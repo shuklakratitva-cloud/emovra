@@ -29,16 +29,29 @@ function getAdvice(level, emotion, sentiment){
 function App() {
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState(() => { try { return loadAnalysis() || null } catch { return null } });
+  const [history, setHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('emovra_history');
+      return saved? JSON.parse(saved) : [];
+    } catch { return [] }
+  });
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
   useEffect(()=>{ if(transcript) setInputText(transcript) },[transcript]);
 
   function handleAnalyze(){
     if(!inputText.trim()) return;
     const result = calculateRisk(inputText);
-    setAnalysis(result);
-    try{ saveAnalysis(result); }catch{}
+    const withTime = {...result, timestamp: new Date().toISOString(), id: Date.now() };
+    setAnalysis(withTime);
+    const newHistory = [...history, withTime].slice(-20);
+    setHistory(newHistory);
+    try{
+      saveAnalysis(withTime);
+      localStorage.setItem('emovra_history', JSON.stringify(newHistory));
+    }catch{}
     setInputText("");
   }
+
   function handleKeyDown(e){
     if(e.key==='Enter' &&!e.shiftKey){
       e.preventDefault();
@@ -59,7 +72,7 @@ function App() {
             <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
               <button onClick={handleAnalyze} className="primary-btn">Analyze (Enter)</button>
               <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
-              <button onClick={()=>{setInputText("");setAnalysis(null);try{localStorage.removeItem('mental_health_last_analysis')}catch{}}} className="secondary-btn">Clear</button>
+              <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);try{localStorage.removeItem('mental_health_last_analysis'); localStorage.removeItem('emovra_history')}catch{}}} className="secondary-btn">Clear All</button>
             </div>
             <div style={{fontSize:12,opacity:.6,marginTop:8}}>You DON'T need to clear manually — box clears automatically after Enter.</div>
           </div>
@@ -67,7 +80,7 @@ function App() {
           {analysis && (
             <>
               <RiskCard analysis={analysis} />
-              <MoodChart history={analysis? [analysis] : []} />
+              <MoodChart history={history.length? history : (analysis? [analysis] : [])} />
 
               <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
                 <strong>💡 Personalized Advice:</strong>
