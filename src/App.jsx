@@ -1,3 +1,4 @@
+import Footer from "./components/Footer";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
@@ -93,6 +94,8 @@ function App() {
         <div className="ticks"></div>
         <section style={{maxWidth:800,margin:"0 auto",width:"100%",padding:"0 16px"}}><MoodTracker/><Journal/><GroundingExercises/><TeleManas/></section>
         <div className="ticks"></div><section id="spacer"></section>
+        <Footer />
+        <div style={{height:20}}></div>
       </>
     </ErrorBoundary>
   )
