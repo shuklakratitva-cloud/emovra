@@ -1,8 +1,9 @@
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
 import RiskCard from "./components/RiskCard";
 import MoodTracker from "./components/MoodTracker";
-import  MoodChart  from "./components/MoodChart.jsx";
+import MoodChart from "./components/MoodChart.jsx";
 import Journal from "./components/Journal";
 import GroundingExercises from "./components/GroundingExercises";
 import TeleManas from "./components/TeleManas";
@@ -48,38 +49,39 @@ function App() {
   const advice = analysis? getAdvice(analysis.riskLevel, analysis.emotion, analysis.sentiment) : "";
 
   return (
-    <>
-      <ThemeToggle />
-      <section id="center">
-        <div><h1>MindGuard - Mental Health Check</h1><p><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line</p></div>
-        <div style={{width:"100%",maxWidth:680,marginTop:16}}>
-          <textarea rows={5} value={inputText} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Type here... Press Enter to send, Shift+Enter for new line. Try 'I am happy today'" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
-          <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
-            <button onClick={handleAnalyze} className="primary-btn">Analyze (Enter)</button>
-            <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
-            <button onClick={()=>{setInputText("");setAnalysis(null);try{localStorage.removeItem('mental_health_last_analysis')}catch{}}} className="secondary-btn">Clear</button>
-          </div>
-          <div style={{fontSize:12,opacity:.6,marginTop:8}}>You DON'T need to clear manually — box clears automatically after Enter.</div>
-        </div>
-
-        {analysis && (
-          <>
-            <RiskCard analysis={analysis} />
-            {/* THIS IS THE LINE — ADDED HERE */}
-            <MoodChart history={analysis? [analysis] : []} />
-
-            <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
-              <strong>💡 Personalized Advice:</strong>
-              <p style={{marginTop:8,lineHeight:1.6}}>{advice}</p>
-              <small style={{opacity:.6}}>Signals: {(analysis.reasons||[analysis.emotion, analysis.sentiment]).join(", ")} | Score: {analysis.score} | Level: {analysis.riskLevel}</small>
+    <ErrorBoundary>
+      <>
+        <ThemeToggle />
+        <section id="center">
+          <div><h1>MindGuard - Mental Health Check</h1><p><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line</p></div>
+          <div style={{width:"100%",maxWidth:680,marginTop:16}}>
+            <textarea rows={5} value={inputText} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Type here... Press Enter to send, Shift+Enter for new line. Try 'I am happy today'" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
+            <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
+              <button onClick={handleAnalyze} className="primary-btn">Analyze (Enter)</button>
+              <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
+              <button onClick={()=>{setInputText("");setAnalysis(null);try{localStorage.removeItem('mental_health_last_analysis')}catch{}}} className="secondary-btn">Clear</button>
             </div>
-          </>
-        )}
-      </section>
-      <div className="ticks"></div>
-      <section style={{maxWidth:800,margin:"0 auto",width:"100%",padding:"0 16px"}}><MoodTracker/><Journal/><GroundingExercises/><TeleManas/></section>
-      <div className="ticks"></div><section id="spacer"></section>
-    </>
+            <div style={{fontSize:12,opacity:.6,marginTop:8}}>You DON'T need to clear manually — box clears automatically after Enter.</div>
+          </div>
+
+          {analysis && (
+            <>
+              <RiskCard analysis={analysis} />
+              <MoodChart history={analysis? [analysis] : []} />
+
+              <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
+                <strong>💡 Personalized Advice:</strong>
+                <p style={{marginTop:8,lineHeight:1.6}}>{advice}</p>
+                <small style={{opacity:.6}}>Signals: {(analysis.reasons||[analysis.emotion, analysis.sentiment]).join(", ")} | Score: {analysis.score} | Level: {analysis.riskLevel}</small>
+              </div>
+            </>
+          )}
+        </section>
+        <div className="ticks"></div>
+        <section style={{maxWidth:800,margin:"0 auto",width:"100%",padding:"0 16px"}}><MoodTracker/><Journal/><GroundingExercises/><TeleManas/></section>
+        <div className="ticks"></div><section id="spacer"></section>
+      </>
+    </ErrorBoundary>
   )
 }
 export default App
