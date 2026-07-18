@@ -64,7 +64,7 @@ function App() {
 
         {analysis && (
           <>
-            <RiskChart analysis={analysis} />
+            <RiskCard analysis={analysis} />
             {/* THIS IS THE LINE — ADDED HERE */}
             <MoodChart history={analysis? [analysis] : []} />
 
