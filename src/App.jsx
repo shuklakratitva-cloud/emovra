@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
 import RiskCard from "./components/RiskCard";
 import MoodTracker from "./components/MoodTracker";
+import  MoodChart  from "./components/MoodChart.jsx";
 import Journal from "./components/Journal";
 import GroundingExercises from "./components/GroundingExercises";
 import TeleManas from "./components/TeleManas";
@@ -29,6 +30,7 @@ function App() {
   const [analysis, setAnalysis] = useState(() => { try { return loadAnalysis() || null } catch { return null } });
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
   useEffect(()=>{ if(transcript) setInputText(transcript) },[transcript]);
+
   function handleAnalyze(){
     if(!inputText.trim()) return;
     const result = calculateRisk(inputText);
@@ -37,13 +39,14 @@ function App() {
     setInputText("");
   }
   function handleKeyDown(e){
-    if(e.key==='Enter' && !e.shiftKey){
+    if(e.key==='Enter' &&!e.shiftKey){
       e.preventDefault();
       handleAnalyze();
     }
   }
   function handleChange(e){ setInputText(e.target.value); }
-  const advice = analysis ? getAdvice(analysis.riskLevel, analysis.emotion, analysis.sentiment) : "";
+  const advice = analysis? getAdvice(analysis.riskLevel, analysis.emotion, analysis.sentiment) : "";
+
   return (
     <>
       <ThemeToggle />
@@ -58,7 +61,20 @@ function App() {
           </div>
           <div style={{fontSize:12,opacity:.6,marginTop:8}}>You DON'T need to clear manually — box clears automatically after Enter.</div>
         </div>
-        {analysis && (<><RiskCard analysis={analysis} /><div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}><strong>💡 Personalized Advice:</strong><p style={{marginTop:8,lineHeight:1.6}}>{advice}</p><small style={{opacity:.6}}>Signals: {(analysis.reasons||[analysis.emotion, analysis.sentiment]).join(", ")} | Score: {analysis.score} | Level: {analysis.riskLevel}</small></div></>)}
+
+        {analysis && (
+          <>
+            <RiskChart analysis={analysis} />
+            {/* THIS IS THE LINE — ADDED HERE */}
+            <MoodChart history={analysis? [analysis] : []} />
+
+            <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
+              <strong>💡 Personalized Advice:</strong>
+              <p style={{marginTop:8,lineHeight:1.6}}>{advice}</p>
+              <small style={{opacity:.6}}>Signals: {(analysis.reasons||[analysis.emotion, analysis.sentiment]).join(", ")} | Score: {analysis.score} | Level: {analysis.riskLevel}</small>
+            </div>
+          </>
+        )}
       </section>
       <div className="ticks"></div>
       <section style={{maxWidth:800,margin:"0 auto",width:"100%",padding:"0 16px"}}><MoodTracker/><Journal/><GroundingExercises/><TeleManas/></section>
