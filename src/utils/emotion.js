@@ -1,5 +1,5 @@
 // src/utils/emotion.js
-
+export function detectEmotion(text) 
 import { EMOTION_KEYWORDS } from "../data/keywords";
 import { normalizeText, countMatches } from "./helpers";
 
@@ -127,3 +127,4 @@ export function getEmotionLabel(emotion = "neutral") {
       return "Neutral";
   }
 }
+export default detectEmotion;
