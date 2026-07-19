@@ -1,6 +1,127 @@
-:root{--text:#6b6375;--text-h:#08060d;--bg:#ffffff;--card-bg:#ffffff;--border:#e5e4e7;--code-bg:#f4f3ec;--accent:#aa3bff;--shadow:0 10px 15px -3px rgba(0,0,0,.1);--sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace;font:16px/1.5 var(--sans);color:var(--text);background:var(--bg)}
-[data-theme="dark"]{--text:#9ca3af;--text-h:#f3f4f6;--bg:#121217;--card-bg:#1f2028;--border:#2e303a;--code-bg:#1f2028;--accent:#c084fc}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);min-height:100vh}
-#root{width:1126px;max-width:100%;margin:0 auto;border-left:1px solid var(--border);border-right:1px solid var(--border);min-height:100vh;display:flex;flex-direction:column;box-sizing:border-box;background:var(--bg)}
-h1,h2,h3{color:var(--text-h);font-weight:600}h1{font-size:36px;line-height:1.1;margin:16px 0}h2{font-size:20px;margin:8px 0}p{margin:6px 0}hr{border:none;border-top:1px solid var(--border);margin:16px 0;width:100%}
-@media(max-width:768px){h1{font-size:26px}#root{border:none}}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap');
+
+:root {
+  --bg: #f8fafc;
+  --card-bg: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --primary: #8b5cf6;
+  --primary-2: #6366f1;
+  --shadow: 0 10px 30px rgba(0,0,0,0.06);
+  --radius: 16px;
+}
+
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --card-bg: #121a2b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #1e293b;
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s, color 0.3s;
+}
+
+h1, h2, h3, strong {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Layout */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Cards - Glass + Premium */
+.card, div[style*="border: 1px solid"] {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.1);
+}
+
+/* Buttons - Gradient Premium */
+button {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2)) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(139,92,246,0.3);
+  transition: all 0.2s ease !important;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(139,92,246,0.4) !important;
+  filter: brightness(1.05);
+}
+
+button:active { transform: translateY(0); }
+
+/* Secondary buttons (outline) */
+button.secondary {
+  background: transparent !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+/* Inputs */
+textarea, input {
+  background: var(--card-bg);
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  color: var(--text) !important;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.2s;
+}
+
+textarea:focus, input:focus {
+  outline: none;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+}
+
+/* Footer - Fix Visibility */
+footer {
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  margin-top: 60px !important;
+  padding: 32px 20px !important;
+  color: var(--muted) !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #334155; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:translateY(0);} }
+.card { animation: fadeIn 0.4s ease both; }
