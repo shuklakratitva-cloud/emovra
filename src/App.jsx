@@ -1,100 +1,148 @@
-import ErrorBoundary from "./components/ErrorBoundary.jsx";
-import { useState, useEffect } from 'react'
-import ThemeToggle from "./components/ThemeToggle";
-import RiskCard from "./components/RiskCard";
-import MoodTracker from "./components/MoodTracker";
-import MoodChart from "./components/MoodChart.jsx";
-import Journal from "./components/Journal";
-import GroundingExercises from "./components/GroundingExercises";
-import TeleManas from "./components/TeleManas";
-import { calculateRisk } from "./utils/risk";
-import { saveAnalysis, loadAnalysis } from "./utils/storage";
-import useSpeechRecognition from "./hooks/useSpeechRecognition";
-import './App.css'
+import { useState } from 'react';
+import MoodTracker from './components/MoodTracker.jsx';
+import Journal from './components/Journal.jsx';
+import GroundingExercises from './components/GroundingExercises.jsx';
+import MoodChart from './components/MoodChart.jsx';
+import RiskCard from './components/RiskCard.jsx';
+import Footer from './components/Footer.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
+import useMood from './hooks/useMood.js';
+import { analyzeSentiment } from './utils/sentiment.js';
+import { detectEmotion } from './utils/emotion.js';
+import { calculateRisk } from './utils/risk.js';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
-function getAdvice(level, emotion, sentiment){
-  if(level==="GREEN"){
-    if(emotion==="happy"||sentiment==="positive") return "Great to hear you're positive! Keep gratitude journaling, share your joy with a friend, and keep doing what lifts you up.";
-    return "You're in a stable range. Maintain healthy habits: sleep, water, movement, and staying connected.";
-  }
-  if(level==="YELLOW"){
-    if(emotion==="anxious"||emotion==="overwhelmed") return "Try Box Breathing 4-4-4-4 for 2 minutes, or do the 5-4-3-2-1 grounding exercise below.";
-    if(emotion==="sad"||emotion==="lonely") return "Consider reaching out to one person today, even with a short message. A 10-minute walk outside can help shift mood.";
-    return "Take a pause. Hydrate, stretch, and write down 3 things that are within your control right now.";
-  }
-  if(level==="ORANGE") return "It sounds like you're carrying a lot. Please talk to a trusted friend, family member, or counselor. Try a grounding exercise and avoid isolating yourself.";
-  return "You matter and help is available. Please call Tele-MANAS 14416 or 1800-891-4416 right now. If you can, stay with someone you trust. You don't have to face this alone.";
-}
+export default function App() {
+  const [text, setText] = useState('');
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const { history, addMood } = useMood();
 
-function App() {
-  const [inputText, setInputText] = useState("");
-  const [analysis, setAnalysis] = useState(() => { try { return loadAnalysis() || null } catch { return null } });
-  const [history, setHistory] = useState(() => {
-    try {
-      const saved = localStorage.getItem('emovra_history');
-      return saved? JSON.parse(saved) : [];
-    } catch { return [] }
-  });
-  const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
-  useEffect(()=>{ if(transcript) setInputText(transcript) },[transcript]);
-
-  function handleAnalyze(){
-    if(!inputText.trim()) return;
-    const result = calculateRisk(inputText);
-    const withTime = {...result, timestamp: new Date().toISOString(), id: Date.now() };
-    setAnalysis(withTime);
-    const newHistory = [...history, withTime].slice(-20);
-    setHistory(newHistory);
-    try{
-      saveAnalysis(withTime);
-      localStorage.setItem('emovra_history', JSON.stringify(newHistory));
-    }catch{}
-    setInputText("");
-  }
-
-  function handleKeyDown(e){
-    if(e.key==='Enter' &&!e.shiftKey){
-      e.preventDefault();
-      handleAnalyze();
-    }
-  }
-  function handleChange(e){ setInputText(e.target.value); }
-  const advice = analysis? getAdvice(analysis.riskLevel, analysis.emotion, analysis.sentiment) : "";
+  const handleAnalyze = () => {
+    if (!text.trim()) return;
+    setLoading(true);
+    setTimeout(() => {
+      const sentiment = analyzeSentiment(text);
+      const emotion = detectEmotion(text);
+      const risk = calculateRisk(text, sentiment, emotion);
+      
+      const newResult = {
+        text,
+        ...sentiment,
+        ...emotion,
+        ...risk,
+        id: Date.now(),
+        time: new Date().toLocaleString()
+      };
+      
+      setResult(newResult);
+      addMood(newResult);
+      setLoading(false);
+    }, 400);
+  };
 
   return (
     <ErrorBoundary>
-      <>
-        <ThemeToggle />
-        <section id="center">
-          <div><h1>MindGuard - Mental Health Check</h1><p><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line</p></div>
-          <div style={{width:"100%",maxWidth:680,marginTop:16}}>
-            <textarea rows={5} value={inputText} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Type here... Press Enter to send, Shift+Enter for new line. Try 'I am happy today'" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
-            <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
-              <button onClick={handleAnalyze} className="primary-btn">Analyze (Enter)</button>
-              <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
-              <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);try{localStorage.removeItem('mental_health_last_analysis'); localStorage.removeItem('emovra_history')}catch{}}} className="secondary-btn">Clear All</button>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
+        
+        {/* HEADER WITH LOGO */}
+        <header style={{ 
+          maxWidth: 1100, margin: '0 auto', padding: '16px 20px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          position: 'sticky', top: 0, backdropFilter: 'blur(12px)', zIndex: 10,
+          background: 'rgba(255,255,255,0.8)', borderBottom: '1px solid var(--border)'
+        }}>
+          <div style={{display:"flex", alignItems:"center", gap:12}}>
+            {/* LOGO - uses your favicon.svg */}
+            <img 
+              src="/favicon.svg" 
+              alt="Emovra Logo" 
+              style={{
+                width:40, height:40, borderRadius:10,
+                background:'linear-gradient(135deg,#8b5cf6,#6366f1)',
+                padding:6, boxShadow:'0 4px 12px rgba(139,92,246,0.3)'
+              }} 
+            />
+            <div>
+              <h1 style={{fontSize:18, fontWeight:700, margin:0, lineHeight:1.2}}>Mental Health Support App</h1>
+              <small style={{opacity:0.6, fontSize:12}}>You matter. Your feelings matter.</small>
             </div>
-            <div style={{fontSize:12,opacity:.6,marginTop:8}}>You DON'T need to clear manually — box clears automatically after Enter.</div>
+          </div>
+          <ThemeToggle />
+        </header>
+
+        <main className="container" style={{paddingTop:24, paddingBottom:20}}>
+          
+          {/* TOP GRID */}
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, alignItems:'start'}}>
+            
+            {/* LEFT - INPUT */}
+            <div style={{padding:20, border:'1px solid var(--border)', borderRadius:16, background:'var(--card-bg)'}}>
+              <h3 style={{marginBottom:4}}>How are you feeling today?</h3>
+              <p style={{fontSize:13, opacity:0.6, marginBottom:12}}>Share your thoughts and let us help you.</p>
+              
+              <textarea
+                value={text}
+                onChange={(e)=>setText(e.target.value)}
+                placeholder="Type your thoughts here..."
+                maxLength={1000}
+                style={{width:'100%', minHeight:120, padding:12, resize:'vertical'}}
+              />
+              <div style={{textAlign:'right', fontSize:12, opacity:0.5, marginTop:4}}>{text.length} / 1000</div>
+
+              <div style={{display:'flex', gap:10, marginTop:12, flexWrap:'wrap'}}>
+                <button onClick={handleAnalyze} disabled={loading || !text.trim()}>
+                  {loading ? 'Analyzing...' : '🔍 Analyze'}
+                </button>
+                <button className="secondary" onClick={()=>setText('')}>🗑️ Clear</button>
+              </div>
+              <small style={{display:'block', marginTop:10, opacity:0.5, fontSize:11}}>🔒 Your data is private and stored only on your device.</small>
+            </div>
+
+            {/* RIGHT - RESULT */}
+            <div>
+              {result ? <RiskCard result={result} /> : (
+                <div style={{padding:20, border:'1px solid var(--border)', borderRadius:16, background:'var(--card-bg)', minHeight:200}}>
+                  <strong>Analysis Result</strong>
+                  <p style={{opacity:0.5, fontSize:13, marginTop:20, textAlign:'center'}}>Your analysis will appear here after you click Analyze</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {analysis && (
-            <>
-              <RiskCard analysis={analysis} />
-              <MoodChart history={history.length? history : (analysis? [analysis] : [])} />
+          {/* MIDDLE 3 COLUMNS */}
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:20, marginTop:20}}>
+            <MoodTracker />
+            <Journal />
+            <GroundingExercises />
+          </div>
 
-              <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
-                <strong>💡 Personalized Advice:</strong>
-                <p style={{marginTop:8,lineHeight:1.6}}>{advice}</p>
-                <small style={{opacity:.6}}>Signals: {(analysis.reasons||[analysis.emotion, analysis.sentiment]).join(", ")} | Score: {analysis.score} | Level: {analysis.riskLevel}</small>
-              </div>
-            </>
-          )}
-        </section>
-        <div className="ticks"></div>
-        <section style={{maxWidth:800,margin:"0 auto",width:"100%",padding:"0 16px"}}><MoodTracker/><Journal/><GroundingExercises/><TeleManas/></section>
-        <div className="ticks"></div><section id="spacer"></section>
-      </>
+          {/* CHART */}
+          <div style={{marginTop:20, display:'flex', justifyContent:'center'}}>
+            <MoodChart history={history} />
+          </div>
+
+          {/* SUPPORT */}
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:20, marginTop:20}}>
+            <div style={{padding:16, border:'1px solid var(--border)', borderRadius:16, background:'var(--card-bg)'}}>
+              <strong>📞 Tele-MANAS Support</strong>
+              <p style={{fontSize:12, opacity:0.7, marginTop:6}}>India's national mental health support service. Trained professionals are here to listen and help you.</p>
+            </div>
+            <div style={{padding:16, border:'1px solid var(--border)', borderRadius:16, background:'var(--card-bg)', textAlign:'center'}}>
+              <div>Primary Helpline</div>
+              <strong style={{color:'#8b5cf6'}}>14416</strong><br/>
+              <button style={{marginTop:8, padding:'6px 14px', fontSize:12}}>Call Now</button>
+            </div>
+            <div style={{padding:16, border:'1px solid var(--border)', borderRadius:16, background:'var(--card-bg)'}}>
+              <strong style={{fontSize:13}}>⚠️ Emergency Notice</strong>
+              <p style={{fontSize:11, opacity:0.7, marginTop:6}}>If you are in immediate danger or having thoughts of self-harm, please contact emergency services or go to the nearest hospital immediately.</p>
+            </div>
+          </div>
+
+        </main>
+
+        <Footer />
+      </div>
     </ErrorBoundary>
-  )
+  );
 }
-export default App
