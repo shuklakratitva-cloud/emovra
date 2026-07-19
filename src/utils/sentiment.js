@@ -127,3 +127,5 @@ export function getSentimentColor(sentiment) {
       return "#facc15"; // Yellow
   }
 }
+
+export { detectSentiment as analyzeSentiment };
