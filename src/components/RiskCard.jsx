@@ -1,32 +1,54 @@
-export default function RiskCard({ result }) {
-  if (!result) return null;
+import React from 'react';
 
-  const colorMap = {
-    GREEN: { bg: '#dcfce7', border: '#22c55e', text: '#166534', label: 'Doing Okay' },
-    YELLOW: { bg: '#fef9c3', border: '#eab308', text: '#854d0e', label: 'Moderate Stress' },
-    ORANGE: { bg: '#ffedd5', border: '#f97316', text: '#9a3412', label: 'Elevated Concern' },
-    RED: { bg: '#fee2e2', border: '#ef4444', text: '#991b1b', label: 'High Risk' },
-  };
+// ✅ Safe converter: object -> string, prevents React crash
+function toStr(v){ 
+  if(v==null) return 'neutral'; 
+  if(typeof v==='string') return v; 
+  if(typeof v==='object') return String(v.label||v.dominant||v.emotion||v.level||'neutral'); 
+  return String(v); 
+}
 
-  const style = colorMap[result.color] || colorMap.GREEN;
-
+export default function RiskCard({ analysis }){
+  if(!analysis) return null;
+  
+  // ✅ All converted to string before render
+  const riskLevel = toStr(analysis.riskLevel).toUpperCase();
+  const emotion = toStr(analysis.emotion);
+  const sentiment = toStr(analysis.sentiment);
+  const score = analysis.score ?? 0;
+  const reasons = Array.isArray(analysis.reasons) ? analysis.reasons.map(toStr) : [];
+  
+  // ✅ Now color always works because riskLevel is guaranteed string
+  const color = riskLevel==='GREEN'?'#22c55e':riskLevel==='YELLOW'?'#eab308':riskLevel==='ORANGE'?'#f97316':'#ef4444';
+  
   return (
     <div style={{
-      padding: 20,
-      borderRadius: 16,
-      background: style.bg,
-      border: `2px solid ${style.border}`,
-      color: style.text
+      borderLeft:`6px solid ${color}`,
+      padding:20,
+      borderRadius:12,
+      border:'1px solid var(--border, #eee)',
+      marginTop:20,
+      maxWidth:680,
+      width:"100%",
+      background:"var(--card-bg, #fff)"
     }}>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <strong>{style.label}</strong>
-        <span style={{fontSize:12, padding:'4px 8px', background:'white', borderRadius:999, border:`1px solid ${style.border}`}}>
-          {result.color} • Score {result.score}
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+        <span style={{background:color,color:'#fff',padding:'4px 12px',borderRadius:20,fontWeight:700,fontSize:12}}>
+          {riskLevel}
+        </span>
+        <span style={{background:'#f1f5f9',padding:'4px 10px',borderRadius:20,fontSize:12}}>
+          {emotion}
+        </span>
+        <span style={{background:'#f1f5f9',padding:'4px 10px',borderRadius:20,fontSize:12}}>
+          {sentiment}
+        </span>
+        <span style={{fontSize:12,opacity:.6}}>
+          Score: {String(score)}
         </span>
       </div>
-      <p style={{marginTop:10, fontSize:13}}>{result.message}</p>
-      {result.reasons && <small style={{opacity:0.7}}>Reason: {result.reasons.join(', ')}</small>}
-      {result.text && <p style={{marginTop:12, fontSize:12, opacity:0.8, fontStyle:'italic'}}>“{result.text.slice(0,200)}...”</p>}
+      <div style={{marginTop:10,fontSize:13,opacity:.8}}>
+        {reasons.join(', ')}
+      </div>
     </div>
   );
 }
