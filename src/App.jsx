@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx - MULTI-EMOTION FINAL
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
@@ -9,7 +9,7 @@ import Journal from "./components/Journal";
 import GroundingExercises from "./components/GroundingExercises";
 import TeleManas from "./components/TeleManas";
 import { analyzeRisk } from "./utils/analyzeRisk.js";
-import { getCounselingAdvice } from "./utils/counselor.js"; // <-- NEW
+import { getCounselingAdvice, getTopEmotions } from "./utils/counselor.js"; // <-- UPDATED: now returns array
 import { saveAnalysis, loadAnalysis } from "./utils/storage";
 import useSpeechRecognition from "./hooks/useSpeechRecognition";
 import './App.css'
@@ -40,7 +40,7 @@ function App() {
       if(!saved) return [];
       const parsed = JSON.parse(saved);
       return parsed.map(h=>({
-    ...h,
+   ...h,
         riskLevel: typeof h.riskLevel==='string'? h.riskLevel : (h.riskLevel?.level||h.riskLevel?.label||"GREEN"),
         emotion: typeof h.emotion==='string'? h.emotion : (h.emotion?.label||h.emotion?.dominant||"neutral"),
         sentiment: typeof h.sentiment==='string'? h.sentiment : (h.sentiment?.label||"neutral"),
@@ -58,10 +58,11 @@ function App() {
     const result = analyzeRisk(inputText);
     if(!result) return;
 
-    // NEW: Get counseling technique from public knowledge base
-    const counseling = getCounselingAdvice(inputText, result.emotion, result.riskLevel);
+    // NEW MULTI: returns array of top 3 techniques + emotion breakdown
+    const counselingList = getCounselingAdvice(inputText, result.emotion, result.riskLevel);
+    const topEmotions = getTopEmotions(inputText);
 
-    const withTime = {...result, counseling, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
+    const withTime = {...result, counseling: counselingList, counselingList, topEmotions, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
     setAnalysis(withTime);
     const newHistory = [...history, withTime].slice(-20);
     setHistory(newHistory);
@@ -74,6 +75,7 @@ function App() {
   }
 
   const advice = analysis? getAdvice(analysis.riskLevel, analysis.emotion, analysis.sentiment) : "";
+  const counselingArray = Array.isArray(analysis?.counseling)? analysis.counseling : (analysis?.counseling? [analysis.counseling] : []);
 
   return (
     <ErrorBoundary>
@@ -82,18 +84,30 @@ function App() {
         <section id="center">
           <div><h1>MindGuard - Mental Health Check</h1><p><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line</p></div>
           <div style={{width:"100%",maxWidth:680,marginTop:16}}>
-            <textarea rows={5} value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type here... Try 'i am stressed and overthinking'" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
+            <textarea rows={5} value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type a long para... e.g. I am stressed about exams, anxious and overthinking, tired, sad and lonely" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
             <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
               <button onClick={handleAnalyze} className="primary-btn">Analyze (Enter)</button>
               <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
               <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);try{localStorage.clear()}catch{}}} className="secondary-btn">Clear All</button>
             </div>
-            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Detects slight stress + gives counseling technique from public KB.</div>
+            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Now supports long paras. Detects up to 3 emotions + 3 solutions.</div>
           </div>
 
           {analysis && (
             <>
               <RiskCard analysis={analysis} text={analysis.text} />
+
+              {/* NEW: Multi-Emotion Badges */}
+              {analysis.topEmotions && analysis.topEmotions.length > 1 && (
+                <div style={{maxWidth:680, width:"100%", display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", marginTop:12}}>
+                  {analysis.topEmotions.map(t=>(
+                    <span key={t.emotion} style={{padding:"6px 12px", borderRadius:20, fontSize:12, fontWeight:700, border:"1px solid var(--border)", background: t.emotion==="anxious"?"#fef9c3":t.emotion==="stressed"?"#ffedd5":t.emotion==="sad"?"#dbeafe":t.emotion==="angry"?"#fee2e2":"#dcfce7"}}>
+                      {t.emotion.toUpperCase()} {t.percent}%
+                    </span>
+                  ))}
+                </div>
+              )}
+
               <MoodChart history={history.length? history : [analysis]} />
 
               <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
@@ -102,19 +116,26 @@ function App() {
                 <small style={{opacity:.6}}>Triggers: {(analysis.reasons||[]).join(", ")} | Score: {String(analysis.score)} | Level: {String(analysis.riskLevel)}</small>
               </div>
 
-              {/* NEW: Counseling KB Solution Card */}
-              {analysis.counseling && (
-                <div style={{maxWidth:680,width:"100%",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:18,marginTop:16,textAlign:"left"}}>
-                  <h3 style={{margin:"0 0 8px 0", color:"#166534"}}>🧠 Recommended: {analysis.counseling.technique}</h3>
-                  <p style={{lineHeight:1.6, fontSize:14, margin:"0 0 10px 0"}}>{analysis.counseling.advice}</p>
-                  <ol style={{margin:"10px 0", paddingLeft:20, fontSize:14}}>
-                    {analysis.counseling.steps.map(s => <li key={s} style={{marginBottom:4}}>{s}</li>)}
-                  </ol>
-                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:10, flexWrap:"wrap", gap:8}}>
-                    <small style={{color:"#666"}}>Source: {analysis.counseling.source} • Educational only</small>
-                    <a href="https://findahelpline.org/countries/in" target="_blank" rel="noreferrer" style={{fontSize:12, color:"#16a34a", textDecoration:"underline"}}>Find Helpline</a>
-                  </div>
-                  {analysis.counseling.disclaimer && <p style={{color:"#dc2626", fontWeight:600, fontSize:12, marginTop:8}}>{analysis.counseling.disclaimer}</p>}
+              {/* NEW: Multi Counseling Cards */}
+              {counselingArray.length > 0 && (
+                <div style={{maxWidth:680,width:"100%",marginTop:16, display:"grid", gap:12}}>
+                  <h3 style={{margin:"4px 0", textAlign:"left"}}>🧠 Recommended Solutions ({counselingArray.length})</h3>
+                  {counselingArray.map((c,i)=>(
+                    <div key={c.id || i} style={{background:i===0?"#f0fdf4":"var(--card-bg)",border:`1px solid ${i===0?"#bbf7d0":"var(--border)"}`,borderRadius:12,padding:18,textAlign:"left"}}>
+                      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:8}}>
+                        <h4 style={{margin:0, color:"#166534"}}>{i+1}. {c.technique}</h4>
+                        <small style={{background:"#e0f2fe", padding:"3px 8px", borderRadius:12, textTransform:"capitalize"}}>{c.emotion}</small>
+                      </div>
+                      <p style={{lineHeight:1.6, fontSize:14, margin:"8px 0"}}>{c.advice}</p>
+                      <ol style={{margin:"10px 0", paddingLeft:20, fontSize:14}}>
+                        {c.steps?.map(s => <li key={s} style={{marginBottom:4}}>{s}</li>)}
+                      </ol>
+                      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:10, flexWrap:"wrap", gap:8}}>
+                        <small style={{color:"#666"}}>Matched: {(c.matchedKeywords||c.keywords||[]).slice(0,3).join(", ")} | Source: {c.source} • Educational only</small>
+                      </div>
+                      {c.disclaimer && <p style={{color:"#dc2626", fontWeight:600, fontSize:12, marginTop:8}}>{c.disclaimer}</p>}
+                    </div>
+                  ))}
                 </div>
               )}
             </>
