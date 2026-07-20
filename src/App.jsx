@@ -1,3 +1,4 @@
+// src/App.jsx
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
@@ -7,7 +8,7 @@ import MoodChart from "./components/MoodChart.jsx";
 import Journal from "./components/Journal";
 import GroundingExercises from "./components/GroundingExercises";
 import TeleManas from "./components/TeleManas";
-import { calculateRisk } from "./utils/risk";
+import { analyzeRisk } from "./utils/analyzeRisk.js"; // <-- NEW sensitive analyzer
 import { saveAnalysis, loadAnalysis } from "./utils/storage";
 import useSpeechRecognition from "./hooks/useSpeechRecognition";
 import './App.css'
@@ -20,7 +21,7 @@ function getAdvice(level, emotion, sentiment){
     return "You're in a stable range. Maintain healthy habits: sleep, water, movement, and staying connected.";
   }
   if(lvl==="YELLOW"){
-    if(emo==="anxious"||emo==="overwhelmed") return "Try Box Breathing 4-4-4-4 for 2 minutes, or do the 5-4-3-2-1 grounding exercise below.";
+    if(emo==="anxious"||emo==="overwhelmed") return "Slight stress detected. Try Box Breathing 4-4-4-4 for 2 minutes, or do the 5-4-3-2-1 grounding exercise below. A short walk helps too.";
     if(emo==="sad"||emo==="lonely") return "Consider reaching out to one person today, even with a short message. A 10-minute walk outside can help shift mood.";
     return "Take a pause. Hydrate, stretch, and write down 3 things that are within your control right now.";
   }
@@ -32,14 +33,13 @@ function App() {
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState(() => { try { return loadAnalysis() || null } catch { return null } });
 
-  // ✅ FIX: Cleans old object entries -> string
   const [history, setHistory] = useState(() => {
     try {
       const saved = localStorage.getItem('emovra_history');
       if(!saved) return [];
       const parsed = JSON.parse(saved);
       return parsed.map(h=>({
-      ...h,
+     ...h,
         riskLevel: typeof h.riskLevel==='string'? h.riskLevel : (h.riskLevel?.level||h.riskLevel?.label||"GREEN"),
         emotion: typeof h.emotion==='string'? h.emotion : (h.emotion?.label||h.emotion?.dominant||"neutral"),
         sentiment: typeof h.sentiment==='string'? h.sentiment : (h.sentiment?.label||"neutral"),
@@ -57,11 +57,11 @@ function App() {
 
   function handleAnalyze(){
     if(!inputText.trim()) return;
-    const result = calculateRisk(inputText); // ✅ Uses cleanText inside risk.js -> "iam anxius" fixed
+    const result = analyzeRisk(inputText); // <-- FIXED: was calculateRisk (always 0)
     if(!result) return;
     const withTime = {...result, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
     setAnalysis(withTime);
-    const newHistory = [...history, withTime].slice(-20); // ✅ Keeps last 20 only
+    const newHistory = [...history, withTime].slice(-20);
     setHistory(newHistory);
     try{ saveAnalysis(withTime); }catch{}
     setInputText("");
@@ -83,24 +83,24 @@ function App() {
         <section id="center">
           <div><h1>MindGuard - Mental Health Check</h1><p><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line</p></div>
           <div style={{width:"100%",maxWidth:680,marginTop:16}}>
-            <textarea rows={5} value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type here... Try 'iam anxius' or 'i am anxious'" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
+            <textarea rows={5} value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type here... Try 'i am stressed' or 'feeling anxious and tired'" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
             <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
               <button onClick={handleAnalyze} className="primary-btn">Analyze (Enter)</button>
               <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
-              {/* ✅ STEP 8: Clears ALL old keys */}
               <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);try{localStorage.removeItem('mental_health_last_analysis'); localStorage.removeItem('emovra_history'); localStorage.removeItem('emovra_last'); localStorage.removeItem('moodHistory')}catch{}}} className="secondary-btn">Clear All</button>
             </div>
-            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Box clears automatically after Enter. Grammar like 'iam anxius' auto-fixed.</div>
+            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Now detects slightest stress. Try "stressed", "tired", "worried".</div>
           </div>
 
           {analysis && (
             <>
-              <RiskCard analysis={analysis} />
+              {/* FIXED: Pass text so RiskCard can re-calculate if needed */}
+              <RiskCard analysis={analysis} text={analysis.text} />
               <MoodChart history={history.length? history : [analysis]} />
               <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
                 <strong>💡 Personalized Advice:</strong>
                 <p style={{marginTop:8,lineHeight:1.6}}>{advice}</p>
-                <small style={{opacity:.6}}>Signals: {(analysis.reasons||[analysis.emotion, analysis.sentiment]).map(v=>String(typeof v==='object'? (v.label||v.dominant||''):v)).join(", ")} | Score: {String(analysis.score)} | Level: {String(analysis.riskLevel)}</small>
+                <small style={{opacity:.6}}>Triggers: {(analysis.reasons||[]).join(", ")} | Score: {String(analysis.score)} | Level: {String(analysis.riskLevel)}</small>
               </div>
             </>
           )}
