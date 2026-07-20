@@ -1,4 +1,4 @@
-// src/App.jsx - MULTI-EMOTION FINAL
+// src/App.jsx - MULTI-EMOTION + VOICE TONE FINAL
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
@@ -9,7 +9,8 @@ import Journal from "./components/Journal";
 import GroundingExercises from "./components/GroundingExercises";
 import TeleManas from "./components/TeleManas";
 import { analyzeRisk } from "./utils/analyzeRisk.js";
-import { getCounselingAdvice, getTopEmotions } from "./utils/counselor.js"; // <-- UPDATED: now returns array
+import { getCounselingAdvice, getTopEmotions } from "./utils/counselor.js";
+import VoiceToneAnalyzer from "./components/VoiceToneAnalyzer.jsx"; // <-- ADDED
 import { saveAnalysis, loadAnalysis } from "./utils/storage";
 import useSpeechRecognition from "./hooks/useSpeechRecognition";
 import './App.css'
@@ -40,7 +41,7 @@ function App() {
       if(!saved) return [];
       const parsed = JSON.parse(saved);
       return parsed.map(h=>({
-   ...h,
+  ...h,
         riskLevel: typeof h.riskLevel==='string'? h.riskLevel : (h.riskLevel?.level||h.riskLevel?.label||"GREEN"),
         emotion: typeof h.emotion==='string'? h.emotion : (h.emotion?.label||h.emotion?.dominant||"neutral"),
         sentiment: typeof h.sentiment==='string'? h.sentiment : (h.sentiment?.label||"neutral"),
@@ -57,11 +58,8 @@ function App() {
     if(!inputText.trim()) return;
     const result = analyzeRisk(inputText);
     if(!result) return;
-
-    // NEW MULTI: returns array of top 3 techniques + emotion breakdown
     const counselingList = getCounselingAdvice(inputText, result.emotion, result.riskLevel);
     const topEmotions = getTopEmotions(inputText);
-
     const withTime = {...result, counseling: counselingList, counselingList, topEmotions, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
     setAnalysis(withTime);
     const newHistory = [...history, withTime].slice(-20);
@@ -90,14 +88,13 @@ function App() {
               <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
               <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);try{localStorage.clear()}catch{}}} className="secondary-btn">Clear All</button>
             </div>
-            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Now supports long paras. Detects up to 3 emotions + 3 solutions.</div>
+            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Now supports long paras. Detects up to 3 emotions + 3 solutions + Voice Tone.</div>
           </div>
 
           {analysis && (
             <>
               <RiskCard analysis={analysis} text={analysis.text} />
 
-              {/* NEW: Multi-Emotion Badges */}
               {analysis.topEmotions && analysis.topEmotions.length > 1 && (
                 <div style={{maxWidth:680, width:"100%", display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", marginTop:12}}>
                   {analysis.topEmotions.map(t=>(
@@ -110,13 +107,24 @@ function App() {
 
               <MoodChart history={history.length? history : [analysis]} />
 
+              {/* VOICE TONE ANALYZER - ADDED HERE */}
+              <VoiceToneAnalyzer onResult={(toneData)=>{
+                setAnalysis(prev => prev? {...prev, voiceTone: toneData} : prev);
+              }} />
+
+              {/* Show merged voice result if available */}
+              {analysis.voiceTone && (
+                <div style={{maxWidth:680,width:"100%",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:12,marginTop:10, fontSize:13, textAlign:"left"}}>
+                  <b>🔊 Voice Reading:</b> {analysis.voiceTone.tone} | Pressure: {analysis.voiceTone.pressure} (Vol {analysis.voiceTone.avgVolume}, Pitch {analysis.voiceTone.avgPitch})
+                </div>
+              )}
+
               <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
                 <strong>💡 Personalized Advice:</strong>
                 <p style={{marginTop:8,lineHeight:1.6}}>{advice}</p>
                 <small style={{opacity:.6}}>Triggers: {(analysis.reasons||[]).join(", ")} | Score: {String(analysis.score)} | Level: {String(analysis.riskLevel)}</small>
               </div>
 
-              {/* NEW: Multi Counseling Cards */}
               {counselingArray.length > 0 && (
                 <div style={{maxWidth:680,width:"100%",marginTop:16, display:"grid", gap:12}}>
                   <h3 style={{margin:"4px 0", textAlign:"left"}}>🧠 Recommended Solutions ({counselingArray.length})</h3>
