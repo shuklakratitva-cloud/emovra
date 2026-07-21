@@ -1,8 +1,9 @@
-// src/components/Journal.jsx
+// src/components/Journal.jsx - Gemini AI for text + voice-ready
 import SupportResources from "./SupportResources";
 import React, { useState } from "react";
 import useJournal from "../hooks/useJournal";
-import { checkCrisis } from "../utils/crisisDetection";
+import { analyzeWithGemini } from "../utils/geminiAnalyzer.js"; // NEW - Gemini
+import { checkCrisis } from "../utils/crisisDetection"; // fallback
 
 export default function Journal() {
   const { journalText, setJournalText, entries, totalEntries, addEntry, editEntry, removeEntry, clearJournal } = useJournal();
@@ -10,42 +11,76 @@ export default function Journal() {
   const [editText, setEditText] = useState("");
   const [crisisLevel, setCrisisLevel] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [lastResult, setLastResult] = useState(null);
 
   function startEditing(entry) { setEditingId(entry.id); setEditText(entry.text); }
   
-  function saveEdit(id) {
-    const result = checkCrisis(editText);
-    if (result.level !== 'none') {
-      setCrisisLevel(result.level);
-      setShowHelp(true);
+  async function saveEdit(id) {
+    setLoading(true);
+    try {
+      const result = await analyzeWithGemini(editText, null);
+      const level = result?.level?.toLowerCase() || 'low';
+      if (level === 'red' || level === 'orange' || result?.isCrisis) {
+        setCrisisLevel(result.level === 'RED' ? 'high' : 'medium');
+        setShowHelp(true);
+      }
+      setLastResult(result);
+    } catch {
+      const result = checkCrisis(editText);
+      if (result.level !== 'none') { setCrisisLevel(result.level); setShowHelp(true); }
     }
     editEntry(id, editText);
-    setEditingId(null);
-    setEditText("");
+    setEditingId(null); setEditText(""); setLoading(false);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!journalText.trim()) return;
-    const result = checkCrisis(journalText);
-    
-    if (result.level === 'high' || result.level === 'medium') {
-      setCrisisLevel(result.level);
-      setShowHelp(true);
+    setLoading(true);
+    setShowHelp(false);
+
+    let result;
+    try {
+      // MAIN: Gemini analyzes sentence tone, not just keywords
+      result = await analyzeWithGemini(journalText, null);
+      setLastResult(result);
+      const lvl = result?.level; // GREEN, YELLOW, ORANGE, RED
+      if (lvl === 'RED' || lvl === 'ORANGE') {
+        setCrisisLevel(lvl === 'RED' ? 'high' : 'medium');
+        setShowHelp(true);
+      }
+    } catch (e) {
+      // Fallback to old keyword system if offline
+      result = checkCrisis(journalText);
+      if (result.level === 'high' || result.level === 'medium') {
+        setCrisisLevel(result.level);
+        setShowHelp(true);
+      }
+      setLastResult({...result, source: "keyword-fallback"});
     }
     
     addEntry(journalText);
+    setLoading(false);
   }
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>📖 Personal Journal</h2>
-      <p>Write about your thoughts and feelings.</p>
+      <h2>📖 Personal Journal - Gemini AI</h2>
+      <p style={{fontSize:13, opacity:0.7}}>Now understands tone like "if i disappeared no one would notice" → detects as RED, not just keywords.</p>
 
-      {/* NEW: This is the single line that replaces the old banner */}
-      {showHelp && <SupportResources level={crisisLevel} onClose={() => setShowHelp(false)} />}
+      {showHelp && <SupportResources level={crisisLevel} result={lastResult} onClose={() => setShowHelp(false)} />}
 
-      <textarea rows={6} value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder="Write your journal entry here..." style={{ width: "100%", padding: "12px", borderRadius: "10px", resize: "vertical", marginTop: 12, border: "1px solid #ddd" }} />
-      <button onClick={handleSave} style={{ marginTop: "12px", padding: "10px 20px", cursor: "pointer", background: "#aa3bff", color: "#fff", border: "none", borderRadius: 8 }}>Save Entry</button>
+      {lastResult && !showHelp && (
+        <div style={{marginTop:12, padding:10, borderRadius:8, border:`2px solid ${lastResult.level==='RED'?'#dc2626':lastResult.level==='ORANGE'?'#ea580c':'#16a34a'}`, background:"#f9fafb", fontSize:13}}>
+          <b>Gemini Result:</b> {lastResult.level} | {lastResult.score} | {lastResult.emotion} | Source: {lastResult.source}
+          <div style={{marginTop:4}}><b>Reason:</b> {lastResult.reasons?.join(", ")}</div>
+        </div>
+      )}
+
+      <textarea rows={6} value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder="Write your journal entry here... e.g. i feel like if i disappeared no one would notice" style={{ width: "100%", padding: "12px", borderRadius: "10px", resize: "vertical", marginTop: 12, border: "1px solid #ddd" }} />
+      <button onClick={handleSave} disabled={loading} style={{ marginTop: "12px", padding: "10px 20px", cursor: loading?"not-allowed":"pointer", background: loading?"#999":"#aa3bff", color: "#fff", border: "none", borderRadius: 8, opacity: loading?0.6:1 }}>
+        {loading ? "Analyzing with Gemini..." : "Save & Analyze"}
+      </button>
       
       <hr style={{ margin: "20px 0" }} />
       <h3>Total Entries: {totalEntries}</h3>
@@ -54,7 +89,7 @@ export default function Journal() {
           {editingId === entry.id ? (
             <>
               <textarea rows={4} value={editText} onChange={(e) => setEditText(e.target.value)} style={{ width: "100%", marginBottom: "10px", padding: "10px", borderRadius: "8px" }} />
-              <button onClick={() => saveEdit(entry.id)} style={{ padding: "6px 14px", background: "#aa3bff", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>Save</button>
+              <button onClick={() => saveEdit(entry.id)} disabled={loading} style={{ padding: "6px 14px", background: "#aa3bff", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>{loading?"Analyzing...":"Save"}</button>
               <button onClick={() => { setEditingId(null); setEditText(""); }} style={{ marginLeft: "10px", padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
             </>
           ) : (
