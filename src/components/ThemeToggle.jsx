@@ -1,46 +1,31 @@
-// src/components/ThemeToggle.jsx
-
-import React, { useState, useEffect } from "react";
-import { saveTheme, loadTheme } from "../utils/storage";
+import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState("light");
-
-  function applyTheme(selectedTheme) {
-    document.documentElement.setAttribute("data-theme", selectedTheme);
-    document.body.style.transition = "background-color 0.3s ease, color 0.3s ease";
-  }
+  const [dark, setDark] = useState(() => {
+    return localStorage.getItem("theme") === "dark" ||
+           (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  });
 
   useEffect(() => {
-    const savedTheme = loadTheme() || "light";
-    setTheme(savedTheme);
-    applyTheme(savedTheme);
-  }, []);
-
-  function toggleTheme() {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    applyTheme(newTheme);
-    saveTheme(newTheme);
-  }
+    const theme = dark? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+    document.body.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [dark]);
 
   return (
-    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "20px" }}>
-      <button
-        onClick={toggleTheme}
-        style={{
-          padding: "10px 18px",
-          border: "none",
-          borderRadius: "10px",
-          cursor: "pointer",
-          backgroundColor: theme === "dark" ? "#facc15" : "#1f2937",
-          color: theme === "dark" ? "#000000" : "#ffffff",
-          fontWeight: "bold",
-        }}
-        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      >
-        {theme === "dark" ? "☀ Light Mode" : "🌙 Dark Mode"}
-      </button>
-    </div>
+    <button
+      onClick={() => setDark(!dark)}
+      style={{
+        position: "fixed", top: 12, right: 12, zIndex: 9999,
+        padding: "8px 12px", borderRadius: 20,
+        border: "1px solid var(--border)",
+        background: "var(--card-bg)", color: "var(--text)",
+        cursor: "pointer"
+      }}
+      aria-label="Toggle theme"
+    >
+      {dark? "☀️ Light" : "🌙 Dark"}
+    </button>
   );
 }

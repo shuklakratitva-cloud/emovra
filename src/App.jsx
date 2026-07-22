@@ -1,4 +1,4 @@
-// src/App.jsx - FIXED: Gemini + Violence Detection = RED
+// src/App.jsx - FINAL FIXED: All features + Gemini + Violence + Abuse + Dark Mode
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
@@ -12,8 +12,8 @@ import { getCounselingAdvice, getTopEmotions } from "./utils/counselor.js";
 import VoiceToneAnalyzer from "./components/VoiceToneAnalyzer.jsx";
 import { saveAnalysis, loadAnalysis } from "./utils/storage";
 import useSpeechRecognition from "./hooks/useSpeechRecognition";
-import { analyzeWithGemini } from "./utils/geminiAnalyzer.js"; // NEW
-import { analyzeRisk } from "./utils/analyzeRisk.js"; // kept as fallback
+import { analyzeWithGemini } from "./utils/geminiAnalyzer.js";
+import { analyzeRisk } from "./utils/analyzeRisk.js";
 import './App.css'
 
 function getAdvice(level, emotion, sentiment){
@@ -34,7 +34,13 @@ function getAdvice(level, emotion, sentiment){
 
 function App() {
   const [inputText, setInputText] = useState("");
-  const [analysis, setAnalysis] = useState(() => { try { return loadAnalysis() || null } catch { return null } });
+  const [analysis, setAnalysis] = useState(null);
+  useEffect(()=>{
+    try{
+      const old = loadAnalysis();
+      if(old && old.text && old.text.trim() && (old.score??0)!== 0) setAnalysis(old);
+    }catch{}
+  },[]);
   const [voiceData, setVoiceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState(() => {
@@ -43,7 +49,7 @@ function App() {
       if(!saved) return [];
       const parsed = JSON.parse(saved);
       return parsed.map(h=>({
-       ...h,
+      ...h,
         riskLevel: typeof h.riskLevel==='string'? h.riskLevel : (h.riskLevel?.level||h.riskLevel?.label||"GREEN"),
         emotion: typeof h.emotion==='string'? h.emotion : (h.emotion?.label||h.emotion?.dominant||"neutral"),
         sentiment: typeof h.sentiment==='string'? h.sentiment : (h.sentiment?.label||"neutral"),
@@ -59,12 +65,45 @@ function App() {
   async function handleAnalyze(){
     if(!inputText.trim()) return;
     setLoading(true);
+    const lower = inputText.toLowerCase();
+    const violenceKeys = ["kill","murder","stab","shoot","hurt him","hurt her","kill him","kill her","want to kill","gonna kill","i will kill","choke","beat him","slit"];
+    const abuseKeys = ["fuck","motherfucker","bitch","bastard","asshole","madarchod","behenchod","chutiya","gandu","randi","saala","bsdk","lavde"];
+
+    // 1. CLIENT HARD FORCE - must be before Gemini
+    if (violenceKeys.some(k=>lower.includes(k))) {
+      const forced = {
+        riskLevel:"RED", level:"RED", score:98, emotion:"angry", sentiment:"negative",
+        reasons:[`violence / homicidal intent detected: ${inputText.slice(0,40)}`],
+        advice:"Intense anger detected. Stop. Breathe. Do not act. Step away and talk to someone now.",
+        isCrisis:true, helpline:"Tele-MANAS 14416 | If you may act, call 112",
+        source:"force-RED-violence", text: inputText, timestamp: new Date().toISOString(), id: Date.now()
+      };
+      const counselingList = getCounselingAdvice(inputText, forced.emotion, forced.riskLevel);
+      const topEmotions = getTopEmotions(inputText);
+      const withTime = {...forced, counseling: counselingList, counselingList, topEmotions, voiceTone: voiceData};
+      setAnalysis(withTime); setHistory(h=>[...h, withTime].slice(-20));
+      try{ saveAnalysis(withTime); }catch{} setInputText(""); setLoading(false); return;
+    }
+
+    if (abuseKeys.some(k=>lower.includes(k))) {
+      const count = abuseKeys.filter(k=>lower.includes(k)).length;
+      const score = count >=2? 55 : 35;
+      const forced = {
+        riskLevel: score>=45?"ORANGE":"YELLOW", level: score>=45?"ORANGE":"YELLOW", score,
+        emotion:"angry", sentiment:"negative",
+        reasons:[`abusive language detected`], advice:"Abuse shows high stress. Pause and rephrase.",
+        isCrisis:false, source:`force-abuse-${score}`, text: inputText, timestamp: new Date().toISOString(), id: Date.now()
+      };
+      const counselingList = getCounselingAdvice(inputText, forced.emotion, forced.riskLevel);
+      const topEmotions = getTopEmotions(inputText);
+      const withTime = {...forced, counseling: counselingList, counselingList, topEmotions, voiceTone: voiceData};
+      setAnalysis(withTime); setHistory(h=>[...h, withTime].slice(-20));
+      try{ saveAnalysis(withTime); }catch{} setInputText(""); setLoading(false); return;
+    }
 
     let result;
     try {
-      // 1. Gemini first (understands "i want to kill him")
       const geminiResult = await analyzeWithGemini(inputText, voiceData);
-
       result = {
         riskLevel: geminiResult.level || geminiResult.riskLevel || "GREEN",
         level: geminiResult.level || "GREEN",
@@ -77,35 +116,16 @@ function App() {
         helpline: geminiResult.helpline || "",
         source: geminiResult.source || "gemini"
       };
-
-      // 2. CLIENT FORCE - never allow GREEN if kill present (your issue fix)
-      const lower = inputText.toLowerCase();
-      if (["kill","murder","stab","shoot","hurt him","hurt her","kill him","kill her","want to kill","gonna kill","i will kill","choke","beat him"].some(k=>lower.includes(k))) {
-        result.riskLevel = "RED";
-        result.level = "RED";
-        result.score = 98;
-        result.emotion = "angry";
-        result.sentiment = "negative";
-        result.isCrisis = true;
-        result.reasons = ["homicidal ideation detected: " + inputText.slice(0,40),...(result.reasons||[])];
-        result.source = "force-RED-violence";
-      }
-
     } catch (e) {
-      // 3. Fallback to old system if Gemini offline
       const fallback = analyzeRisk(inputText);
-      result = fallback;
-      result.source = "fallback-keyword";
+      result = {...fallback, source: "fallback-keyword"};
     }
-
-    if(!result) { setLoading(false); return; }
 
     const counselingList = getCounselingAdvice(inputText, result.emotion, result.riskLevel);
     const topEmotions = getTopEmotions(inputText);
     const withTime = {...result, counseling: counselingList, counselingList, topEmotions, voiceTone: voiceData, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
     setAnalysis(withTime);
-    const newHistory = [...history, withTime].slice(-20);
-    setHistory(newHistory);
+    setHistory(h=>[...h, withTime].slice(-20));
     try{ saveAnalysis(withTime); }catch{}
     setInputText("");
     setLoading(false);
@@ -125,13 +145,13 @@ function App() {
         <section id="center">
           <div><h1>MindGuard - Mental Health Check</h1><p><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line</p></div>
           <div style={{width:"100%",maxWidth:680,marginTop:16}}>
-            <textarea rows={5} value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type a long para... e.g. I am stressed about exams, anxious and overthinking, tired, sad and lonely" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
+            <textarea rows={5} value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type a long para... e.g. I am stressed about exams, anxious and overthinking, tired, sad and lonely" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical", background:"var(--card-bg)", color:"var(--text)"}}/>
             <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
               <button onClick={handleAnalyze} disabled={loading} className="primary-btn" style={{opacity: loading?0.6:1}}>{loading? "Analyzing with Gemini..." : "Analyze (Enter)"}</button>
               <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
               <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);setVoiceData(null);try{localStorage.clear()}catch{}}} className="secondary-btn">Clear All</button>
             </div>
-            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Now powered by Gemini AI. Detects self-harm + violence + 3 emotions + Voice Tone.</div>
+            <div style={{fontSize:12,opacity:.6,marginTop:8, color:"var(--muted)"}}>Now powered by Gemini AI. Detects self-harm + violence + abuse + Voice Tone.</div>
           </div>
 
           {analysis && (
@@ -140,7 +160,7 @@ function App() {
               {analysis.topEmotions && analysis.topEmotions.length > 1 && (
                 <div style={{maxWidth:680, width:"100%", display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", marginTop:12}}>
                   {analysis.topEmotions.map(t=>(
-                    <span key={t.emotion} style={{padding:"6px 12px", borderRadius:20, fontSize:12, fontWeight:700, border:"1px solid var(--border)", background: t.emotion==="anxious"?"#fef9c3":t.emotion==="stressed"?"#ffedd5":t.emotion==="sad"?"#dbeafe":t.emotion==="angry"?"#fee2e2":"#dcfce7"}}>
+                    <span key={t.emotion} style={{padding:"6px 12px", borderRadius:20, fontSize:12, fontWeight:700, border:"1px solid var(--border)", background:"var(--card-bg)", color:"var(--text)"}}>
                       {t.emotion.toUpperCase()} {t.percent}%
                     </span>
                   ))}
@@ -148,24 +168,24 @@ function App() {
               )}
               <MoodChart history={history.length? history : [analysis]} />
               {analysis.voiceTone && (
-                <div style={{maxWidth:680,width:"100%",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:12,marginTop:10, fontSize:13, textAlign:"left"}}>
+                <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:12,marginTop:10, fontSize:13, textAlign:"left", color:"var(--text)"}}>
                   <b>🔊 Last Voice Reading:</b> {analysis.voiceTone.tone} | Pressure: {analysis.voiceTone.pressure}
                 </div>
               )}
-              <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
+              <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left", color:"var(--text)"}}>
                 <strong>💡 Personalized Advice:</strong>
                 <p style={{marginTop:8,lineHeight:1.6}}>{advice}</p>
-                <small style={{opacity:.6}}>Triggers: {(analysis.reasons||[]).join(", ")} | Score: {String(analysis.score)} | Level: {String(analysis.riskLevel)} | Source: {String(analysis.source||"")}</small>
+                <small style={{color:"var(--muted)"}}>Triggers: {(analysis.reasons||[]).join(", ")} | Score: {String(analysis.score)} | Level: {String(analysis.riskLevel)} | Source: {String(analysis.source||"")}</small>
               </div>
               {counselingArray.length > 0 && (
                 <div style={{maxWidth:680,width:"100%",marginTop:16, display:"grid", gap:12}}>
-                  <h3 style={{margin:"4px 0", textAlign:"left"}}>🧠 Recommended Solutions ({counselingArray.length})</h3>
+                  <h3 style={{margin:"4px 0", textAlign:"left", color:"var(--text)"}}>🧠 Recommended Solutions ({counselingArray.length})</h3>
                   {counselingArray.map((c,i)=>(
                     <div key={c.id || i} style={{background:i===0?"#f0fdf4":"var(--card-bg)",border:`1px solid ${i===0?"#bbf7d0":"var(--border)"}`,borderRadius:12,padding:18,textAlign:"left"}}>
-                      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:8}}><h4 style={{margin:0, color:"#166534"}}>{i+1}. {c.technique}</h4><small style={{background:"#e0f2fe", padding:"3px 8px", borderRadius:12, textTransform:"capitalize"}}>{c.emotion}</small></div>
-                      <p style={{lineHeight:1.6, fontSize:14, margin:"8px 0"}}>{c.advice}</p>
-                      <ol style={{margin:"10px 0", paddingLeft:20, fontSize:14}}>{c.steps?.map(s => <li key={s} style={{marginBottom:4}}>{s}</li>)}</ol>
-                      <small style={{color:"#666"}}>Matched: {(c.matchedKeywords||c.keywords||[]).slice(0,3).join(", ")} | Source: {c.source}</small>
+                      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:8}}><h4 style={{margin:0, color:"#166534"}}>{i+1}. {c.technique}</h4><small style={{background:"#e0f2fe", padding:"3px 8px", borderRadius:12, textTransform:"capitalize", color:"#0c4a6e"}}>{c.emotion}</small></div>
+                      <p style={{lineHeight:1.6, fontSize:14, margin:"8px 0", color:"var(--text)"}}>{c.advice}</p>
+                      <ol style={{margin:"10px 0", paddingLeft:20, fontSize:14, color:"var(--text)"}}>{c.steps?.map(s => <li key={s} style={{marginBottom:4}}>{s}</li>)}</ol>
+                      <small style={{color:"var(--muted)"}}>Matched: {(c.matchedKeywords||c.keywords||[]).slice(0,3).join(", ")} | Source: {c.source}</small>
                     </div>
                   ))}
                 </div>
