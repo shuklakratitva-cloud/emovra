@@ -1,4 +1,4 @@
-// src/App.jsx - FIXED: Full UI + Voice Always Visible + 5 Min
+// src/App.jsx - FIXED: Gemini + Violence Detection = RED
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
@@ -8,11 +8,12 @@ import MoodChart from "./components/MoodChart.jsx";
 import Journal from "./components/Journal";
 import GroundingExercises from "./components/GroundingExercises";
 import TeleManas from "./components/TeleManas";
-import { analyzeRisk } from "./utils/analyzeRisk.js";
 import { getCounselingAdvice, getTopEmotions } from "./utils/counselor.js";
 import VoiceToneAnalyzer from "./components/VoiceToneAnalyzer.jsx";
 import { saveAnalysis, loadAnalysis } from "./utils/storage";
 import useSpeechRecognition from "./hooks/useSpeechRecognition";
+import { analyzeWithGemini } from "./utils/geminiAnalyzer.js"; // NEW
+import { analyzeRisk } from "./utils/analyzeRisk.js"; // kept as fallback
 import './App.css'
 
 function getAdvice(level, emotion, sentiment){
@@ -35,13 +36,14 @@ function App() {
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState(() => { try { return loadAnalysis() || null } catch { return null } });
   const [voiceData, setVoiceData] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState(() => {
     try {
       const saved = localStorage.getItem('emovra_history');
       if(!saved) return [];
       const parsed = JSON.parse(saved);
       return parsed.map(h=>({
-        ...h,
+       ...h,
         riskLevel: typeof h.riskLevel==='string'? h.riskLevel : (h.riskLevel?.level||h.riskLevel?.label||"GREEN"),
         emotion: typeof h.emotion==='string'? h.emotion : (h.emotion?.label||h.emotion?.dominant||"neutral"),
         sentiment: typeof h.sentiment==='string'? h.sentiment : (h.sentiment?.label||"neutral"),
@@ -54,10 +56,50 @@ function App() {
   useEffect(()=>{ if(transcript) setInputText(transcript) },[transcript]);
   useEffect(()=>{ try{ localStorage.setItem('emovra_history', JSON.stringify(history)); }catch{} },[history]);
 
-  function handleAnalyze(){
+  async function handleAnalyze(){
     if(!inputText.trim()) return;
-    const result = analyzeRisk(inputText);
-    if(!result) return;
+    setLoading(true);
+
+    let result;
+    try {
+      // 1. Gemini first (understands "i want to kill him")
+      const geminiResult = await analyzeWithGemini(inputText, voiceData);
+
+      result = {
+        riskLevel: geminiResult.level || geminiResult.riskLevel || "GREEN",
+        level: geminiResult.level || "GREEN",
+        score: geminiResult.score || 0,
+        emotion: geminiResult.emotion || "neutral",
+        sentiment: geminiResult.sentiment || "neutral",
+        reasons: geminiResult.reasons || [],
+        advice: geminiResult.advice || "",
+        isCrisis: geminiResult.isCrisis || false,
+        helpline: geminiResult.helpline || "",
+        source: geminiResult.source || "gemini"
+      };
+
+      // 2. CLIENT FORCE - never allow GREEN if kill present (your issue fix)
+      const lower = inputText.toLowerCase();
+      if (["kill","murder","stab","shoot","hurt him","hurt her","kill him","kill her","want to kill","gonna kill","i will kill","choke","beat him"].some(k=>lower.includes(k))) {
+        result.riskLevel = "RED";
+        result.level = "RED";
+        result.score = 98;
+        result.emotion = "angry";
+        result.sentiment = "negative";
+        result.isCrisis = true;
+        result.reasons = ["homicidal ideation detected: " + inputText.slice(0,40),...(result.reasons||[])];
+        result.source = "force-RED-violence";
+      }
+
+    } catch (e) {
+      // 3. Fallback to old system if Gemini offline
+      const fallback = analyzeRisk(inputText);
+      result = fallback;
+      result.source = "fallback-keyword";
+    }
+
+    if(!result) { setLoading(false); return; }
+
     const counselingList = getCounselingAdvice(inputText, result.emotion, result.riskLevel);
     const topEmotions = getTopEmotions(inputText);
     const withTime = {...result, counseling: counselingList, counselingList, topEmotions, voiceTone: voiceData, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
@@ -66,6 +108,7 @@ function App() {
     setHistory(newHistory);
     try{ saveAnalysis(withTime); }catch{}
     setInputText("");
+    setLoading(false);
   }
 
   function handleKeyDown(e){
@@ -84,11 +127,11 @@ function App() {
           <div style={{width:"100%",maxWidth:680,marginTop:16}}>
             <textarea rows={5} value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type a long para... e.g. I am stressed about exams, anxious and overthinking, tired, sad and lonely" style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",resize:"vertical"}}/>
             <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
-              <button onClick={handleAnalyze} className="primary-btn">Analyze (Enter)</button>
+              <button onClick={handleAnalyze} disabled={loading} className="primary-btn" style={{opacity: loading?0.6:1}}>{loading? "Analyzing with Gemini..." : "Analyze (Enter)"}</button>
               <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
               <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);setVoiceData(null);try{localStorage.clear()}catch{}}} className="secondary-btn">Clear All</button>
             </div>
-            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Now supports long paras. Detects up to 3 emotions + 3 solutions + Voice Tone.</div>
+            <div style={{fontSize:12,opacity:.6,marginTop:8}}>Now powered by Gemini AI. Detects self-harm + violence + 3 emotions + Voice Tone.</div>
           </div>
 
           {analysis && (
@@ -112,7 +155,7 @@ function App() {
               <div style={{maxWidth:680,width:"100%",background:"var(--card-bg)",border:"1px solid var(--border)",borderRadius:12,padding:16,marginTop:16,textAlign:"left"}}>
                 <strong>💡 Personalized Advice:</strong>
                 <p style={{marginTop:8,lineHeight:1.6}}>{advice}</p>
-                <small style={{opacity:.6}}>Triggers: {(analysis.reasons||[]).join(", ")} | Score: {String(analysis.score)} | Level: {String(analysis.riskLevel)}</small>
+                <small style={{opacity:.6}}>Triggers: {(analysis.reasons||[]).join(", ")} | Score: {String(analysis.score)} | Level: {String(analysis.riskLevel)} | Source: {String(analysis.source||"")}</small>
               </div>
               {counselingArray.length > 0 && (
                 <div style={{maxWidth:680,width:"100%",marginTop:16, display:"grid", gap:12}}>
