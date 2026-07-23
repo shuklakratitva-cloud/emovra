@@ -2,61 +2,86 @@
 .hero{display:flex;justify-content:center;padding:16px 0}
 .ticks{height:1px;background:var(--border);margin:24px 0;width:100%}
 #spacer{height:40px}
-.primary-btn{padding:10px 20px;background:#aa3bff;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:15px}
-.secondary-btn{padding:10px 18px;border-radius:10px;cursor:pointer;border:1px solid var(--border);background:var(--card-bg,#fff);color:var(--text-h)}
-textarea{font-family:inherit;background:var(--card-bg,#fff);color:var(--text-h)}
-/* === DARK MODE FIX - paste at end of App.css === */
+.primary-btn{padding:10px 20px;background:#7c3aed;color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:700;font-size:13px;transition:0.2s}
+.primary-btn:hover{opacity:0.9;transform:translateY(-1px)}
+.primary-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.secondary-btn{padding:10px 18px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-weight:600;font-size:13px;transition:0.2s}
+.secondary-btn:hover{background:var(--bg)}
+textarea{font-family:inherit;background:var(--card-bg);color:var(--text);border:1px solid var(--border);outline:none}
+textarea:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,0.15)}
+
+/* === THEME VARIABLES - SINGLE SOURCE OF TRUTH === */
 :root {
-  --bg: #f8fafc;
+  --bg: #f8f7ff;
   --card-bg: #ffffff;
-  --text: #1e293b;
-  --border: #e2e8f0;
-  --muted: #64748b;
+  --text: #1a1033;
+  --text-h: #1a1033;
+  --border: #e9d5ff;
+  --muted: #8b7aa8;
 }
 [data-theme="dark"] {
-  --bg: #0f172a;
-  --card-bg: #1e293b;
-  --text: #f1f5f9;
-  --border: #334155;
-  --muted: #94a3b8;
-}
-body, #root { background: var(--bg); color: var(--text); }
-
-/* === DARK MODE FIX - FINAL === */
-:root {
-  --bg: #f8fafc;
-  --card-bg: #ffffff;
-  --text: #1e293b;
-  --border: #e2e8f0;
-  --muted: #64748b;
-}
-[data-theme="dark"] {
-  --bg: #0f172a;
-  --card-bg: #1e293b;
-  --text: #f1f5f9;
-  --border: #334155;
-  --muted: #94a3b8;
-}
-body, #root { background: var(--bg); color: var(--text); }
-
-/* force all white boxes to dark */
-[data-theme="dark"] div[style*="background: white"],
-[data-theme="dark"] div[style*="background:white"],
-[data-theme="dark"] div[style*="background: #ffffff"],
-[data-theme="dark"] div[style*="background:#ffffff"],
-[data-theme="dark"] div[style*="background: var(--card-bg)"] {
-  background: var(--card-bg) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
+  --bg: #0a0015;
+  --card-bg: #1a1033;
+  --text: #e9d5ff;
+  --text-h: #ffffff;
+  --border: #2a1a4a;
+  --muted: #a78bfa;
 }
 
+body, #root { background: var(--bg); color: var(--text); min-height:100vh; margin:0; transition: background 0.2s, color 0.2s; }
+
+/* === FIX: HEADER - NO OVERLAP === */
+.app-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:12px 18px;
+  max-width:900px;
+  margin:0 auto;
+  flex-wrap:wrap;
+  position:sticky;
+  top:0;
+  z-index:100;
+  background:var(--card-bg);
+  border-bottom:1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+/* === FIX: RED ALERT SHOULD NEVER BE OVERRIDDEN BY DARK MODE === */
+.red-alert-box{
+  background:#fee2e2 !important;
+  border:2px solid #ef4444 !important;
+  color:#991b1b !important;
+}
+.red-alert-box a{color:#fff !important}
+[data-theme="dark"] .red-alert-box{
+  background:#fee2e2 !important;
+  color:#991b1b !important;
+}
+[data-theme="dark"] .red-alert-box p,
+[data-theme="dark"] .red-alert-box div,
+[data-theme="dark"] .red-alert-box b,
+[data-theme="dark"] .red-alert-box span{
+  color:#991b1b !important;
+}
+
+/* === DARK MODE - SAFE, NO !important ABUSE === */
 [data-theme="dark"] p,
 [data-theme="dark"] small,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
 [data-theme="dark"] h3,
 [data-theme="dark"] h4,
-[data-theme="dark"] span,
-[data-theme="dark"] li {
-  color: var(--text) !important;
+[data-theme="dark"] li,
+[data-theme="dark"] span:not(.red-alert-box *) {
+  color: var(--text);
 }
 
 [data-theme="dark"] .helpline-box {

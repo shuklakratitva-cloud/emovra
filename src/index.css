@@ -44,8 +44,9 @@ h1, h2, h3, strong {
   padding: 0 20px;
 }
 
-/* Cards - Glass + Premium */
-.card, div[style*="border: 1px solid"] {
+/* Cards - Glass + Premium - BUT NOT AUTH CARD */
+.card, 
+div[style*="border: 1px solid"]:not(.auth-card):not(.red-alert-box) {
   background: var(--card-bg) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
@@ -59,8 +60,8 @@ h1, h2, h3, strong {
   box-shadow: 0 16px 40px rgba(0,0,0,0.1);
 }
 
-/* Buttons - Gradient Premium */
-button {
+/* Buttons - Gradient Premium - BUT PROTECT RED + AUTH + SECONDARY */
+button:not(.no-gradient):not(.red-btn):not(.secondary):not(.logout-btn):not(.view-red-btn) {
   background: linear-gradient(135deg, var(--primary), var(--primary-2)) !important;
   color: white !important;
   border: none !important;
@@ -73,7 +74,7 @@ button {
   transition: all 0.2s ease !important;
 }
 
-button:hover {
+button:not(.no-gradient):not(.red-btn):hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 24px rgba(139,92,246,0.4) !important;
   filter: brightness(1.05);
@@ -81,16 +82,51 @@ button:hover {
 
 button:active { transform: translateY(0); }
 
-/* Secondary buttons (outline) */
-button.secondary {
-  background: transparent !important;
+/* === FIX: Secondary / Logout buttons keep their own colors === */
+button.secondary,
+button.logout-btn,
+button.view-red-btn {
+  background: var(--card-bg) !important;
   color: var(--text) !important;
   border: 1px solid var(--border) !important;
   box-shadow: none !important;
+  border-radius: 999px !important;
+}
+
+/* === FIX: RED ALERT BUTTONS STAY RED - NEVER PURPLE === */
+.red-alert-box,
+.red-alert-box * {
+  color: #991b1b !important;
+}
+button.red-btn,
+a.red-btn,
+.red-alert-box button,
+.red-alert-box a {
+  background: #dc2626 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* === FIX: AUTH CARD STAYS DARK WITH WHITE TEXT === */
+.auth-card,
+.auth-card h1,
+.auth-card p,
+.auth-card label {
+  color: #ffffff !important;
+}
+.auth-card input {
+  background: #2a1b4d !important;
+  color: #fff !important;
+  border: 1px solid #4c1d95 !important;
+}
+.auth-card input::placeholder {
+  color: #a78bfa !important;
 }
 
 /* Inputs */
-textarea, input {
+textarea, input:not(.auth-card input) {
   background: var(--card-bg);
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
