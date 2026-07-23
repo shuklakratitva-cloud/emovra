@@ -10,6 +10,7 @@
   --primary-2: #6366f1;
   --shadow: 0 10px 30px rgba(0,0,0,0.06);
   --radius: 16px;
+  color-scheme: light dark;
 }
 
 [data-theme="dark"] {
@@ -60,7 +61,7 @@ div[style*="border: 1px solid"]:not(.auth-card):not(.red-alert-box) {
   box-shadow: 0 16px 40px rgba(0,0,0,0.1);
 }
 
-/* Buttons - Gradient Premium - BUT PROTECT RED + AUTH + SECONDARY */
+/* Buttons - Gradient Premium - PROTECTED */
 button:not(.no-gradient):not(.red-btn):not(.secondary):not(.logout-btn):not(.view-red-btn) {
   background: linear-gradient(135deg, var(--primary), var(--primary-2)) !important;
   color: white !important;
@@ -79,10 +80,8 @@ button:not(.no-gradient):not(.red-btn):hover {
   box-shadow: 0 10px 24px rgba(139,92,246,0.4) !important;
   filter: brightness(1.05);
 }
-
 button:active { transform: translateY(0); }
 
-/* === FIX: Secondary / Logout buttons keep their own colors === */
 button.secondary,
 button.logout-btn,
 button.view-red-btn {
@@ -93,7 +92,7 @@ button.view-red-btn {
   border-radius: 999px !important;
 }
 
-/* === FIX: RED ALERT BUTTONS STAY RED - NEVER PURPLE === */
+/* RED ALERT STAYS RED */
 .red-alert-box,
 .red-alert-box * {
   color: #991b1b !important;
@@ -109,7 +108,7 @@ a.red-btn,
   box-shadow: none !important;
 }
 
-/* === FIX: AUTH CARD STAYS DARK WITH WHITE TEXT === */
+/* AUTH CARD DARK */
 .auth-card,
 .auth-card h1,
 .auth-card p,
@@ -134,14 +133,15 @@ textarea, input:not(.auth-card input) {
   font-family: 'Inter', sans-serif;
   transition: border-color 0.2s;
 }
-
+textarea::placeholder, input::placeholder {
+  color: var(--muted) !important;
+}
 textarea:focus, input:focus {
   outline: none;
   border-color: var(--primary) !important;
   box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
 }
 
-/* Footer - Fix Visibility */
 footer {
   background: var(--card-bg);
   border-top: 1px solid var(--border);
@@ -153,11 +153,9 @@ footer {
   opacity: 1 !important;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
 [data-theme="dark"] ::-webkit-scrollbar-thumb { background: #334155; }
 
-/* Animations */
 @keyframes fadeIn { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:translateY(0);} }
 .card { animation: fadeIn 0.4s ease both; }
