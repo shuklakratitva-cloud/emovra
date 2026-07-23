@@ -38,16 +38,11 @@ h1, h2, h3, strong {
   letter-spacing: -0.02em;
 }
 
-/* Layout */
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
+.container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
 
-/* Cards - Glass + Premium - BUT NOT AUTH CARD */
-.card, 
-div[style*="border: 1px solid"]:not(.auth-card):not(.red-alert-box) {
+/* === CARDS - NEVER HIT AUTH === */
+.card,
+div[style*="border: 1px solid"]:not(.auth-card):not(#auth-card-fix):not(.red-alert-box):not(#auth-card-fix *) {
   background: var(--card-bg) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
@@ -55,14 +50,10 @@ div[style*="border: 1px solid"]:not(.auth-card):not(.red-alert-box) {
   backdrop-filter: blur(12px);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+.card:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(0,0,0,0.1); }
 
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.1);
-}
-
-/* Buttons - Gradient Premium - PROTECTED */
-button:not(.no-gradient):not(.red-btn):not(.secondary):not(.logout-btn):not(.view-red-btn) {
+/* Buttons */
+button:not(.no-gradient):not(.red-btn):not(.secondary):not(.logout-btn):not(.view-red-btn):not(.auth-btn) {
   background: linear-gradient(135deg, var(--primary), var(--primary-2)) !important;
   color: white !important;
   border: none !important;
@@ -74,17 +65,10 @@ button:not(.no-gradient):not(.red-btn):not(.secondary):not(.logout-btn):not(.vie
   box-shadow: 0 6px 16px rgba(139,92,246,0.3);
   transition: all 0.2s ease !important;
 }
-
-button:not(.no-gradient):not(.red-btn):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(139,92,246,0.4) !important;
-  filter: brightness(1.05);
-}
+button:not(.no-gradient):not(.red-btn):hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(139,92,246,0.4) !important; filter: brightness(1.05); }
 button:active { transform: translateY(0); }
 
-button.secondary,
-button.logout-btn,
-button.view-red-btn {
+button.secondary, button.logout-btn, button.view-red-btn {
   background: var(--card-bg) !important;
   color: var(--text) !important;
   border: 1px solid var(--border) !important;
@@ -92,70 +76,47 @@ button.view-red-btn {
   border-radius: 999px !important;
 }
 
-/* RED ALERT STAYS RED */
-.red-alert-box,
-.red-alert-box * {
-  color: #991b1b !important;
-}
-button.red-btn,
-a.red-btn,
-.red-alert-box button,
-.red-alert-box a {
-  background: #dc2626 !important;
-  background-image: none !important;
-  color: #ffffff !important;
-  border: none !important;
-  box-shadow: none !important;
+/* RED STAYS RED */
+.red-alert-box, .red-alert-box * { color: #991b1b !important; }
+button.red-btn, a.red-btn, .red-alert-box button, .red-alert-box a {
+  background: #dc2626 !important; background-image: none !important; color: #ffffff !important; border: none !important; box-shadow: none !important;
 }
 
-/* AUTH CARD DARK */
-.auth-card,
-.auth-card h1,
-.auth-card p,
-.auth-card label {
-  color: #ffffff !important;
+/* === AUTH CARD - MAX SPECIFICITY WITH ID === */
+#auth-card-fix {
+  background: #1a1033 !important;
+  background-color: #1a1033 !important;
+  border: 1px solid #4c1d95 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6) !important;
 }
-.auth-card input {
+#auth-card-fix h1 { color: #ffffff !important; }
+#auth-card-fix label { color: #e9d5ff !important; }
+#auth-card-fix p, #auth-card-fix span { color: #a78bfa !important; }
+#auth-card-fix input {
   background: #2a1b4d !important;
+  background-color: #2a1b4d !important;
   color: #fff !important;
   border: 1px solid #4c1d95 !important;
 }
-.auth-card input::placeholder {
-  color: #a78bfa !important;
+#auth-card-fix input::placeholder { color: #a78bfa !important; }
+#auth-card-fix .auth-btn {
+  background: linear-gradient(90deg,#7c3aed,#a855f7) !important;
+  color: #fff !important;
+  border: none !important;
 }
 
-/* Inputs */
-textarea, input:not(.auth-card input) {
+/* Inputs outside auth */
+textarea, input:not(#auth-card-fix input) {
   background: var(--card-bg);
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
   color: var(--text) !important;
-  font-family: 'Inter', sans-serif;
-  transition: border-color 0.2s;
 }
-textarea::placeholder, input::placeholder {
-  color: var(--muted) !important;
-}
-textarea:focus, input:focus {
-  outline: none;
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
-}
+textarea::placeholder, input::placeholder { color: var(--muted) !important; }
+textarea:focus, input:focus { outline: none; border-color: var(--primary) !important; box-shadow: 0 0 0 3px rgba(139,92,246,0.15); }
 
-footer {
-  background: var(--card-bg);
-  border-top: 1px solid var(--border);
-  margin-top: 60px !important;
-  padding: 32px 20px !important;
-  color: var(--muted) !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
+footer { background: var(--card-bg); border-top: 1px solid var(--border); margin-top: 60px !important; padding: 32px 20px !important; color: var(--muted) !important; display: block !important; }
 
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
-[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #334155; }
-
-@keyframes fadeIn { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:translateY(0);} }
-.card { animation: fadeIn 0.4s ease both; }
+::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; } [data-theme="dark"] ::-webkit-scrollbar-thumb { background: #334155; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:translateY(0);} } .card { animation: fadeIn 0.4s ease both; }
