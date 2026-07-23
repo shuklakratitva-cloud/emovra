@@ -1,10 +1,10 @@
-// src/App.jsx - FINAL FIXED: All features + Gemini + Violence + Abuse + Dark Mode
+// src/App.jsx - FINAL CONNECTED TO MONGODB + GEMINI + AUTH - FIXED
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useState, useEffect } from 'react'
 import ThemeToggle from "./components/ThemeToggle";
 import RiskCard from "./components/RiskCard";
 import MoodTracker from "./components/MoodTracker";
-import MoodChart from "./components/MoodChart.jsx";
+import MoodChart from "./components/MoodChart";
 import Journal from "./components/Journal";
 import GroundingExercises from "./components/GroundingExercises";
 import TeleManas from "./components/TeleManas";
@@ -14,7 +14,10 @@ import { saveAnalysis, loadAnalysis } from "./utils/storage";
 import useSpeechRecognition from "./hooks/useSpeechRecognition";
 import { analyzeWithGemini } from "./utils/geminiAnalyzer.js";
 import { analyzeRisk } from "./utils/analyzeRisk.js";
+import Auth from "./components/Auth.jsx";
 import './App.css'
+
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 function getAdvice(level, emotion, sentiment){
   const emo = String(emotion || "").toLowerCase();
@@ -35,12 +38,7 @@ function getAdvice(level, emotion, sentiment){
 function App() {
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState(null);
-  useEffect(()=>{
-    try{
-      const old = loadAnalysis();
-      if(old && old.text && old.text.trim() && (old.score??0)!== 0) setAnalysis(old);
-    }catch{}
-  },[]);
+  const [user, setUser] = useState(()=>{ try{ return JSON.parse(localStorage.getItem('user')) }catch{ return null } });
   const [voiceData, setVoiceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState(() => {
@@ -49,7 +47,7 @@ function App() {
       if(!saved) return [];
       const parsed = JSON.parse(saved);
       return parsed.map(h=>({
-      ...h,
+    ...h,
         riskLevel: typeof h.riskLevel==='string'? h.riskLevel : (h.riskLevel?.level||h.riskLevel?.label||"GREEN"),
         emotion: typeof h.emotion==='string'? h.emotion : (h.emotion?.label||h.emotion?.dominant||"neutral"),
         sentiment: typeof h.sentiment==='string'? h.sentiment : (h.sentiment?.label||"neutral"),
@@ -59,8 +57,36 @@ function App() {
   });
 
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
+
+  useEffect(()=>{
+    try{
+      const old = loadAnalysis();
+      if(old && old.text && old.text.trim() && (old.score??0)!== 0) setAnalysis(old);
+      const token = localStorage.getItem('token');
+      if(token){
+        fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` }})
+        .then(r=>{ if(!r.ok) throw new Error("auth"); return r.json() })
+        .then(data=>{
+            if(Array.isArray(data) && data.length) setHistory(data.reverse().slice(-20));
+          }).catch(()=>{})
+      }
+    }catch{}
+  },[]);
+
   useEffect(()=>{ if(transcript) setInputText(transcript) },[transcript]);
   useEffect(()=>{ try{ localStorage.setItem('emovra_history', JSON.stringify(history)); }catch{} },[history]);
+
+  async function saveToBackend(entry){
+    const token = localStorage.getItem('token');
+    if(!token) return;
+    try{
+      await fetch(`${API}/data/save`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(entry)
+      });
+    }catch(e){ console.log("Backend save failed", e.message) }
+  }
 
   async function handleAnalyze(){
     if(!inputText.trim()) return;
@@ -69,7 +95,6 @@ function App() {
     const violenceKeys = ["kill","murder","stab","shoot","hurt him","hurt her","kill him","kill her","want to kill","gonna kill","i will kill","choke","beat him","slit"];
     const abuseKeys = ["fuck","motherfucker","bitch","bastard","asshole","madarchod","behenchod","chutiya","gandu","randi","saala","bsdk","lavde"];
 
-    // 1. CLIENT HARD FORCE - must be before Gemini
     if (violenceKeys.some(k=>lower.includes(k))) {
       const forced = {
         riskLevel:"RED", level:"RED", score:98, emotion:"angry", sentiment:"negative",
@@ -82,7 +107,8 @@ function App() {
       const topEmotions = getTopEmotions(inputText);
       const withTime = {...forced, counseling: counselingList, counselingList, topEmotions, voiceTone: voiceData};
       setAnalysis(withTime); setHistory(h=>[...h, withTime].slice(-20));
-      try{ saveAnalysis(withTime); }catch{} setInputText(""); setLoading(false); return;
+      try{ saveAnalysis(withTime); }catch{} saveToBackend(withTime);
+      setInputText(""); setLoading(false); return;
     }
 
     if (abuseKeys.some(k=>lower.includes(k))) {
@@ -98,7 +124,8 @@ function App() {
       const topEmotions = getTopEmotions(inputText);
       const withTime = {...forced, counseling: counselingList, counselingList, topEmotions, voiceTone: voiceData};
       setAnalysis(withTime); setHistory(h=>[...h, withTime].slice(-20));
-      try{ saveAnalysis(withTime); }catch{} setInputText(""); setLoading(false); return;
+      try{ saveAnalysis(withTime); }catch{} saveToBackend(withTime);
+      setInputText(""); setLoading(false); return;
     }
 
     let result;
@@ -126,7 +153,7 @@ function App() {
     const withTime = {...result, counseling: counselingList, counselingList, topEmotions, voiceTone: voiceData, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
     setAnalysis(withTime);
     setHistory(h=>[...h, withTime].slice(-20));
-    try{ saveAnalysis(withTime); }catch{}
+    try{ saveAnalysis(withTime); }catch{} saveToBackend(withTime);
     setInputText("");
     setLoading(false);
   }
@@ -138,10 +165,18 @@ function App() {
   const advice = analysis? getAdvice(analysis.riskLevel, analysis.emotion, analysis.sentiment) : "";
   const counselingArray = Array.isArray(analysis?.counseling)? analysis.counseling : (analysis?.counseling? [analysis.counseling] : []);
 
+  if(!user){
+    return <Auth onLogin={(u)=>{ setUser(u); localStorage.setItem('user', JSON.stringify(u)) }} API={API} />
+  }
+
   return (
     <ErrorBoundary>
       <>
         <ThemeToggle />
+        <div style={{position:"absolute", top:12, right:80, fontSize:12, opacity:.7}}>
+          {user? `Hi, ${user.name} | Emergency: ${user.emergencyPhone || ''} ` : ''}
+          {user && <button onClick={()=>{localStorage.clear(); location.reload()}} style={{marginLeft:8, cursor:"pointer"}}>Logout</button>}
+        </div>
         <section id="center">
           <div><h1>MindGuard - Mental Health Check</h1><p><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line</p></div>
           <div style={{width:"100%",maxWidth:680,marginTop:16}}>
@@ -149,9 +184,9 @@ function App() {
             <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"center",flexWrap:"wrap"}}>
               <button onClick={handleAnalyze} disabled={loading} className="primary-btn" style={{opacity: loading?0.6:1}}>{loading? "Analyzing with Gemini..." : "Analyze (Enter)"}</button>
               <button onClick={()=>listening?stopListening():startListening("en-IN")} className="secondary-btn">{listening?"Stop Listening":"🎙 Speak"}</button>
-              <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);setVoiceData(null);try{localStorage.clear()}catch{}}} className="secondary-btn">Clear All</button>
+              <button onClick={()=>{setInputText("");setAnalysis(null);setHistory([]);setVoiceData(null);try{localStorage.removeItem('emovra_history')}catch{}}} className="secondary-btn">Clear All</button>
             </div>
-            <div style={{fontSize:12,opacity:.6,marginTop:8, color:"var(--muted)"}}>Now powered by Gemini AI. Detects self-harm + violence + abuse + Voice Tone.</div>
+            <div style={{fontSize:12,opacity:.6,marginTop:8, color:"var(--muted)"}}>Now powered by Gemini AI + MongoDB. Detects self-harm + violence + abuse + Voice Tone.</div>
           </div>
 
           {analysis && (
