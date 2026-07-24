@@ -6,15 +6,11 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
 import alertRoutes from "./routes/alerts.js";
-import adminRoutes from "./routes/admin.js"; // <-- NEW
+import adminRoutes from "./routes/admin.js";
+import emotionRoutes from "./routes/emotion.js"; // <-- NEW AI ROUTE
 
 dotenv.config();
-
 const app = express();
-
-/* -----------------------------
-   Middleware
------------------------------- */
 
 app.use(
   cors({
@@ -31,25 +27,17 @@ app.use(
 
 app.use(express.json());
 
-/* -----------------------------
-   MongoDB Connection
------------------------------- */
-
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => {
+ .connect(process.env.MONGO_URI)
+ .then(() => console.log("✅ MongoDB connected"))
+ .catch((err) => {
     console.error("❌ MongoDB Connection Error");
     console.error(err);
     process.exit(1);
   });
 
-/* -----------------------------
-   Routes
------------------------------- */
-
 app.get("/", (req, res) => {
-  res.send("MindGuard Backend Running");
+  res.send("MindGuard Backend Running - AI Enabled");
 });
 
 app.get("/api", (req, res) => {
@@ -57,44 +45,26 @@ app.get("/api", (req, res) => {
     success: true,
     name: "MindGuard API",
     version: "1.0.0",
-    status: "Running - Admin enabled",
+    status: "Running - Admin + AI enabled",
   });
 });
 
 app.use("/api/auth", authRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/alerts", alertRoutes);
-app.use("/api/admin", adminRoutes); // <-- NEW: Only you can access
-
-/* -----------------------------
-   404 Handler
------------------------------- */
+app.use("/api/admin", adminRoutes);
+app.use("/api/emotion", emotionRoutes); // <-- NEW
 
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "API Route Not Found",
-  });
+  res.status(404).json({ success: false, message: "API Route Not Found" });
 });
-
-/* -----------------------------
-   Global Error Handler
------------------------------- */
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
+  res.status(500).json({ success: false, message: err.message || "Internal Server Error" });
 });
 
-/* -----------------------------
-   Server
------------------------------- */
-
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT} with AI`);
 });
