@@ -1,23 +1,37 @@
 import express from "express";
-import { authMiddleware } from "../middleware/auth.js";
+import Entry from "../models/Entry.js";
+import User from "../models/User.js";
+import { auth } from "../middleware/auth.js";
 import { isAdmin } from "../middleware/isAdmin.js";
-import Data from "../models/Data.js";
 
 const router = express.Router();
 
-// GET all RED alerts with participant info - PRIVATE
-router.get("/red-codes", authMiddleware, isAdmin, async (req, res) => {
-  const reds = await Data.find({ $or: [{ riskLevel: "RED" }, { level: "RED" }] })
-    .populate("user", "name email phone emergencyPhone emergency_phone")
+// GET /api/admin/reds - THIS IS THE CODE YOU ASKED
+router.get("/reds", auth, isAdmin, async (req, res) => {
+  try {
+    // Find all critical entries with user data
+    const reds = await Entry.find({ 
+      $or: [
+        { isCritical: true }, 
+        { level: { $gte: 85 } }, 
+        { triggers: { $exists: true, $ne: [] } }
+      ]
+    })
+    .populate("userId", "name email age emergencyPhone role")
     .sort({ createdAt: -1 })
     .limit(100);
-  res.json({ success: true, count: reds.length, data: reds });
+
+    res.json(reds);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: err.message });
+  }
 });
 
-// Clear / resolve a RED code
-router.delete("/red-codes/:id", authMiddleware, isAdmin, async (req, res) => {
-  await Data.findByIdAndDelete(req.params.id);
-  res.json({ success: true, message: "RED code cleared" });
+// Optional: get all users
+router.get("/users", auth, isAdmin, async (req, res) => {
+  const users = await User.find().select("-password").sort({ createdAt: -1 });
+  res.json(users);
 });
 
 export default router;
