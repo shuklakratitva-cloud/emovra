@@ -1,41 +1,50 @@
-const express = require("express");
+import express from "express";
+
+import {
+  createAlert,
+  getRedAlert,
+  clearAlert,
+  callSOS,
+  getAlertHistory,
+} from "../controllers/alertController.js";
+
+import { protect } from "../middleware/auth.js";
+
 const router = express.Router();
-const Alert = require("../models/Alert");
-const auth = require("../middleware/auth"); // your existing auth middleware
 
-// POST /api/alerts/red - called automatically when RED detected
-router.post("/red", auth, async (req,res)=>{
-  try{
-    const { text, score, reasons, riskLevel } = req.body;
-    const user = req.user; // from your auth middleware
-    const alert = await Alert.create({
-      userId: user._id || user.id,
-      name: user.name,
-      age: user.age,
-      emergencyPhone: user.emergencyPhone,
-      text, score, reasons, riskLevel: riskLevel||"RED",
-      ip: req.ip
-    });
-    console.log("🚨 RED ALERT SAVED:", alert.name, alert.text.slice(0,50));
-    res.json({ ok:true, id: alert._id });
-  }catch(e){ res.status(500).json({msg:e.message}) }
-});
+/* =====================================
+   Create Alert
+   POST /api/alerts
+===================================== */
 
-// GET /api/alerts/all - for admin to see
-router.get("/all", auth, async (req,res)=>{
-  const alerts = await Alert.find({cleared:false}).sort({timestamp:-1}).limit(100);
-  res.json(alerts);
-});
+router.post("/", protect, createAlert);
 
-// DELETE /api/alerts/clear - clear all after you check
-router.delete("/clear", auth, async (req,res)=>{
-  await Alert.updateMany({cleared:false}, {cleared:true});
-  res.json({ok:true, msg:"All cleared"});
-});
+/* =====================================
+   Get Current Active Alert
+   GET /api/alerts/red
+===================================== */
 
-router.delete("/:id", auth, async (req,res)=>{
-  await Alert.findByIdAndUpdate(req.params.id, {cleared:true});
-  res.json({ok:true});
-});
+router.get("/red", protect, getRedAlert);
 
-module.exports = router;
+/* =====================================
+   Alert History
+   GET /api/alerts/history
+===================================== */
+
+router.get("/history", protect, getAlertHistory);
+
+/* =====================================
+   Call SOS
+   POST /api/alerts/call/:id
+===================================== */
+
+router.post("/call/:id", protect, callSOS);
+
+/* =====================================
+   Clear Alert
+   PATCH /api/alerts/clear/:id
+===================================== */
+
+router.patch("/clear/:id", protect, clearAlert);
+
+export default router;
