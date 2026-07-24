@@ -5,9 +5,9 @@ import dotenv from "dotenv";
 
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
-import alertRoutes from "./routes/alert.js"; // FIXED: was alerts.js -> now alert.js
-import adminRoutes from "./routes/admin.js";
-import emotionRoutes from "./routes/emotion.js"; // AI route
+import alertRoutes from "./routes/alert.js";
+import emotionRoutes from "./routes/emotion.js";
+// import adminRoutes from "./routes/admin.js"; // TEMP DISABLED - will fix after Live
 
 dotenv.config();
 const app = express();
@@ -45,15 +45,15 @@ app.get("/api", (req, res) => {
     success: true,
     name: "MindGuard API",
     version: "1.0.0",
-    status: "Running - Admin + AI enabled",
+    status: "Running - AI enabled, Admin temp disabled",
   });
 });
 
 app.use("/api/auth", authRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/alerts", alertRoutes);
-app.use("/api/admin", adminRoutes);
 app.use("/api/emotion", emotionRoutes);
+// app.use("/api/admin", adminRoutes); // TEMP DISABLED
 
 app.use((req, res) => {
   res.status(404).json({
@@ -70,7 +70,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// FIXED PORT BINDING FOR RENDER
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
