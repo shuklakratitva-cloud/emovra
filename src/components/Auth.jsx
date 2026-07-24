@@ -1,5 +1,5 @@
 import { useState } from "react";
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API = import.meta.env.VITE_API_URL || "https://emovra.onrender.com/api";
 
 export default function Auth({ onAuth, onLogin }) {
   const [isSignup, setIsSignup] = useState(false);
