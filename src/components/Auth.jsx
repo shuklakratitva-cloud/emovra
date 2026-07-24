@@ -20,9 +20,10 @@ export default function Auth({ onAuth }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const url = isSignup 
-        ? "https://emovra.onrender.com/api/auth/register"
-        : "https://emovra.onrender.com/api/auth/login";
+      // FIXED: backend route is /signup and /login, not /register
+      // Also using your deployed backend URL
+      const BASE_URL = "https://emovra.onrender.com/api/auth";
+      const url = isSignup ? `${BASE_URL}/signup` : `${BASE_URL}/login`;
       
       const payload = isSignup ? form : { email: form.email, password: form.password };
       
@@ -31,7 +32,9 @@ export default function Auth({ onAuth }) {
       localStorage.setItem("user", JSON.stringify(res.data.user));
       onAuth(res.data.user);
     } catch (err) {
-      alert(err.response?.data?.msg || "Error");
+      console.log("Full error:", err.response);
+      // Show real error message instead of just "Error"
+      alert(err.response?.data?.msg || err.response?.data?.message || err.message || "Server Error - check if backend is awake");
     } finally {
       setLoading(false);
     }
@@ -43,22 +46,22 @@ export default function Auth({ onAuth }) {
       
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "20px" }}>
         {isSignup && (
-          <input name="name" placeholder="Enter your full name" value={form.name} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px" }} />
+          <input name="name" placeholder="Enter your full name" value={form.name} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
         )}
         
-        <input name="email" type="email" placeholder="Enter your email" value={form.email} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px" }} />
+        <input name="email" type="email" placeholder="Enter your email" value={form.email} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
         
         {isSignup && (
           <>
-            <input name="age" type="number" placeholder="Enter your age" value={form.age} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px" }} />
-            <input name="emergencyPhone" placeholder="For SOS help" value={form.emergencyPhone} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px" }} />
+            <input name="age" type="number" placeholder="Enter your age" value={form.age} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
+            <input name="emergencyPhone" placeholder="For SOS help" value={form.emergencyPhone} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
           </>
         )}
         
-        <input name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px" }} />
+        <input name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
         
         <button type="submit" disabled={loading} style={{ padding: "12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
-          {loading ? "Loading..." : isSignup ? "Sign Up" : "Sign In"}
+          {loading ? "Waking up server... wait 30s" : isSignup ? "Sign Up" : "Sign In"}
         </button>
       </form>
       
