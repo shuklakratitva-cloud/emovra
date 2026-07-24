@@ -6,8 +6,8 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
 import alertRoutes from "./routes/alert.js";
+import adminRoutes from "./routes/admin.js";
 import emotionRoutes from "./routes/emotion.js";
-// import adminRoutes from "./routes/admin.js"; // TEMP DISABLED - will fix after Live
 
 dotenv.config();
 const app = express();
@@ -45,15 +45,15 @@ app.get("/api", (req, res) => {
     success: true,
     name: "MindGuard API",
     version: "1.0.0",
-    status: "Running - AI enabled, Admin temp disabled",
+    status: "Running - Admin + AI enabled",
   });
 });
 
 app.use("/api/auth", authRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/alerts", alertRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/emotion", emotionRoutes);
-// app.use("/api/admin", adminRoutes); // TEMP DISABLED
 
 app.use((req, res) => {
   res.status(404).json({

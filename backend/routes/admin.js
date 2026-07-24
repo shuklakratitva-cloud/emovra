@@ -1,15 +1,14 @@
 import express from "express";
 import Entry from "../models/Entry.js";
 import User from "../models/User.js";
-import { authenticate as auth } from "../middleware/auth.js";
+import { protect as auth } from "../middleware/auth.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 
 const router = express.Router();
 
-// GET /api/admin/reds - THIS IS THE CODE YOU ASKED
+// GET /api/admin/reds - Admin sees all RED critical alerts
 router.get("/reds", auth, isAdmin, async (req, res) => {
   try {
-    // Find all critical entries with user data
     const reds = await Entry.find({ 
       $or: [
         { isCritical: true }, 
@@ -28,10 +27,14 @@ router.get("/reds", auth, isAdmin, async (req, res) => {
   }
 });
 
-// Optional: get all users
+// GET /api/admin/users - Admin sees all users
 router.get("/users", auth, isAdmin, async (req, res) => {
-  const users = await User.find().select("-password").sort({ createdAt: -1 });
-  res.json(users);
+  try {
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
 });
 
 export default router;
