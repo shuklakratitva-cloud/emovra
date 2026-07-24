@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
 import alertRoutes from "./routes/alerts.js";
+import adminRoutes from "./routes/admin.js"; // <-- NEW
 
 dotenv.config();
 
@@ -56,15 +57,14 @@ app.get("/api", (req, res) => {
     success: true,
     name: "MindGuard API",
     version: "1.0.0",
-    status: "Running",
+    status: "Running - Admin enabled",
   });
 });
 
 app.use("/api/auth", authRoutes);
-
 app.use("/api/data", dataRoutes);
-
 app.use("/api/alerts", alertRoutes);
+app.use("/api/admin", adminRoutes); // <-- NEW: Only you can access
 
 /* -----------------------------
    404 Handler
@@ -83,7 +83,6 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-
   res.status(500).json({
     success: false,
     message: err.message || "Internal Server Error",
