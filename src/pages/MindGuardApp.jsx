@@ -20,10 +20,10 @@ const API = import.meta.env.VITE_API_URL || "https://emovra.onrender.com/api";
 
 function getAdvice(level){
   const lvl = String(level||"").toUpperCase();
-  if(lvl==="GREEN") return "You're in a stable range. Maintain healthy habits.";
-  if(lvl==="YELLOW") return "Slight stress detected. Try Box Breathing 4-4-4-4.";
-  if(lvl==="ORANGE") return "Please talk to a trusted friend or counselor.";
-  return "You matter. Call Tele-MANAS 14416 right now.";
+  if(lvl==="GREEN") return "You're in a stable range. Maintain healthy habits and keep journaling.";
+  if(lvl==="YELLOW") return "Slight stress detected. Try Box Breathing 4-4-4-4 for 2 minutes.";
+  if(lvl==="ORANGE") return "High stress detected. Please talk to a trusted friend or counselor today.";
+  return "You matter a lot. Please call Tele-MANAS 14416 or your SOS contact right now.";
 }
 
 export default function MindGuardApp() {
@@ -48,9 +48,9 @@ export default function MindGuardApp() {
       const token=localStorage.getItem('token');
       if(token){
         fetch(`${API}/data/my`,{headers:{Authorization:`Bearer ${token}`}})
-       .then(r=>{if(!r.ok)throw new Error();return r.json()})
-       .then(d=>{if(Array.isArray(d)&&d.length)setHistory(d.reverse().slice(-20))})
-       .catch(()=>{})
+      .then(r=>{if(!r.ok)throw new Error();return r.json()})
+      .then(d=>{if(Array.isArray(d)&&d.length)setHistory(d.reverse().slice(-20))})
+      .catch(()=>{})
       }
     }catch{}
   },[]);
@@ -60,6 +60,14 @@ export default function MindGuardApp() {
   async function saveToBackend(entry){
     const t=localStorage.getItem('token'); if(!t) return;
     try{ await fetch(`${API}/data/save`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${t}`},body:JSON.stringify(entry)}) }catch(e){console.log(e.message)}
+  }
+
+  function handleLogout(){
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('emovra_history');
+    setUser(null);
+    navigate("/", { replace: true });
   }
 
   async function handleAnalyze(){
@@ -93,40 +101,68 @@ export default function MindGuardApp() {
 
   return (
     <>
-      <div className="app-header" style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:"12px 18px",maxWidth:900,margin:"0 auto",flexWrap:"wrap",position:"sticky",top:0,zIndex:100,background:"var(--card-bg)",borderBottom:"1px solid var(--border)"}}>
-        <div style={{fontWeight:900,fontSize:18,color:"var(--text)"}}>MindGuard</div>
+      <div className="app-header" style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:"14px 20px",maxWidth:900,margin:"0 auto",flexWrap:"wrap",position:"sticky",top:0,zIndex:100,background:"var(--card-bg)",borderBottom:"1px solid var(--border)",backdropFilter:"blur(10px)"}}>
+        <div onClick={()=>navigate("/")} style={{fontWeight:900,fontSize:20,color:"var(--text)",cursor:"pointer",letterSpacing:"-0.5px"}}>MindGuard 🧠</div>
         <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <span style={{fontSize:11,opacity:0.7,color:"var(--text)"}}>Hi, {user.name} {isAdmin && "👑"} | SOS: {user.emergencyPhone}</span>
-          {isAdmin && <button onClick={()=>navigate("/admin")} style={{padding:"6px 10px",borderRadius:20,border:"none",background:"#7c3aed",color:"#fff",cursor:"pointer",fontSize:11,fontWeight:700}}>👑 Admin REDs</button>}
-          <button onClick={()=>{localStorage.clear(); location.reload()}} style={{padding:"6px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--card-bg)",color:"var(--text)",cursor:"pointer",fontSize:12,fontWeight:700}}>Logout</button>
+          <span style={{fontSize:12,opacity:0.7,color:"var(--text)"}}>Hi, {user.name} {isAdmin && "👑"} | SOS: {user.emergencyPhone}</span>
+          {isAdmin && <button onClick={()=>navigate("/admin")} style={{padding:"6px 12px",borderRadius:20,border:"none",background:"#7c3aed",color:"#fff",cursor:"pointer",fontSize:11,fontWeight:700}}>👑 Admin REDs</button>}
           <ThemeToggle />
+          <button onClick={handleLogout} style={{padding:"7px 14px",borderRadius:20,border:"none",background:"#ef4444",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:700}}>Logout</button>
         </div>
       </div>
 
-      <div style={{maxWidth:720,margin:"18px auto",padding:"0 16px"}}>
-        <p style={{fontSize:12,opacity:0.6,color:"var(--muted)"}}><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line</p>
-        <textarea rows={5} value={inputText} onChange={e=>setInputText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); handleAnalyze()}}} placeholder="Type here..." style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",background:"var(--card-bg)",color:"var(--text)",resize:"vertical"}} />
-        <div style={{display:"flex",gap:10,marginTop:10,justifyContent:"center",flexWrap:"wrap"}}>
-          <button onClick={handleAnalyze} disabled={loading} style={{padding:"10px 18px",borderRadius:20,border:"none",background:"linear-gradient(135deg,#8b5cf6,#6366f1)",color:"#fff",fontWeight:800}}>{loading?"Analyzing...":"Analyze (Enter)"}</button>
-          <button onClick={()=>listening?stopListening():startListening()} style={{padding:"10px 18px",borderRadius:20}}>🎙 {listening?"Stop":"Speak"}</button>
-          <button onClick={()=>{setInputText("");setAnalysis(null)}} style={{padding:"10px 18px",borderRadius:20}}>Clear</button>
+      <div style={{maxWidth:760,margin:"20px auto",padding:"0 16px"}}>
+        <div style={{padding:"16px",borderRadius:"16px",border:"1px solid var(--border)",background:"var(--card-bg)",marginBottom:16}}>
+          <h3 style={{margin:"0 0 8px 0",color:"var(--text)"}}>How are you feeling today?</h3>
+          <p style={{fontSize:12,opacity:0.6,color:"var(--muted)",margin:"0 0 10px 0"}}><b>Enter</b> to Analyze • <b>Shift+Enter</b> for new line • 🎙️ for voice</p>
+          <textarea
+            rows={5}
+            value={inputText}
+            onChange={e=>setInputText(e.target.value)}
+            onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); handleAnalyze()}}}
+            placeholder="Type what's on your mind... I'm here to listen."
+            style={{width:"100%",padding:14,borderRadius:12,border:"1px solid var(--border)",background:"var(--bg, #fff)",color:"var(--text)",resize:"vertical",outline:"none",fontSize:14}}
+          />
+          <div style={{display:"flex",gap:10,marginTop:12,justifyContent:"flex-start",flexWrap:"wrap"}}>
+            <button onClick={handleAnalyze} disabled={loading} style={{padding:"11px 20px",borderRadius:24,border:"none",background:"linear-gradient(135deg,#8b5cf6,#6366f1)",color:"#fff",fontWeight:800,cursor:"pointer",opacity: loading?0.7:1}}>{loading?"Analyzing...":"✨ Analyze"}</button>
+            <button onClick={()=>listening?stopListening():startListening()} style={{padding:"11px 18px",borderRadius:24,border:"1px solid var(--border)",background: listening? "#fee2e2" : "var(--card-bg)",color:"var(--text)",cursor:"pointer",fontWeight:600}}>🎙 {listening?"Stop Listening":"Speak"}</button>
+            <button onClick={()=>{setInputText("");setAnalysis(null)}} style={{padding:"11px 18px",borderRadius:24,border:"1px solid var(--border)",background:"var(--card-bg)",color:"var(--text)",cursor:"pointer"}}>Clear</button>
+          </div>
         </div>
 
         {analysis && (
-          <div style={{marginTop:16}}>
+          <div style={{marginTop:16, display:"flex", flexDirection:"column", gap:12}}>
             {analysis.riskLevel==="RED" && (
-              <div style={{padding:16,background:"#fee2e2",border:"2px solid #ef4444",borderRadius:12,color:"#991b1b",marginBottom:12}}>
-                <b>🚨 RED CODE - CRITICAL</b><div style={{fontSize:13,marginTop:6}}>Detected: "{analysis.text.slice(0,80)}" | SOS: {user.emergencyPhone}</div>
-                <a href={`tel:${user.emergencyPhone}`} style={{display:"inline-block",marginTop:8,padding:"8px 14px",background:"#dc2626",color:"#fff",borderRadius:8,textDecoration:"none",fontWeight:700}}>📞 Call SOS: {user.emergencyPhone}</a>
+              <div style={{padding:18,background:"#fef2f2",border:"2px solid #ef4444",borderRadius:14,color:"#991b1b"}}>
+                <b style={{fontSize:15}}>🚨 RED CODE - CRITICAL SUPPORT NEEDED</b>
+                <div style={{fontSize:13,marginTop:8,lineHeight:1.5}}>Detected: "{analysis.text.slice(0,100)}"<br/>Your SOS: {user.emergencyPhone} | Tele-MANAS: 14416</div>
+                <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
+                  <a href={`tel:${user.emergencyPhone}`} style={{display:"inline-block",padding:"10px 16px",background:"#dc2626",color:"#fff",borderRadius:10,textDecoration:"none",fontWeight:800}}>📞 Call SOS: {user.emergencyPhone}</a>
+                  <a href="tel:14416" style={{display:"inline-block",padding:"10px 16px",background:"#111",color:"#fff",borderRadius:10,textDecoration:"none",fontWeight:700}}>Call Tele-MANAS 14416</a>
+                </div>
               </div>
             )}
             <RiskCard analysis={analysis} text={analysis.text} />
             <MoodChart history={history.length?history:[analysis]} />
-            <div style={{marginTop:12,padding:12,border:"1px solid var(--border)",borderRadius:12,background:"var(--card-bg)",color:"var(--text"}}><b>Advice:</b> {advice}</div>
-            {counselingArray.length>0 && <div style={{marginTop:12}}><h4>Solutions ({counselingArray.length})</h4>{counselingArray.map((c,i)=><div key={i} style={{padding:10,border:"1px solid var(--border)",borderRadius:10,marginTop:8,background:"var(--card-bg)"}}><b>{c.technique}</b><p>{c.advice}</p></div>)}</div>}
+            <div style={{padding:14,border:"1px solid var(--border)",borderRadius:12,background:"var(--card-bg)",color:"var(--text)"}}><b>💡 Advice:</b> <span style={{opacity:0.9}}>{advice}</span></div>
+            {counselingArray.length>0 && (
+              <div style={{marginTop:4}}>
+                <h4 style={{color:"var(--text)",marginBottom:8}}>Personalized Solutions ({counselingArray.length})</h4>
+                <div style={{display:"grid",gap:8}}>
+                  {counselingArray.map((c,i)=><div key={i} style={{padding:12,border:"1px solid var(--border)",borderRadius:12,background:"var(--card-bg)"}}><b style={{color:"var(--text)"}}>{c.technique || `Step ${i+1}`}</b><p style={{margin:"6px 0 0 0",fontSize:13,opacity:0.85,color:"var(--text)"}}>{c.advice}</p></div>)}
+                </div>
+              </div>
+            )}
           </div>
         )}
-        <div style={{marginTop:20}}><VoiceToneAnalyzer onResult={setVoiceData} /><MoodTracker /><Journal /><GroundingExercises /><TeleManas /></div>
+
+        <div style={{marginTop:24, display:"flex", flexDirection:"column", gap:16}}>
+          <VoiceToneAnalyzer onResult={setVoiceData} />
+          <MoodTracker />
+          <Journal />
+          <GroundingExercises />
+          <TeleManas />
+        </div>
       </div>
     </>
   );
