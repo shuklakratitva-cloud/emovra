@@ -23,7 +23,7 @@ function getAdvice(level){
   if(lvl==="GREEN") return "You're in a stable range. Maintain healthy habits. Keep smiling! 😊";
   if(lvl==="YELLOW") return "Slight stress detected. Try Box Breathing 4-4-4-4.";
   if(lvl==="ORANGE") return "Please talk to a trusted friend or counselor.";
-  return "You matter. Professional help has been notified.";
+  return "You matter. You are not alone. Help is available if you need it.";
 }
 
 export default function MindGuardApp() {
@@ -47,9 +47,9 @@ export default function MindGuardApp() {
       const token=localStorage.getItem('token');
       if(token){
         fetch(`${API}/data/my`,{headers:{Authorization:`Bearer ${token}`}})
-     .then(r=>{if(!r.ok)throw new Error();return r.json()})
-     .then(d=>{if(Array.isArray(d)&&d.length)setHistory(d.reverse().slice(-20))})
-     .catch(()=>{})
+    .then(r=>{if(!r.ok)throw new Error();return r.json()})
+    .then(d=>{if(Array.isArray(d)&&d.length)setHistory(d.reverse().slice(-20))})
+    .catch(()=>{})
       }
     }catch{}
   },[]);
@@ -69,7 +69,6 @@ export default function MindGuardApp() {
     navigate("/", { replace: true });
   }
 
-  // --- FINAL FIXED ANALYZE FUNCTION - NOW USES REAL BACKEND AI ---
   async function handleAnalyze(){
     if(!inputText.trim()) return;
     setLoading(true);
@@ -85,7 +84,6 @@ export default function MindGuardApp() {
 
     let result;
     try{
-      // STEP 1: Try REAL backend AI (Gemini on Render) - THIS FIXES "I am happy" -> GREEN
       const token = localStorage.getItem('token');
       const res = await fetch(`${API}/emotion/analyze`, {
         method: "POST",
@@ -94,7 +92,6 @@ export default function MindGuardApp() {
       });
       if(res.ok){
         const data = await res.json();
-        // Backend returns color, score etc
         result = {
           riskLevel: data.color || data.riskLevel || "GREEN",
           score: data.score || 85,
@@ -107,14 +104,12 @@ export default function MindGuardApp() {
         };
       } else throw new Error("backend failed");
     } catch (e){
-      console.log("Backend AI failed, trying frontend Gemini", e);
       try{
         const g=await analyzeWithGemini(inputText,voiceData);
         result={riskLevel:g.level||"GREEN",score:g.score||75,emotion:g.emotion||"neutral",sentiment:g.sentiment||"neutral",reasons:g.reasons||[],advice:g.advice||"",source:"gemini-frontend"}
       }
       catch{
         const f=analyzeRisk(inputText);
-        // FORCE GREEN FOR HAPPY WORDS IF FALLBACK
         if(lower.includes("happy") || lower.includes("great") || lower.includes("good") || lower.includes("awesome") || lower.includes("joy")){
           result={ riskLevel:"GREEN", score:88, emotion:"happy", sentiment:"positive", reasons:["positive keywords: happy"], advice:"", source:"fallback-fixed"};
         } else {
@@ -159,11 +154,10 @@ export default function MindGuardApp() {
           <div style={{marginTop:16}}>
             {analysis.riskLevel==="RED" && (
               <div style={{padding:16,background:"#fef2f2",border:"2px solid #ef4444",borderRadius:12,color:"#991b1b",marginBottom:12}}>
-                <b>🚨 RED CODE - CRITICAL SUPPORT NEEDED</b>
-                <div style={{fontSize:13,marginTop:6}}>We detected distress. Your emergency contact and counselor have been notified securely via backend. You are not alone.</div>
+                <b>🚨 RED CODE - We are here for you</b>
+                <div style={{fontSize:13,marginTop:6}}>We noticed you're going through a tough time. You are not alone. If you need to talk, help is available.</div>
                 <div style={{display:"flex",gap:10,marginTop:10}}>
                   <a href="tel:14416" style={{padding:"10px 16px",background:"#111",color:"#fff",borderRadius:10,textDecoration:"none",fontWeight:700}}>Call Tele-MANAS 14416</a>
-                  <button onClick={()=>alert("SOS alert sent to backend securely")} style={{padding:"10px 16px",background:"#dc2626",color:"#fff",borderRadius:10,border:"none",fontWeight:700}}>SOS Alert Sent</button>
                 </div>
               </div>
             )}
