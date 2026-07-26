@@ -8,6 +8,8 @@ export default function Auth({ onAuth }) {
     email: "",
     age: "",
     password: "",
+    emergencyName: "",
+    countryCode: "+91",
     emergencyPhone: ""
   });
   const [loading, setLoading] = useState(false);
@@ -18,14 +20,48 @@ export default function Auth({ onAuth }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ===== INTERNATIONAL PHONE VALIDATION =====
+    if (isSignup) {
+      if (!form.emergencyName || form.emergencyName.trim().length < 2) {
+        alert("Emergency contact name is compulsory! Who should we call in RED emergency?");
+        return;
+      }
+      const digitsOnly = form.emergencyPhone.replace(/\D/g, '');
+      if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+        alert("Emergency phone is COMPULSORY!\n\nEnter valid international number with 7-15 digits\nExamples:\nIndia: +91 9876543210\nUSA: +1 202-555-0123\nUK: +44 7700 900000");
+        return;
+      }
+      if (!/^\+?[\d\s\-\(\)]+$/.test(form.emergencyPhone)) {
+        alert("Phone can only contain numbers, +, spaces, - and () - no letters or ?");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      // FIXED: backend route is /signup and /login, not /register
-      // Also using your deployed backend URL
       const BASE_URL = "https://emovra.onrender.com/api/auth";
       const url = isSignup ? `${BASE_URL}/signup` : `${BASE_URL}/login`;
       
-      const payload = isSignup ? form : { email: form.email, password: form.password };
+      let payload;
+      if (isSignup) {
+        // Combine country code + phone for international format
+        const fullPhone = form.emergencyPhone.startsWith('+') 
+          ? form.emergencyPhone 
+          : `${form.countryCode} ${form.emergencyPhone}`;
+        
+        payload = {
+          name: form.name,
+          email: form.email,
+          age: form.age,
+          password: form.password,
+          emergencyName: form.emergencyName,
+          emergencyPhone: fullPhone,
+          countryCode: form.countryCode
+        };
+      } else {
+        payload = { email: form.email, password: form.password };
+      }
       
       const res = await axios.post(url, payload);
       localStorage.setItem("token", res.data.token);
@@ -33,7 +69,6 @@ export default function Auth({ onAuth }) {
       onAuth(res.data.user);
     } catch (err) {
       console.log("Full error:", err.response);
-      // Show real error message instead of just "Error"
       alert(err.response?.data?.msg || err.response?.data?.message || err.message || "Server Error - check if backend is awake");
     } finally {
       setLoading(false);
@@ -41,26 +76,62 @@ export default function Auth({ onAuth }) {
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "50px auto", padding: "20px", background: "var(--card-bg, #1e1e2f)", borderRadius: "12px", color: "white" }}>
+    <div style={{ maxWidth: "420px", margin: "50px auto", padding: "25px", background: "var(--card-bg, #1e1e2f)", borderRadius: "12px", color: "white" }}>
       <h2>{isSignup ? "Create Account" : "Sign In"} - MindGuard</h2>
       
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "20px" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "20px" }}>
         {isSignup && (
-          <input name="name" placeholder="Enter your full name" value={form.name} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
+          <input name="name" placeholder="Full name *" value={form.name} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
         )}
         
-        <input name="email" type="email" placeholder="Enter your email" value={form.email} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
+        <input name="email" type="email" placeholder="Email * (e.g. you@gmail.com)" value={form.email} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
         
         {isSignup && (
           <>
-            <input name="age" type="number" placeholder="Enter your age" value={form.age} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
-            <input name="emergencyPhone" placeholder="For SOS help" value={form.emergencyPhone} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
+            <input name="age" type="number" min="10" max="100" placeholder="Age * (e.g. 16)" value={form.age} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
+            
+            <input name="emergencyName" placeholder="Emergency Contact Name * (Mom/Dad)" value={form.emergencyName} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
+            
+            <div style={{ display: "flex", gap: "8px" }}>
+              <select 
+                name="countryCode" 
+                value={form.countryCode} 
+                onChange={handleChange} 
+                required
+                style={{ width: "120px", padding: "10px", borderRadius: "8px", color: "black" }}
+              >
+                <option value="+91">🇮🇳 +91</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+971">🇦🇪 +971</option>
+                <option value="+61">🇦🇺 +61</option>
+                <option value="+81">🇯🇵 +81</option>
+                <option value="+49">🇩🇪 +49</option>
+                <option value="+33">🇫🇷 +33</option>
+                <option value="+86">🇨🇳 +86</option>
+                <option value="+65">🇸🇬 +65</option>
+              </select>
+              
+              <input 
+                name="emergencyPhone" 
+                type="tel"
+                placeholder="Emergency Phone *"
+                title="International: 7-15 digits, e.g. 9876543210 or +1 202-555-0123"
+                value={form.emergencyPhone} 
+                onChange={handleChange} 
+                required 
+                style={{ flex: 1, padding: "10px", borderRadius: "8px", color: "black" }} 
+              />
+            </div>
+            <small style={{ color: "#ff6b6b", fontSize: "11px", marginTop: "-8px" }}>
+              * Compulsory - Used only in RED emergency for SOS. Supports all countries.
+            </small>
           </>
         )}
         
-        <input name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
+        <input name="password" type="password" placeholder="Password *" value={form.password} onChange={handleChange} required style={{ padding: "10px", borderRadius: "8px", color: "black" }} />
         
-        <button type="submit" disabled={loading} style={{ padding: "12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+        <button type="submit" disabled={loading} style={{ padding: "12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
           {loading ? "Waking up server... wait 30s" : isSignup ? "Sign Up" : "Sign In"}
         </button>
       </form>
