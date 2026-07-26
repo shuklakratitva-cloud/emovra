@@ -3,63 +3,156 @@ import LegalCookieBanner from "../components/LegalCookieBanner";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a12', color: 'white', fontFamily: 'Inter, sans-serif' }}>
-      
+    <div className="min-h-screen bg-[#0a0a12] text-white">
+
       {/* Header */}
-      <header style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontWeight: 900, fontSize: '20px' }}>MindGuard 🧠</div>
-        <nav style={{ display: 'flex', gap: '24px', fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
-          <span>Features</span><span>About</span><span>Support</span>
+      <header className="max-w- mx-auto px-6 py-5 flex justify-between items-center">
+        <div className="font-black text-">
+          MindGuard 🧠
+        </div>
+        <nav className="hidden md:flex gap-6 text- text-white/60">
+          <span>Features</span>
+          <span>About</span>
+          <span>Support</span>
         </nav>
-        <button onClick={()=>navigate("/app")} style={{ background: '#8b5cf6', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '999px', fontWeight: 700, cursor: 'pointer' }}>
+        <button
+          onClick={()=>navigate("/app")}
+          className="bg-[#8b5cf6] text-white px-5 py-2 rounded-full text- font-bold"
+        >
           Launch App →
         </button>
       </header>
 
-      {/* Hero */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '80px 20px', display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '40px', alignItems: 'center' }}>
+      {/* Hero Section - Your Old UI */}
+      <div className="max-w- mx-auto px-6 pt-20 pb-20 grid md:grid-cols-[1.2fr_0.8fr] gap-10 items-center">
+
         <div>
-          <div style={{ display: 'inline-block', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', padding: '6px 14px', borderRadius: '999px', fontSize: '12px', marginBottom: '20px' }}>
+          <div className="inline-flex px-3 py-1 rounded-full bg-[#8b5cf6]/15 border border-[#8b5cf6]/20 text-[#a78bfa] text- mb-6">
             AI Mental Wellness Platform
           </div>
-          <h1 style={{ fontSize: '56px', fontWeight: 900, lineHeight: 1, margin: 0 }}>
-            Your Mental<br/>Wellness,<br/>Understood.
+
+          <h1 className="text- md:text- font-black leading-[1]">
+            Your Mental<br />
+            Wellness,<br />
+            Understood.
           </h1>
-          <p style={{ marginTop: '20px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, maxWidth: '460px' }}>
-            Real check-ins, real private journaling, from exam stress to late-night thoughts. Pick your moment. MindGuard helps students recognise stress, emotional abuse and mental health risks using intelligent emotion analysis.
+
+          <p className="mt-5 max-w- text- leading-[1.6] text-white/60">
+            Real check-ins, real private journaling, from exam stress to
+            late-night thoughts. Pick your moment. MindGuard helps students
+            recognise stress, emotional abuse and mental health risks using
+            intelligent emotion analysis.
           </p>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>
-            <button onClick={()=>navigate("/app")} style={{ background: 'white', color: 'black', padding: '14px 28px', borderRadius: '999px', border: 'none', fontWeight: 800, cursor: 'pointer' }}>Start Analysis →</button>
-            <button style={{ background: 'transparent', color: 'white', padding: '14px 28px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }}>Learn More</button>
+
+          <div className="mt-8 flex gap-3">
+            <button
+              onClick={()=>navigate("/app")}
+              className="px-6 py-3 rounded-full bg-[#8b5cf6] text-white text- font-bold"
+            >
+              Start Analysis →
+            </button>
+            <button className="px-6 py-3 rounded-full bg-white text-black text- font-bold">
+              Learn More
+            </button>
           </div>
         </div>
 
-        <div style={{ background: 'linear-gradient(180deg, #1e1b2e, #15131f)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '24px', height: '320px' }}>
-          <div style={{ background: '#0a0a12', borderRadius: '16px', height: '100%', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ background: 'rgba(139,92,246,0.2)', padding: '12px', borderRadius: '10px', fontSize: '13px' }}>🧠 Mood Analysis - Active</div>
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '10px', fontSize: '13px' }}>🎙️ Voice Check - Relaxed</div>
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '10px', fontSize: '13px' }}>📔 Private Journal - Encrypted</div>
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '10px', fontSize: '13px' }}>🌿 Grounding Exercises</div>
+        <div className="bg-[#15131f] border border-white/10 rounded- p-5">
+          <div className="bg-[#0a0a12] rounded- p-4 flex flex-col gap-3">
+
+            <div className="bg-[#8b5cf6]/20 p-3 rounded-xl text-">
+              🧠 Mood Analysis - Active
+            </div>
+
+            <div className="bg-white/5 p-3 rounded-xl text-">
+              🎙️ Voice Check - Relaxed
+            </div>
+
+            <div className="bg-white/5 p-3 rounded-xl text-">
+              📔 Private Journal - Encrypted
+            </div>
+
+            <div className="bg-white/5 p-3 rounded-xl text-">
+              🌿 Grounding Exercises
+            </div>
+
           </div>
         </div>
-      </main>
 
-      {/* Features - This makes it 100+ lines like old */}
-      <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px 100px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-        {[
-          { t: 'Emotion AI', d: 'Detects stress from text and voice in real-time.' },
-          { t: '100% Private', d: 'Your journals are encrypted. No one can read them.' },
-          { t: 'SOS Support', d: 'Emergency contact + Kiran helpline when needed.' },
-        ].map(f=>(
-          <div key={f.t} style={{ background: '#15131f', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
-            <h3 style={{ margin: '0 0 8px', fontWeight: 800 }}>{f.t}</h3>
-            <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{f.d}</p>
+      </div>
+
+      {/* Features - Your old 3 cards */}
+      <div className="max-w- mx-auto px-6 pb-20 grid md:grid-cols-3 gap-5">
+
+        <div className="bg-[#15131f] border border-white/5 rounded-2xl p-6">
+          <div className="w-10 h-10 rounded-full bg-[#8b5cf6]/20 flex items-center justify-center mb-4">
+            🧠
           </div>
-        ))}
-      </section>
+          <h3 className="font-bold text-">
+            Emotion AI
+          </h3>
+          <p className="text- text-white/50 mt-2 leading-6">
+            Detects stress from text and voice in real-time.
+            Advanced sentiment analysis to capture how you feel.
+          </p>
+        </div>
+
+        <div className="bg-[#15131f] border border-white/5 rounded-2xl p-6">
+          <div className="w-10 h-10 rounded-full bg-[#8b5cf6]/20 flex items-center justify-center mb-4">
+            🔒
+          </div>
+          <h3 className="font-bold text-">
+            100% Private
+          </h3>
+          <p className="text- text-white/50 mt-2 leading-6">
+            Your journals are encrypted. No one can read them.
+            End-to-end encryption, your data stays yours always.
+          </p>
+        </div>
+
+        <div className="bg-[#15131f] border border-white/5 rounded-2xl p-6">
+          <div className="w-10 h-10 rounded-full bg-[#8b5cf6]/20 flex items-center justify-center mb-4">
+            🆘
+          </div>
+          <h3 className="font-bold text-">
+            SOS Support
+          </h3>
+          <p className="text- text-white/50 mt-2 leading-6">
+            Emergency contact + Kiran helpline when needed.
+            Instant access to breathing exercises & crisis resources.
+          </p>
+        </div>
+
+      </div>
+
+      {/* How it Works */}
+      <div className="max-w- mx-auto px-6 pb-32">
+        <h2 className="text- font-black text-center">
+          How it Works
+        </h2>
+        <div className="mt-8 grid md:grid-cols-3 gap-5 text-center">
+          <div>
+            <div className="text-[#8b5cf6] font-black text-">01</div>
+            <p className="mt-2 font-bold">Check-in</p>
+            <p className="text- text-white/50 mt-1">Share how you feel via text or voice</p>
+          </div>
+          <div>
+            <div className="text-[#8b5cf6] font-black text-">02</div>
+            <p className="mt-2 font-bold">Analyze</p>
+            <p className="text- text-white/50 mt-1">AI detects emotion, stress & risk level</p>
+          </div>
+          <div>
+            <div className="text-[#8b5cf6] font-black text-">03</div>
+            <p className="mt-2 font-bold">Support</p>
+            <p className="text- text-white/50 mt-1">Get coping tools, journaling & SOS help</p>
+          </div>
+        </div>
+      </div>
 
       <LegalCookieBanner />
+
     </div>
   );
 }
