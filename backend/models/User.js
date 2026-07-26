@@ -25,12 +25,14 @@ const UserSchema = new mongoose.Schema({
   },
   emergencyName: { 
     type: String,
-    required: [true, "Emergency contact name is required"],
+    required: false,
+    default: "",
     trim: true
   },
   emergencyPhone: { 
     type: String, 
-    required: [true, "Emergency phone is required"],
+    required: false,
+    default: "",
     trim: true
   },
   countryCode: {
