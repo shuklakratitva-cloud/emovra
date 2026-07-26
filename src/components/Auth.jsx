@@ -24,20 +24,13 @@ export default function Auth({ onAuth }) {
     // ===== VALIDATION =====
     if (isSignup) {
       if (!form.emergencyName || form.emergencyName.trim().length < 2) {
-        alert("Emergency contact name is compulsory! Who should we call in RED emergency?");
+        alert("Emergency contact name is compulsory!");
         return;
       }
 
       const digitsOnly = form.emergencyPhone.replace(/\D/g, "");
       if (digitsOnly.length < 7 || digitsOnly.length > 15) {
-        alert(
-          "Emergency phone is COMPULSORY!\n\nEnter valid international number with 7-15 digits\nExamples:\nIndia: +91 9876543210\nUSA: +1 202-555-0123\nUK: +44 7700 900000"
-        );
-        return;
-      }
-
-      if (!/^\+?[\d\s\-\(\)]+$/.test(form.emergencyPhone)) {
-        alert("Phone can only contain numbers, +, spaces, - and ()");
+        alert("Please enter a valid emergency phone number (7-15 digits)");
         return;
       }
     }
@@ -84,7 +77,7 @@ export default function Auth({ onAuth }) {
         err.response?.data?.message ||
         err.response?.data?.error ||
         err.message ||
-        "Server Error - The backend might be waking up. Please wait 30 seconds and try again.";
+        "Server Error - Please wait 30 seconds and try again.";
 
       alert(message);
     } finally {
@@ -123,7 +116,7 @@ export default function Auth({ onAuth }) {
         <input
           name="email"
           type="email"
-          placeholder="Email * (e.g. you@gmail.com)"
+          placeholder="Email *"
           value={form.email}
           onChange={handleChange}
           required
@@ -137,7 +130,7 @@ export default function Auth({ onAuth }) {
               type="number"
               min="10"
               max="100"
-              placeholder="Age * (e.g. 16)"
+              placeholder="Age *"
               value={form.age}
               onChange={handleChange}
               required
@@ -158,7 +151,6 @@ export default function Auth({ onAuth }) {
                 name="countryCode"
                 value={form.countryCode}
                 onChange={handleChange}
-                required
                 style={{ width: "120px", padding: "10px", borderRadius: "8px", color: "black" }}
               >
                 <option value="+91">🇮🇳 +91</option>
@@ -184,8 +176,8 @@ export default function Auth({ onAuth }) {
               />
             </div>
 
-            <small style={{ color: "#ff6b6b", fontSize: "11px", marginTop: "-8px" }}>
-              * Compulsory - Used only in RED emergency for SOS. Supports all countries.
+            <small style={{ color: "#ff6b6b", fontSize: "11px" }}>
+              * Compulsory - Used only in RED emergency for SOS
             </small>
           </>
         )}
