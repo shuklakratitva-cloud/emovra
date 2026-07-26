@@ -1,167 +1,121 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
 import LegalCookieBanner from "../components/LegalCookieBanner";
 
-export default function HomePage() {
+export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#0a0a12] text-white selection:bg-[#8b5cf6]/30 overflow-x-hidden">
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;900&display=swap');`}</style>
+    <div style={{ minHeight: '100vh', background: '#0a0a12', color: 'white', fontFamily: 'Inter, sans-serif', overflowX: 'hidden' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Inter:wght@400;600;700;900&display=swap');`}</style>
 
-      {/* HEADER - Like Gavelling pill */}
-      <div className="sticky top-0 z-50 px-4 py-4">
-        <div className="max-w- mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2 font-black text- tracking-tight" style={{fontFamily:'Inter'}}>MindGuard</div>
-
-          <div className="hidden md:flex items-center bg-[#1a1a24]/80 backdrop-blur-xl border border-white/10 rounded-full p-1.5 gap-1">
-            <a className="px-4 py-1.5 text- tracking-widest uppercase text-white/60 hover:text-white">Sessions</a>
-            <a className="px-4 py-1.5 text- tracking-widest uppercase bg-[#23231f] text-[#f7e9a0] rounded-full font-bold border border-[#f7e9a0]/20">Conferences</a>
-            <a className="px-4 py-1.5 text- tracking-widest uppercase text-white/60 hover:text-white">About Us</a>
-            <a className="px-4 py-1.5 text- tracking-widest uppercase text-white/60 hover:text-white">Contact</a>
-          </div>
-
-          <button onClick={()=>navigate("/app")} className="px-5 py-2.5 rounded-full bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text- font-bold shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all">
-            Launch App →
-          </button>
+      {/* HEADER - Original theme + Gavelling pill minute detail */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontWeight: 900, fontSize: '22px', letterSpacing: '-0.02em' }}>MindGuard 🧠</div>
+        
+        {/* Minute Detail from Gavelling: pill nav */}
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '100px', padding: '4px', gap: '2px' }}>
+          {['Features','About','Support'].map(t=>(
+            <div key={t} style={{ padding: '6px 14px', fontSize: '12px', color: 'rgba(255,255,255,0.6)', borderRadius: '100px' }}>{t}</div>
+          ))}
+          <div style={{ padding: '6px 14px', fontSize: '12px', background: 'rgba(255,255,255,0.08)', color: 'white', borderRadius: '100px', fontWeight: 600 }}>Conferences</div>
         </div>
+
+        <button onClick={()=>navigate("/app")} style={{ padding: '10px 20px', borderRadius: '100px', background: '#8b5cf6', color: 'white', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', boxShadow: '0 0 20px rgba(139,92,246,0.3)' }}>
+          Launch App →
+        </button>
       </div>
 
-      {/* HERO SECTION - Gavelling + Rolex */}
-      <div className="max-w- mx-auto px-6 md:px-8 grid grid-cols-1 lg:grid-cols-[1.1fr_0.5fr] gap-10 pt-12 pb-20">
-        {/* LEFT */}
-        <div className="relative">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1c1c2a] border border-[#8b5cf6]/20 text- tracking-wide text-[#a78bfa] mb-6">
-            <span className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-pulse"></span>
+      {/* HERO - Your original + Rolex small caps + Gavelling big typography */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '60px 24px 40px', display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '40px', alignItems: 'center' }}>
+        <div>
+          {/* Rolex Minute Detail: small tracking label */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#a78bfa', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', padding: '6px 12px', borderRadius: '100px', marginBottom: '20px' }}>
+            <span style={{ width: '6px', height: '6px', background: '#8b5cf6', borderRadius: '50%' }}></span>
             AI Mental Wellness Platform
           </div>
 
-          <h1 className="text- md:text- font-[900] leading-[0.9] tracking-[-0.04em] " style={{fontFamily:'Inter'}}>
+          <h1 style={{ fontSize: '64px', fontWeight: 900, lineHeight: 0.95, letterSpacing: '-0.04em', margin: 0 }}>
             Your Mental<br/>
             Wellness,<br/>
-            <span style={{fontFamily:'"Instrument Serif", serif'}} className="font-normal italic text-[#f7e9a0]">Understood.</span>
+            <span style={{ fontFamily: '"Instrument Serif", serif', fontWeight: 400, fontStyle: 'italic', color: '#a78bfa' }}>Understood.</span>
           </h1>
 
-          <p className="mt-6 max-w- text- leading-[1.6] text-white/60">
-            Real check-ins, real private journaling, from exam stress to late-night thoughts. Pick your moment. MindGuard helps students recognise stress, emotional abuse and mental health risks using intelligent emotion analysis.
+          <p style={{ marginTop: '20px', maxWidth: '480px', fontSize: '15px', lineHeight: 1.6, color: 'rgba(255,255,255,0.6)' }}>
+            Real check-ins, real private journaling, from exam stress to late-night thoughts. Pick your moment. MindGuard helps students recognise stress using intelligent emotion analysis.
           </p>
 
-          {/* Search Bar like Gavelling */}
-          <div className="mt-8 flex items-center gap-2 max-w- bg-[#15151f]/80 backdrop-blur border border-white/10 rounded-full p-1.5">
-            <div className="flex-1 flex items-center gap-2 px-4">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-white/40"><circle cx="11" cy="11" r="6"/><path d="M21 21l-4.3-4.3"/></svg>
-              <input placeholder="Search how you're feeling..." className="bg-transparent outline-none text- w-full placeholder:text-white/40" />
-            </div>
-            <button onClick={()=>navigate("/app")} className="px-5 py-2.5 rounded-full bg-[#f7e9a0] text-black text- font-bold hover:bg-white transition-colors">Discover all</button>
+          <div style={{ marginTop: '28px', display: 'flex', gap: '12px' }}>
+            <button onClick={()=>navigate("/app")} style={{ padding: '14px 28px', borderRadius: '100px', background: 'white', color: 'black', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>Start Analysis →</button>
+            <button style={{ padding: '14px 28px', borderRadius: '100px', background: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.15)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>Learn More</button>
           </div>
-          <p className="mt-3 text- text-white/40 ml-2">Organising one? <span className="underline cursor-pointer">List it free ↗</span></p>
+
+          {/* Gavelling Minute Detail: Organising one? link */}
+          <div style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Organising one? <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>List it free ↗</span></div>
         </div>
 
-        {/* RIGHT FLOATING CARDS - Like SIMUN / WORLDMUN cards */}
-        <div className="relative flex flex-col gap-4 lg:pt-4">
-          {/* Card 1 */}
-          <div className="group relative rounded- overflow-hidden border border-[#f7e9a0]/30 bg-gradient-to-br from-[#1e1e2a] to-[#15151f] p-4 shadow-xl">
-            <div className="flex justify-between items-start">
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">🧠</div>
-              <span className="text- px-2 py-1 rounded-full bg-white/10 border border-white/10">14-18 Mar 2027</span>
+        {/* RIGHT - Your original image area + Gavelling card style minute detail */}
+        <div style={{ position: 'relative' }}>
+          <div style={{ background: 'radial-gradient(100% 100% at 50% 0%, rgba(139,92,246,0.3) 0%, transparent 60%)', position: 'absolute', inset: '-20px', zIndex: 0 }}></div>
+          <div style={{ position: 'relative', background: 'linear-gradient(180deg, #1e1b2e 0%, #15131f 100%)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '20px', zIndex: 1 }}>
+            {/* Fake App UI like original */}
+            <div style={{ height: '300px', background: '#0a0a12', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', padding: '16px', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}><div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56' }}></div><div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e' }}></div><div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f' }}></div></div>
+              <div style={{ background: 'rgba(139,92,246,0.15)', padding: '12px', borderRadius: '12px', fontSize: '12px' }}>💜 Mood: Calm - 85% positive detected</div>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', fontSize: '12px' }}>🎙️ Voice tone: Relaxed</div>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', fontSize: '12px' }}>📔 Journal: Today I felt better...</div>
             </div>
-            <h3 className="mt-12 text- font-black tracking-tight">MOOD ANALYSIS</h3>
-            <div className="mt-2 flex items-center gap-3 text- text-white/60">
-              <span>📍 Private, IN</span><span className="px-2 py-0.5 rounded-full bg-[#f7e9a0]/20 text-[#f7e9a0] border border-[#f7e9a0]/20">$120</span><span>👥 1,000</span>
-            </div>
-            <button onClick={()=>navigate("/app")} className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full bg-[#f7e9a0] text-black text- font-bold">APPLY →</button>
-            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#f7e9a0] flex items-center justify-center text-">⚖️</div>
-          </div>
-
-          {/* Card 2 */}
-          <div className="group relative rounded- overflow-hidden border border-white/10 bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1a] p-4 shadow-xl">
-            <div className="flex justify-between items-start">
-              <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">🎙️</div>
-              <span className="text- px-2 py-1 rounded-full bg-white/10 border border-white/10">10-11 Oct 2026</span>
-            </div>
-            <h3 className="mt-12 text- font-black tracking-tight">VOICE TONE</h3>
-            <div className="mt-2 flex items-center gap-3 text- text-white/60">
-              <span>📍 Jammu, IN</span><span className="px-2 py-0.5 rounded-full bg-white/10 border border-white/10">₹3000</span><span>👥 1,500</span>
-            </div>
-            <button onClick={()=>navigate("/app")} className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full bg-[#f7e9a0] text-black text- font-bold">APPLY →</button>
-          </div>
-
-          {/* Card 3 - Peeking like IMUN */}
-          <div className="relative rounded- overflow-hidden border border-white/10 bg-[#0f2a1f] p-4 h-">
-            <h3 className="mt-6 text- font-black tracking-tight opacity-80">JOURNAL 2026</h3>
-            <span className="absolute top-3 right-12 text- px-2 py-1 rounded-full bg-white/10">25-26 Jul 2026</span>
           </div>
         </div>
       </div>
 
-      {/* ONE PLATFORM EVERY ROLE - Like Gavelling */}
-      <div className="bg-[#f6f3ee] text-[#111] py-16 px-6">
-        <div className="max-w- mx-auto text-center">
-          <p className="text- tracking-[0.2em] uppercase text-[#9a8a5a] font-bold">Find your seat</p>
-          <h2 className="mt-3 text- md:text- font-[900] tracking-tight" style={{fontFamily:'Inter'}}>One platform, every role.</h2>
+      {/* STATS BAR - Gavelling minute detail but in your purple theme */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+          <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '28px', fontWeight: 900 }}>127</div>
+            <div style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginTop: '4px' }}>Check-ins done</div>
+          </div>
+          <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '28px', fontWeight: 900 }}>27,508</div>
+            <div style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginTop: '4px' }}>Students supported</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '28px', fontWeight: 900 }}>45</div>
+            <div style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a78bfa', marginTop: '4px' }}>Countries</div>
+          </div>
+        </div>
+      </div>
 
-          <div className="mt-10 relative max-w- mx-auto rounded- overflow-hidden bg-[#111] h- flex">
-            {/* Carousel-like */}
-            <div className="absolute inset-0 flex">
-              <div className="flex-1 bg-[#e8e6e3] flex items-center justify-center text- font-black opacity-30">DELEGATES</div>
-              <div className="flex-[1.3] bg-[#0a0a0a] text-white p-8 flex flex-col justify-center text-left relative z-10">
-                <h3 className="text- font-black leading-none tracking-tight">SECRETARIAT</h3>
-                <p className="mt-4 text- leading-[1.6] text-white/70">The machine behind the weekend: run applications, allocations, delegates and communications from one place — the whole show, zero fees.</p>
-                <div className="mt-6 flex gap-3">
-                  <button onClick={()=>navigate("/app")} className="px-4 py-2 rounded-full bg-[#f7e9a0] text-black text- font-bold">See open roles</button>
-                  <button className="px-4 py-2 rounded-full border border-white/20 text-white text-">List your conference</button>
+      {/* FEATURE CARDS - MUN in India style but your theme */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '40px 24px 80px' }}>
+        <h3 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '6px' }}>Mood Tools in India</h3>
+        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '20px' }}>Private tools around New Delhi and across India.</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+          {[
+            { name: 'Mood Analysis', date: '25-26 Jul 2026', place: 'Private, IN', price: 'FREE', icon: '🧠' },
+            { name: 'Voice Check', date: '1-2 Aug 2026', place: 'Online, IN', price: 'FREE', icon: '🎙️' },
+            { name: 'Journal Safe', date: '9-9 Aug 2026', place: 'Encrypted, IN', price: '₹99', icon: '📔' },
+            { name: 'Grounding', date: '15-16 Aug 2026', place: '24/7, IN', price: '₹450', icon: '🌿' },
+          ].map(c=>(
+            <div key={c.name} style={{ background: '#15131f', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ height: '90px', background: '#1e1b2e', position: 'relative', padding: '12px' }}>
+                <span style={{ fontSize: '10px', padding: '4px 8px', borderRadius: '100px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>📅 {c.date}</span>
+                <div style={{ position: 'absolute', bottom: '-18px', left: '16px', width: '36px', height: '36px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{c.icon}</div>
+              </div>
+              <div style={{ padding: '28px 16px 16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 800, fontSize: '16px' }}>{c.name}</div>
+                  <div style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '100px', background: c.price==='FREE' ? '#a78bfa' : 'rgba(255,255,255,0.08)', color: c.price==='FREE' ? 'black' : 'white', fontWeight: 700 }}>{c.price}</div>
+                </div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>{c.place}</div>
+                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.06)', padding: '4px 8px', borderRadius: '100px' }}>👥 100</span>
+                  <button onClick={()=>navigate("/app")} style={{ padding: '6px 12px', borderRadius: '100px', background: '#f7e9a0', color: 'black', border: 'none', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>APPLY →</button>
                 </div>
               </div>
-              <div className="flex-1 bg-[#d8d5d0] flex items-center justify-center text- font-black opacity-30">CHAIRS</div>
             </div>
-          </div>
-
-          {/* Stats like Gavelling */}
-          <div className="mt-12 grid grid-cols-3 max-w- mx-auto divide-x divide-black/10">
-            <div><p className="text- font-black leading-none">127</p><p className="mt-2 text- tracking-widest uppercase text-[#9a8a5a]">Conferences on the board</p></div>
-            <div><p className="text- font-black leading-none">27,508</p><p className="mt-2 text- tracking-widest uppercase text-[#9a8a5a]">Delegates expected</p></div>
-            <div><p className="text- font-black leading-none">45</p><p className="mt-2 text- tracking-widest uppercase text-[#9a8a5a]">Countries</p></div>
-          </div>
+          ))}
         </div>
-      </div>
-
-      {/* MUN IN INDIA - Card grid */}
-      <div className="bg-[#efeadd] text-[#111] py-12 px-6">
-        <div className="max-w- mx-auto">
-          <h2 className="text- font-black tracking-tight">MUN in India</h2>
-          <p className="text- text-black/60">Conferences around New Delhi and across India.</p>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[
-              {name:'ICMUN 2026', place:'Mumbai, IN', date:'25-26 Jul 2026', price:'FREE', count:50},
-              {name:'NUEMUN 2026', place:'Kolhapur, IN', date:'1-2 Aug 2026', price:'FREE', count:100},
-              {name:'NMUN 2026', place:'Dehradun, IN', date:'9-9 Aug 2026', price:'₹99', count:100},
-              {name:'IGMUN 2026', place:'Mumbai, IN', date:'15-16 Aug 2026', price:'₹450', count:150},
-            ].map(card=>(
-              <div key={card.name} className="rounded- overflow-hidden bg-white border border-black/5 shadow-sm">
-                <div className="h- bg-[#111] relative p-3">
-                  <span className="text- px-2 py-1 rounded-full bg-white/10 border border-white/20 text-white">{card.date}</span>
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-12 h-12 rounded-full bg-white border-4 border-white shadow flex items-center justify-center text-">🦉</div>
-                </div>
-                <div className="pt-8 p-4">
-                  <div className="flex justify-between items-center"><h4 className="font-black text-">{card.name}</h4><span className="text- px-2 py-1 rounded-full border border-black/10 bg-[#f7e9a0]/30 font-bold">{card.price}</span></div>
-                  <p className="text- text-black/60 mt-1">{card.place}</p>
-                  <div className="mt-4 flex justify-between items-center"><span className="text- bg-black/5 px-2 py-1 rounded-full">👥 {card.count}</span><button onClick={()=>navigate("/app")} className="px-3 py-1.5 rounded-full bg-[#f7e9a0] text-black text- font-bold">APPLY →</button></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Rolex-style minimal footer */}
-      <div className="py-20 text-center bg-[#0a0a12] border-t border-white/5">
-        <p className="text- tracking-[0.3em] uppercase text-white/40">Oyster Perpetual</p>
-        <h2 className="text- font-bold tracking-tight mt-2" style={{fontFamily:'"Instrument Serif", serif'}}>MindGuard</h2>
-        <div className="mt-6 flex justify-center gap-3">
-          <button onClick={()=>navigate("/app")} className="px-6 py-2.5 rounded-full bg-[#8b5cf6] text-white text- font-bold">Start Analysis</button>
-          <button className="px-6 py-2.5 rounded-full bg-white text-black text- font-bold">Learn More</button>
-        </div>
-        <p className="mt-16 text- text-white/30 max-w- mx-auto px-6">MindGuard is for wellness support only and does not provide medical diagnosis. If you are in crisis, call Kiran 1800-599-0019 or 112. By using this site you accept our privacy policy.</p>
       </div>
 
       <LegalCookieBanner />
