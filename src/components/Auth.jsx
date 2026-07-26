@@ -1,6 +1,15 @@
 import { useState } from "react";
 import axios from "axios";
 
+// --- STEP 3 HELPER ---
+const getConsent = () => {
+  try {
+    return JSON.parse(localStorage.getItem("emovra_legal_consent") || "null");
+  } catch {
+    return null;
+  }
+};
+
 export default function Auth({ onAuth }) {
   const [isSignup, setIsSignup] = useState(true);
   const [form, setForm] = useState({
@@ -23,6 +32,13 @@ export default function Auth({ onAuth }) {
 
     // ===== VALIDATION =====
     if (isSignup) {
+      // Legal consent check - STEP 3
+      const consent = getConsent();
+      if (!consent) {
+        alert("Please click 'Accept All & Continue' on the privacy banner at the bottom first!");
+        return;
+      }
+
       if (!form.emergencyName || form.emergencyName.trim().length < 2) {
         alert("Emergency contact name is compulsory!");
         return;
@@ -48,6 +64,8 @@ export default function Auth({ onAuth }) {
           ? form.emergencyPhone
           : `${form.countryCode} ${form.emergencyPhone}`;
 
+        const consent = getConsent(); // Get consent again for payload
+
         payload = {
           name: form.name.trim(),
           email: form.email.trim().toLowerCase(),
@@ -55,7 +73,13 @@ export default function Auth({ onAuth }) {
           password: form.password,
           emergencyName: form.emergencyName.trim(),
           emergencyPhone: fullPhone,
-          countryCode: form.countryCode
+          countryCode: form.countryCode,
+          // --- ADDED FOR LEGAL COMPLIANCE ---
+          legalConsent: {
+            given: true,
+            type: consent.type,
+            consentText: consent.consentText
+          }
         };
       } else {
         payload = {

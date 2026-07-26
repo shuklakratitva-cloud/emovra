@@ -5,18 +5,22 @@ import User from "../models/User.js";
 
 const router = express.Router();
 
-// Helper function for signup logic
 async function handleSignup(req, res) {
   try {
-    let { name, email, password, age, emergencyPhone } = req.body;
+    let { name, email, password, age, emergencyName, emergencyPhone, legalConsent } = req.body;
 
-    // Clean inputs
     name = name?.trim();
     email = email?.trim().toLowerCase();
+    emergencyName = emergencyName?.trim() || "";
     emergencyPhone = emergencyPhone?.trim();
 
-    if (!name || !email || !password || !age || !emergencyPhone) {
-      return res.status(400).json({ msg: "All fields required" });
+    if (!legalConsent ||!legalConsent.given) {
+      return res.status(400).json({ msg: "You must accept Privacy Policy and Terms to continue." });
+    }
+
+    // NUMBER IS MANDATORY HERE
+    if (!name ||!email ||!password ||!age ||!emergencyPhone) {
+      return res.status(400).json({ msg: "All fields required - Emergency phone is mandatory" });
     }
 
     if (password.length < 6) {
@@ -30,7 +34,6 @@ async function handleSignup(req, res) {
 
     const hash = await bcrypt.hash(password, 10);
 
-    // Auto-make admin if email matches yours
     let role = "user";
     if (email === "kratitvashukla14@mindguard.local" || email === "kratitvashhukla12@mindguard.local") {
       role = "admin";
@@ -41,19 +44,30 @@ async function handleSignup(req, res) {
       email,
       password: hash,
       age: Number(age),
-      emergencyPhone,
-      role
+      emergencyName,
+      emergencyPhone, // mandatory
+      role,
+      legalConsent: {
+        given: true,
+        type: legalConsent.type || "all",
+        timestamp: new Date(),
+        ipAddress: req.headers['x-forwarded-for']?.split(',')[0] || req.ip,
+        userAgent: req.headers['user-agent'],
+        consentVersion: "v1.0 - 26 July 2026",
+        consentText: legalConsent.consentText || ""
+      }
     });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(201).json({
       token,
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email, 
-        age: user.age, 
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        age: user.age,
+        emergencyName: user.emergencyName,
         emergencyPhone: user.emergencyPhone,
         role: user.role
       }
@@ -65,17 +79,15 @@ async function handleSignup(req, res) {
   }
 }
 
-// SIGNUP - support both /signup and /register
 router.post("/signup", handleSignup);
-router.post("/register", handleSignup); // FIX for 404
+router.post("/register", handleSignup);
 
-// LOGIN
 router.post("/login", async (req, res) => {
   try {
     let { email, password } = req.body;
     email = email?.trim().toLowerCase();
 
-    if (!email || !password) {
+    if (!email ||!password) {
       return res.status(400).json({ msg: "Email and password required" });
     }
 
@@ -89,13 +101,14 @@ router.post("/login", async (req, res) => {
 
     res.json({
       token,
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email, 
-        age: user.age, 
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        age: user.age,
+        emergencyName: user.emergencyName,
         emergencyPhone: user.emergencyPhone,
-        role: user.role || "user"  // return role
+        role: user.role || "user"
       }
     });
 
