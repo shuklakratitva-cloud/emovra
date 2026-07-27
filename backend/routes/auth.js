@@ -8,32 +8,28 @@ const router = express.Router();
 async function handleSignup(req, res) {
   try {
     let { name, email, password, age, emergencyName, emergencyPhone, countryCode, legalConsent } = req.body;
+    console.log("Signup attempt:", email);
 
     name = name?.trim();
     email = email?.trim().toLowerCase();
     emergencyName = emergencyName?.trim() || "";
     emergencyPhone = emergencyPhone?.trim();
-    countryCode = countryCode?.trim() || "+91"; // ADDED - keeps your +91 feature
+    countryCode = countryCode?.trim() || "+91";
 
-    if (!legalConsent ||!legalConsent.given) {
-      return res.status(400).json({ msg: "You must accept Privacy Policy and Terms to continue." });
+    if (!legalConsent?.given) {
+      return res.status(400).json({ msg: "You must accept Privacy Policy and Terms" });
     }
-
-    // NUMBER IS MANDATORY HERE
-    if (!name ||!email ||!password ||!age ||!emergencyPhone) {
-      return res.status(400).json({ msg: "All fields required - Emergency phone is mandatory" });
+    if (!name ||!email ||!password ||!age) {
+      return res.status(400).json({ msg: "Name, email, password, age required" });
     }
-
-    if (password.length < 6) {
-      return res.status(400).json({ msg: "Password must be at least 6 characters" });
+    if (!emergencyPhone) {
+      return res.status(400).json({ msg: "Emergency phone is compulsory" });
     }
 
     const exists = await User.findOne({ email });
-    if (exists) {
-      return res.status(400).json({ msg: "User already exists, please login" });
-    }
+    if (exists) return res.status(400).json({ msg: "User already exists, please login" });
 
-    const hash = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 10);
 
     let role = "user";
     if (email === "kratitvashukla14@mindguard.local" || email === "kratitvashhukla12@mindguard.local") {
@@ -43,42 +39,32 @@ async function handleSignup(req, res) {
     const user = await User.create({
       name,
       email,
-      password: hash,
+      password: hashed,
       age: Number(age),
       emergencyName,
-      emergencyPhone, // mandatory
-      countryCode, // ADDED - saved to DB
+      emergencyPhone: emergencyPhone.replace(/\D/g,""),
+      countryCode,
       role,
       legalConsent: {
         given: true,
-        type: legalConsent.type || "all",
+        type: legalConsent?.type || "all",
         timestamp: new Date(),
         ipAddress: req.headers['x-forwarded-for']?.split(',')[0] || req.ip,
-        userAgent: req.headers['user-agent'],
+        userAgent: req.headers["user-agent"],
         consentVersion: "v1.0 - 26 July 2026",
-        consentText: legalConsent.consentText || ""
+        consentText: legalConsent?.consentText || "User accepted Terms & Privacy"
       }
     });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
     res.status(201).json({
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        age: user.age,
-        emergencyName: user.emergencyName,
-        emergencyPhone: user.emergencyPhone,
-        countryCode: user.countryCode, // ADDED
-        role: user.role
-      }
+      user: { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role }
     });
 
   } catch (err) {
     console.error("Signup Error:", err);
-    res.status(500).json({ msg: "Signup failed", error: err.message });
+    res.status(500).json({ msg: err.message });
   }
 }
 
@@ -90,35 +76,18 @@ router.post("/login", async (req, res) => {
     let { email, password } = req.body;
     email = email?.trim().toLowerCase();
 
-    if (!email ||!password) {
-      return res.status(400).json({ msg: "Email and password required" });
-    }
-
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ msg: "User not found, please signup" });
+    if (!user) return res.status(400).json({ msg: "User not found" });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ msg: "Invalid password" });
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).json({ msg: "Invalid password" });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        age: user.age,
-        emergencyName: user.emergencyName,
-        emergencyPhone: user.emergencyPhone,
-        countryCode: user.countryCode, // ADDED
-        role: user.role || "user"
-      }
-    });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role || "user" } });
 
   } catch (err) {
     console.error("Login Error:", err);
-    res.status(500).json({ msg: "Login failed", error: err.message });
+    res.status(500).json({ msg: err.message });
   }
 });
 
