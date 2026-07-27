@@ -2,8 +2,57 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import Otp from "../models/Otp.js"; // <-- ADDED
 
 const router = express.Router();
+
+// ===== OTP ROUTES - MUST BE BEFORE EXPORT =====
+
+// SEND OTP
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone || phone.replace(/\D/g,"").length < 10) {
+      return res.status(400).json({ success: false, error: "Invalid phone" });
+    }
+    const cleanPhone = phone.replace(/\D/g,"");
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await Otp.deleteMany({ phone: cleanPhone });
+    await Otp.create({ phone: cleanPhone, otp });
+
+    console.log(`>>> OTP for ${cleanPhone} is ${otp} <<<`); // check Render logs
+
+    // For production later:
+    // await fetch(`https://api.msg91.com/api/v5/otp?template_id=...&mobile=${cleanPhone}&authkey=${process.env.MSG91_KEY}&otp=${otp}`);
+
+    res.json({ success: true, message: "OTP sent" });
+  } catch (err) {
+    console.error("Send OTP Error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// VERIFY OTP
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    const cleanPhone = phone.replace(/\D/g,"");
+    const record = await Otp.findOne({ phone: cleanPhone, otp });
+    if (!record) return res.status(400).json({ verified: false, error: "Invalid or expired OTP" });
+
+    await Otp.deleteMany({ phone: cleanPhone });
+
+    // Optional: mark user as verified
+    // await User.findOneAndUpdate({ emergencyPhone: cleanPhone }, { isPhoneVerified: true });
+
+    res.json({ verified: true });
+  } catch (err) {
+    res.status(500).json({ verified: false, error: err.message });
+  }
+});
+
+// ===== YOUR EXISTING AUTH - UNCHANGED =====
 
 async function handleSignup(req, res) {
   try {
