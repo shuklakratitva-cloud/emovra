@@ -91,29 +91,46 @@ export default function MindGuardApp() {
 
   return (
     <>
-      {/* BLACK GOLD GLOBAL OVERRIDE - NO FEATURE LOSS */}
       <style>{`
-        body{background:#0a0a0c!important}
-       .gold{color:#d4c5a0}
-       .tracking-mini{letter-spacing:0.18em;text-transform:uppercase;font-size:9px}
+        :root{
+          --bg:#0a0a0c!important;
+          --card-bg:rgba(18,18,20,0.95)!important;
+          --border:rgba(212,197,160,0.18)!important;
+          --text:#e8dcc6!important;
+        }
+        body{background:#0a0a0c!important; color:#e8dcc6!important}
+        /* FORCE all child components to black gold */
+        div[style*="var(--card-bg)"], div[style*="var(--bg)"]{
+          background: rgba(18,18,20,0.95)!important;
+          border: 0.5px solid rgba(212,197,160,0.18)!important;
+          color:#e8dcc6!important;
+        }
+        /* kill purple hardcoded */
+        div[style*="#2a1f"], div[style*="#1e1b2e"], div[style*="rgb(42"], div[style*="rgb(30"]{
+          background: rgba(18,18,20,0.95)!important;
+          border: 0.5px solid rgba(212,197,160,0.18)!important;
+        }
+        button[style*="linear-gradient"], button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
+          background:#d4b07a!important; color:#000!important; border:none!important;
+        }
+        /* MoodTracker buttons */
+        button{font-family:Inter,sans-serif}
       `}</style>
 
       <div style={{ minHeight:'100vh', background:'#0a0a0c', color:'#e8dcc6' }}>
-        {/* HEADER - BLACK GOLD */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,0.92)", backdropFilter:'blur(20px)', borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,0.95)", backdropFilter:'blur(20px)', borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
           <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "#d4c5a0", cursor: "pointer" }}>MindGuard ♛</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 12, color:'#e8dcc6', opacity:0.7 }}>Hi, {user.name} {isAdmin && "👑"}</span>
-            {isAdmin && (<button onClick={() => navigate("/admin")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "rgba(212,197,160,0.1)", color: "#d4c5a0", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Admin</button>)}
+            {isAdmin && (<button onClick={() => navigate("/admin")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "rgba(212,197,160,0.12)", color: "#d4c5a0", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Admin</button>)}
             <ThemeToggle />
             <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "#141416", color: "#d4c5a0", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Logout</button>
           </div>
         </div>
 
         <div style={{ maxWidth: 720, margin: "18px auto", padding: "0 16px" }}>
-          {/* INPUT CARD - BLACK GOLD */}
           <div style={{ padding: 20, borderRadius: 16, border: "0.5px solid rgba(212,197,160,0.18)", background: "rgba(18,18,20,0.95)" }}>
-            <h3 style={{ margin: "0 0 12px 0", color:'#e8dcc6', fontSize:16, fontWeight:600 }}>How are you feeling today?</h3>
+            <h3 style={{ margin: "0 0 12px 0", color:'#e8dcc6' }}>How are you feeling today?</h3>
             <textarea rows={5} value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" &&!e.shiftKey) { e.preventDefault(); handleAnalyze(); } }} placeholder="Type what's on your mind..." style={{ width: "100%", padding: 14, borderRadius: 12, border: "0.5px solid rgba(212,197,160,0.18)", background: "#0f0f11", color: "#e8dcc6", outline:'none' }} />
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
               <button onClick={handleAnalyze} disabled={loading} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "#d4b07a", color: "#000", fontWeight: 800, cursor:'pointer', fontSize:12 }}>{loading? "Analyzing..." : "✨ Analyze"}</button>
@@ -144,9 +161,7 @@ export default function MindGuardApp() {
           )}
 
           <div style={{ marginTop: 20, display:'flex', flexDirection:'column', gap:16 }}>
-            <div style={{ background:'rgba(18,18,20,0.6)', border:'0.5px solid rgba(212,197,160,0.12)', borderRadius:12, padding:12 }}>
-              <VoiceToneAnalyzer onResult={setVoiceData} />
-            </div>
+            <VoiceToneAnalyzer onResult={setVoiceData} />
             <MoodTracker />
             <Journal />
             <GroundingExercises />
