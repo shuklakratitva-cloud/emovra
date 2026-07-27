@@ -14,25 +14,23 @@ export default function LandingPage() {
 
   useEffect(() => {
     document.body.style.background = "#09090b";
+    const link = document.createElement("link");
+    link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
   }, []);
 
   return (
     <div style={{ minHeight:'100vh', background:'#0a0a0c', color:'#e8dcc6', fontFamily:'Inter, sans-serif' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
+      <style dangerouslySetInnerHTML={{ __html: `
         .serif{font-family:'Instrument Serif',serif}
         .tracking-mini{letter-spacing:0.18em;text-transform:uppercase;font-size:9px}
         html{scroll-behavior:smooth}
-      `}</style>
+      `}} />
 
-      {/* HEADER - WITH OPTION 2 */}
       <header style={{ height:72, borderBottom:'0.5px solid rgba(212,197,160,0.15)', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 32px', position:'sticky', top:0, background:'rgba(10,10,12,0.92)', backdropFilter:'blur(20px)', zIndex:100 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, cursor:'pointer' }} onClick={goTop}>
           <img src={EMOVRA_LOGO} alt="EMOVRA" style={{ height:52, width:'auto', objectFit:'contain' }} />
-          <div style={{ display:'flex', alignItems:'center', marginLeft:4 }}>
-            <div style={{ width:1, height:18, background:'rgba(212,197,160,0.2)', marginRight:14 }}></div>
-            <span style={{ fontSize:9, letterSpacing:'0.24em', color:'rgba(232,220,198,0.5)', textTransform:'uppercase', whiteSpace:'nowrap' }}>Breathe. Balance. Become.</span>
-          </div>
         </div>
         <div style={{ display:'flex', gap:28, fontSize:13, color:'rgba(232,220,198,0.6)' }}>
           <span onClick={goTop} style={{ color:'#d4c5a0', borderBottom:'1px solid #d4c5a0', cursor:'pointer' }}>Home</span>
@@ -45,7 +43,6 @@ export default function LandingPage() {
         <button onClick={goApp} style={{ border:'0.5px solid rgba(212,197,160,0.4)', background:'transparent', color:'#d4c5a0', padding:'8px 20px', borderRadius:999, fontSize:12, cursor:'pointer' }}>Get Started</button>
       </header>
 
-      {/* HERO */}
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'50px 32px', display:'grid', gridTemplateColumns:'1.1fr 0.9fr', gap:50, alignItems:'center' }}>
         <div>
           <h1 className="serif" style={{ fontSize:'54px', lineHeight:1.05, fontWeight:400, color:'#e8dcc6', margin:0 }}>Your Mental Wellness<br/>Understood</h1>
@@ -56,6 +53,7 @@ export default function LandingPage() {
             <button onClick={goApp} style={{ background:'#d4b07a', color:'#000', border:0, padding:'12px 28px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>Begin Your Journey</button>
             <button onClick={()=>scrollTo('features')} style={{ background:'transparent', border:'0.5px solid rgba(212,197,160,0.3)', color:'#d4c5a0', padding:'12px 28px', borderRadius:8, fontSize:12, cursor:'pointer' }}>Learn More →</button>
           </div>
+
           <div style={{ marginTop:32, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, borderTop:'0.5px solid rgba(255,255,255,0.08)', paddingTop:20 }}>
             <div style={{ borderRight:'0.5px solid rgba(255,255,255,0.08)', paddingRight:12 }}>
               <div style={{ display:'flex', gap:8 }}><span>🛡</span><div><div style={{ fontSize:12, fontWeight:500 }}>Private & Secure</div><div style={{ fontSize:10, color:'rgba(255,255,255,0.4)', marginTop:2 }}>End-to-end encrypted, privacy first</div></div></div>
@@ -66,11 +64,14 @@ export default function LandingPage() {
             <div style={{ paddingLeft:4 }}>
               <div style={{ display:'flex', gap:8 }}><span>🍃</span><div><div style={{ fontSize:12, fontWeight:500 }}>Daily Calm</div><div style={{ fontSize:10, color:'rgba(255,255,255,0.4)', marginTop:2 }}>Guided practices in 5–15 minutes</div></div></div>
             </div>
+          </div>
+
           <div style={{ marginTop:28, display:'flex', gap:40, borderTop:'0.5px solid rgba(255,255,255,0.08)', paddingTop:16 }}>
             <div><div style={{ fontSize:16, fontWeight:600 }}>• 98%</div><div style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>Report Reduced Stress</div></div>
             <div><div style={{ fontSize:16, fontWeight:600 }}>• 4.9/5</div><div style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>Wellness Rating</div></div>
           </div>
         </div>
+
         <div style={{ background:'rgba(15,15,17,0.6)', border:'0.5px solid rgba(212,197,160,0.25)', borderRadius:16, padding:16, height:460 }}>
           <div style={{ borderRadius:12, overflow:'hidden', height:260 }}><img src={ZEN_IMAGE} alt="zen" style={{ width:'100%', height:'100%', objectFit:'cover' }} /></div>
           <div style={{ textAlign:'center', marginTop:20 }}>
@@ -121,7 +122,7 @@ export default function LandingPage() {
           <a href="mailto:shukla.kratitva@gmail.com" style={{ border:'0.5px solid rgba(212,197,160,0.3)', color:'#d4c5a0', padding:'12px 20px', borderRadius:999, textDecoration:'none', fontWeight:600, fontSize:13 }}>✉ shukla.kratitva@gmail.com</a>
         </div>
         <div style={{ marginTop:30, display:'flex', justifyContent:'space-between' }} className="tracking-mini">
-          <span style={{ color:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', gap:8 }}><img src={EMOVRA_LOGO} style={{ height:24, width:'auto' }} /> © 2026 EMOVRA</span>
+          <span style={{ color:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', gap:8 }}><img src={EMOVRA_LOGO} alt="logo" style={{ height:24, width:'auto' }} /> © 2026 EMOVRA</span>
           <span onClick={goApp} style={{ cursor:'pointer', color:'rgba(255,255,255,0.5)' }}>Launch App →</span>
         </div>
       </div>
