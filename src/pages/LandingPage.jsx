@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import LegalCookieBanner from "../components/LegalCookieBanner";
 
 const ZEN_IMAGE = "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=800&auto=format&fit=crop";
+const EMOVRA_LOGO = "/emovra-logo.png"; // your brain logo - white transparent version
 
 export default function LandingPage() {
   const goApp = () => (window.location.href = "/app");
@@ -24,11 +25,11 @@ export default function LandingPage() {
         html{scroll-behavior:smooth}
       `}</style>
 
-      {/* HEADER */}
+      {/* HEADER - ROLEX CROWN CHANGED TO BRAIN LOGO + EMOVRA */}
       <header style={{ height:68, borderBottom:'0.5px solid rgba(212,197,160,0.15)', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 32px', position:'sticky', top:0, background:'rgba(10,10,12,0.92)', backdropFilter:'blur(20px)', zIndex:100 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }} onClick={goTop}>
-          <span style={{ fontSize:22, color:'#d4c5a0' }}>♛</span>
-          <span className="serif" style={{ fontSize:24, color:'#d4c5a0', fontWeight:400 }}>MindGuard</span>
+          <img src={EMOVRA_LOGO} alt="EMOVRA" style={{ height:32, width:'auto' }} />
+          <span className="serif" style={{ fontSize:24, color:'#d4c5a0', fontWeight:400, letterSpacing:'0.15em' }}>EMOVRA</span>
         </div>
         <div style={{ display:'flex', gap:28, fontSize:13, color:'rgba(232,220,198,0.6)' }}>
           <span onClick={goTop} style={{ color:'#d4c5a0', borderBottom:'1px solid #d4c5a0', cursor:'pointer' }}>Home</span>
@@ -41,7 +42,7 @@ export default function LandingPage() {
         <button onClick={goApp} style={{ border:'0.5px solid rgba(212,197,160,0.4)', background:'transparent', color:'#d4c5a0', padding:'8px 20px', borderRadius:999, fontSize:12, cursor:'pointer' }}>Get Started</button>
       </header>
 
-      {/* HERO */}
+      {/* HERO - UNCHANGED */}
       <div style={{ maxWidth:1280, margin:'0 auto', padding:'50px 32px', display:'grid', gridTemplateColumns:'1.1fr 0.9fr', gap:50, alignItems:'center' }}>
         <div>
           <h1 className="serif" style={{ fontSize:'54px', lineHeight:1.05, fontWeight:400, color:'#e8dcc6', margin:0 }}>Your Mental Wellness<br/>Understood</h1>
@@ -65,7 +66,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* 10k+ REMOVED - ONLY 2 ITEMS NOW */}
           <div style={{ marginTop:28, display:'flex', gap:40, borderTop:'0.5px solid rgba(255,255,255,0.08)', paddingTop:16 }}>
             <div><div style={{ fontSize:16, fontWeight:600 }}>• 98%</div><div style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>Report Reduced Stress</div></div>
             <div><div style={{ fontSize:16, fontWeight:600 }}>• 4.9/5</div><div style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>Wellness Rating</div></div>
@@ -83,7 +83,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* BLACK & GOLD MAIN AREA - NOW VISIBLE, ALL BUTTONS LAND HERE */}
       <div id="features" style={{ maxWidth:1280, margin:'0 auto', padding:'80px 32px', borderTop:'0.5px solid rgba(212,197,160,0.12)', background:'radial-gradient(600px at 20% 0%, rgba(212,197,160,0.06), transparent)' }}>
         <div className="tracking-mini" style={{ color:'#d4c5a0' }}>01 — Features</div>
         <h2 className="serif" style={{ fontSize:36, marginTop:10 }}>Private, intelligent, calm.</h2>
@@ -107,14 +106,26 @@ export default function LandingPage() {
       </div>
 
       <div id="about" style={{ maxWidth:1280, margin:'0 auto', padding:'80px 32px', borderTop:'0.5px solid rgba(212,197,160,0.12)', textAlign:'center' }}>
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:12 }}>
+          <img src={EMOVRA_LOGO} alt="EMOVRA" style={{ height:42 }} />
+        </div>
         <div className="tracking-mini" style={{ color:'#d4c5a0' }}>About</div>
         <h2 className="serif" style={{ fontSize:36, marginTop:10 }}>Made for students, not metrics.</h2>
         <p style={{ color:'rgba(255,255,255,0.45)', maxWidth:520, margin:'12px auto', fontSize:13 }}>No feeds, no likes. Just a quiet place. Built in Greater Noida by Emovra.</p>
       </div>
 
-      <div id="support" style={{ maxWidth:1280, margin:'0 auto', padding:'30px 32px', display:'flex', justifyContent:'space-between', borderTop:'0.5px solid rgba(212,197,160,0.12)' }} className="tracking-mini">
-        <span style={{ color:'rgba(255,255,255,0.2)' }}>© 2026 MindGuard — Emovra</span>
-        <span onClick={()=>window.location.href='mailto:support@emovra.pages.dev'} style={{ cursor:'pointer', color:'rgba(255,255,255,0.5)' }}>support@emovra.pages.dev — Launch App →</span>
+      {/* SUPPORT - MOVED FROM APP TO LANDING - YOUR PERSONAL DETAILS */}
+      <div id="support" style={{ maxWidth:1280, margin:'0 auto', padding:'50px 32px', borderTop:'0.5px solid rgba(212,197,160,0.12)', background:'rgba(18,18,20,0.4)', textAlign:'center' }}>
+        <div className="tracking-mini" style={{ color:'#d4c5a0' }}>Support & Contact</div>
+        <h2 className="serif" style={{ fontSize:32, marginTop:10 }}>We are here for you</h2>
+        <div style={{ display:'flex', justifyContent:'center', gap:16, marginTop:24, flexWrap:'wrap' }}>
+          <a href="tel:9999773355" style={{ background:'#d4b07a', color:'#000', padding:'12px 20px', borderRadius:999, textDecoration:'none', fontWeight:700, fontSize:13 }}>📞 9999773355</a>
+          <a href="mailto:shukla.kratitva@gmail.com" style={{ border:'0.5px solid rgba(212,197,160,0.3)', color:'#d4c5a0', padding:'12px 20px', borderRadius:999, textDecoration:'none', fontWeight:600, fontSize:13 }}>✉️ shukla.kratitva@gmail.com</a>
+        </div>
+        <div style={{ marginTop:30, display:'flex', justifyContent:'space-between' }} className="tracking-mini">
+          <span style={{ color:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', gap:8 }}><img src={EMOVRA_LOGO} style={{ height:16 }} /> © 2026 EMOVRA</span>
+          <span onClick={goApp} style={{ cursor:'pointer', color:'rgba(255,255,255,0.5)' }}>Launch App →</span>
+        </div>
       </div>
 
       <LegalCookieBanner />

@@ -45,9 +45,9 @@ export default function MindGuardApp() {
       const token = localStorage.getItem('token');
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
-      .catch(() => {});
+     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+     .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+     .catch(() => {});
       }
     } catch {}
   }, []);
@@ -114,10 +114,10 @@ export default function MindGuardApp() {
       `}</style>
 
       <div style={{ minHeight:'100vh', background:'#0a0a0c', color:'#e8dcc6' }}>
+        {/* HEADER - KEPT AS EMOVRA TEXT ONLY LIKE SCREENSHOT 3 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,0.95)", backdropFilter:'blur(20px)', borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
-          <div onClick={() => navigate("/")} style={{ display:'flex', alignItems:'center', gap:10, cursor: "pointer" }}>
-            <img src="/emovra-logo.png" alt="EMOVRA" style={{ height:28, width:'auto' }} onError={(e)=>e.target.style.display='none'} />
-            <span style={{ fontWeight: 800, fontSize: 18, color: "#d4c5a0", letterSpacing:'0.15em' }}>EMOVRA</span>
+          <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "#d4c5a0", letterSpacing:'0.15em', cursor: "pointer" }}>
+            EMOVRA
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 12, color:'#e8dcc6', opacity:0.7 }}>Hi, {user.name} {isAdmin && "👑"}</span>
@@ -166,19 +166,10 @@ export default function MindGuardApp() {
             <TeleManas />
           </div>
 
-          <div style={{ marginTop: 32, padding: 20, borderRadius: 16, border: "0.5px solid rgba(212,197,160,0.18)", background: "rgba(18,18,20,0.9)", textAlign:'center' }}>
-            <div style={{ fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:'#d4c5a0' }}>Support & Contact</div>
-            <h3 style={{ margin:'8px 0 12px', color:'#e8dcc6' }}>We are here for you</h3>
-            <div style={{ display:'flex', justifyContent:'center', gap:12, flexWrap:'wrap', marginTop:12 }}>
-              <a href="tel:9999773355" style={{ padding:'10px 18px', borderRadius:999, background:'#d4b07a', color:'#000', textDecoration:'none', fontWeight:700, fontSize:13 }}>📞 9999773355</a>
-              <a href="mailto:shukla.kratitva@gmail.com" style={{ padding:'10px 18px', borderRadius:999, border:'0.5px solid rgba(212,197,160,0.3)', color:'#d4c5a0', textDecoration:'none', fontWeight:600, fontSize:13 }}>✉ shukla.kratitva@gmail.com</a>
-            </div>
-            <div style={{ marginTop:12, fontSize:11, color:'rgba(232,220,198,0.5)' }}>Available Mon-Sat, 9AM - 9PM IST | For crisis, call Tele-MANAS 14416</div>
-          </div>
+          {/* SUPPORT REMOVED FROM APP - NOW ONLY ON LANDING PAGE AS YOU WANTED */}
 
           <div style={{ marginTop: 20, padding: '16px', textAlign: 'center', fontSize: '11px', color: 'rgba(232,220,198,0.4)', borderTop: '0.5px solid rgba(212,197,160,0.12)' }}>
             <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:8, marginBottom:8 }}>
-              <img src="/emovra-logo.png" alt="EMOVRA" style={{ height:16 }} />
               <span style={{ color:'#d4c5a0', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span>
             </div>
             EMOVRA is for wellness support only and does not provide medical diagnosis or treatment. If you are in crisis, call Kiran 1800-599-0019 or 112.
