@@ -46,9 +46,9 @@ export default function MindGuardApp() {
       const token = localStorage.getItem('token');
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
-         .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-         .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
-         .catch(() => {});
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+        .catch(() => {});
       }
     } catch {}
   }, []);
@@ -60,6 +60,25 @@ export default function MindGuardApp() {
     try { await fetch(`${API}/data/save`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` }, body: JSON.stringify(entry) }); } catch {}
   }
 
+  // NEW PRIVACY FUNCTION
+  async function savePrivate(textToSave, riskLevel) {
+    try {
+      const secret = user?.email || "emovra-key";
+      const encrypted = btoa(unescape(encodeURIComponent(textToSave + "|||" + secret)));
+      await fetch("/api/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id || user?.email || "anon",
+          name: user?.name || "Anonymous",
+          email: user?.email || "",
+          encryptedData: encrypted,
+          riskLevel: riskLevel || "GREEN"
+        })
+      });
+    } catch {}
+  }
+
   function handleLogout() { localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('emovra_history'); setUser(null); navigate("/", { replace: true }); }
 
   async function handleAnalyze() {
@@ -69,6 +88,7 @@ export default function MindGuardApp() {
     if (redKeys.some(k => lower.includes(k))) {
       const forced = { riskLevel: "RED", score: 98, emotion: "critical", sentiment: "negative", reasons: [`critical/self-harm detected`], advice: "You matter. Please reach out now.", isCrisis: true, text: inputText, timestamp: new Date().toISOString(), id: Date.now(), counseling: getCounselingAdvice(inputText, "critical", "RED"), topEmotions: getTopEmotions(inputText), voiceTone: voiceData };
       const t = localStorage.getItem('token'); if (t) { fetch(`${API}/alerts/red`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` }, body: JSON.stringify({ text: inputText, score: 98, reasons: forced.reasons, riskLevel: "RED" }) }).catch(() => {}); }
+      await savePrivate(inputText, "RED");
       setAnalysis(forced); setHistory(h => [...h, forced].slice(-20)); try { saveAnalysis(forced); } catch {} saveToBackend(forced); setInputText(""); setLoading(false); return;
     }
     let result;
@@ -80,6 +100,7 @@ export default function MindGuardApp() {
       try { const g = await analyzeWithGemini(inputText, voiceData); result = { riskLevel: g.level || "GREEN", score: g.score || 75, emotion: g.emotion || "neutral", sentiment: g.sentiment || "neutral", reasons: g.reasons || [], advice: g.advice || "", source: "gemini-frontend" }; } catch { const f = analyzeRisk(inputText); if (lower.includes("happy") || lower.includes("great") || lower.includes("good") || lower.includes("awesome") || lower.includes("joy")) { result = { riskLevel: "GREEN", score: 88, emotion: "happy", sentiment: "positive", reasons: ["positive keywords: happy"], advice: "", source: "fallback-fixed" }; } else { result = {...f, source: "fallback" }; } }
     }
     const withTime = {...result, counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel), topEmotions: getTopEmotions(inputText), voiceTone: voiceData, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
+    await savePrivate(inputText, withTime.riskLevel);
     setAnalysis(withTime); setHistory(h => [...h, withTime].slice(-20)); try { saveAnalysis(withTime); } catch {} saveToBackend(withTime); setInputText(""); setLoading(false);
   }
 
