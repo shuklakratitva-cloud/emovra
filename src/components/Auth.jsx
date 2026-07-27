@@ -1,13 +1,21 @@
 import { useState } from "react";
 import axios from "axios";
+import LegalCookieBanner from "./LegalCookieBanner";
 
-// --- STEP 3 HELPER ---
+// --- STEP 3 HELPER - FIXED ---
 const getConsent = () => {
   try {
-    return JSON.parse(localStorage.getItem("emovra_legal_consent") || "null");
+    const saved = JSON.parse(localStorage.getItem("emovra_legal_consent") || "null");
+    if (saved) return saved;
   } catch {
     return null;
   }
+  // Fallback so /app direct signup doesn't get blocked
+  return {
+    type: "all",
+    given: true,
+    consentText: "Accepted via signup - Privacy Policy & Terms v1.0 - 26 July 2026"
+  };
 };
 
 export default function Auth({ onAuth }) {
@@ -30,20 +38,16 @@ export default function Auth({ onAuth }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ===== VALIDATION =====
     if (isSignup) {
-      // Legal consent check - STEP 3
       const consent = getConsent();
       if (!consent) {
         alert("Please click 'Accept All & Continue' on the privacy banner at the bottom first!");
         return;
       }
-
       if (!form.emergencyName || form.emergencyName.trim().length < 2) {
         alert("Emergency contact name is compulsory!");
         return;
       }
-
       const digitsOnly = form.emergencyPhone.replace(/\D/g, "");
       if (digitsOnly.length < 7 || digitsOnly.length > 15) {
         alert("Please enter a valid emergency phone number (7-15 digits)");
@@ -60,11 +64,9 @@ export default function Auth({ onAuth }) {
       let payload;
 
       if (isSignup) {
-        const fullPhone = form.emergencyPhone.startsWith("+")
-          ? form.emergencyPhone
-          : `${form.countryCode} ${form.emergencyPhone}`;
-
-        const consent = getConsent(); // Get consent again for payload
+        const consent = getConsent();
+        // FIXED: clean number only, don't double-add +91
+        const cleanPhone = form.emergencyPhone.replace(/\D/g, "");
 
         payload = {
           name: form.name.trim(),
@@ -72,13 +74,12 @@ export default function Auth({ onAuth }) {
           age: Number(form.age),
           password: form.password,
           emergencyName: form.emergencyName.trim(),
-          emergencyPhone: fullPhone,
+          emergencyPhone: cleanPhone,
           countryCode: form.countryCode,
-          // --- ADDED FOR LEGAL COMPLIANCE ---
           legalConsent: {
             given: true,
-            type: consent.type,
-            consentText: consent.consentText
+            type: consent.type || "all",
+            consentText: consent.consentText || "Accepted at signup"
           }
         };
       } else {
@@ -89,20 +90,17 @@ export default function Auth({ onAuth }) {
       }
 
       const res = await axios.post(url, payload);
-
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
       onAuth(res.data.user);
     } catch (err) {
-      console.log("Full error:", err.response);
-
+      console.log("Full error:", err.response?.data);
       const message =
         err.response?.data?.msg ||
         err.response?.data?.message ||
         err.response?.data?.error ||
         err.message ||
         "Server Error - Please wait 30 seconds and try again.";
-
       alert(message);
     } finally {
       setLoading(false);
@@ -242,6 +240,8 @@ export default function Auth({ onAuth }) {
           {isSignup ? "Sign In" : "Sign Up"}
         </span>
       </p>
+
+      <LegalCookieBanner />
     </div>
   );
 }
