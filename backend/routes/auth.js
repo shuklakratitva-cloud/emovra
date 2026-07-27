@@ -7,12 +7,13 @@ const router = express.Router();
 
 async function handleSignup(req, res) {
   try {
-    let { name, email, password, age, emergencyName, emergencyPhone, legalConsent } = req.body;
+    let { name, email, password, age, emergencyName, emergencyPhone, countryCode, legalConsent } = req.body;
 
     name = name?.trim();
     email = email?.trim().toLowerCase();
     emergencyName = emergencyName?.trim() || "";
     emergencyPhone = emergencyPhone?.trim();
+    countryCode = countryCode?.trim() || "+91"; // ADDED - keeps your +91 feature
 
     if (!legalConsent ||!legalConsent.given) {
       return res.status(400).json({ msg: "You must accept Privacy Policy and Terms to continue." });
@@ -46,6 +47,7 @@ async function handleSignup(req, res) {
       age: Number(age),
       emergencyName,
       emergencyPhone, // mandatory
+      countryCode, // ADDED - saved to DB
       role,
       legalConsent: {
         given: true,
@@ -69,6 +71,7 @@ async function handleSignup(req, res) {
         age: user.age,
         emergencyName: user.emergencyName,
         emergencyPhone: user.emergencyPhone,
+        countryCode: user.countryCode, // ADDED
         role: user.role
       }
     });
@@ -108,6 +111,7 @@ router.post("/login", async (req, res) => {
         age: user.age,
         emergencyName: user.emergencyName,
         emergencyPhone: user.emergencyPhone,
+        countryCode: user.countryCode, // ADDED
         role: user.role || "user"
       }
     });
