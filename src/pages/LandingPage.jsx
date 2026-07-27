@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import LegalCookieBanner from "../components/LegalCookieBanner";
-import PhoneVerify from "./components/PhoneVerify"; // <-- make sure this file exists
+import PhoneVerify from "../components/PhoneVerify"; // <-- make sure this file exists
 
 const ZEN_IMAGE = "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=800&auto=format&fit=crop";
 const EMOVRA_LOGO = "/emovra-logo.png";
