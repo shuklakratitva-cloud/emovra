@@ -29,9 +29,17 @@ export default function LandingPage() {
       `}} />
 
       <header style={{ height:72, borderBottom:'0.5px solid rgba(212,197,160,0.15)', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 32px', position:'sticky', top:0, background:'rgba(10,10,12,0.92)', backdropFilter:'blur(20px)', zIndex:100 }}>
+        {/* LOGO + TAGLINE ADDED HERE */}
         <div style={{ display:'flex', alignItems:'center', gap:12, cursor:'pointer' }} onClick={goTop}>
           <img src={EMOVRA_LOGO} alt="EMOVRA" style={{ height:52, width:'auto', objectFit:'contain' }} />
+          <div style={{ display:'flex', flexDirection:'column', lineHeight:1.1 }}>
+            <span className="serif" style={{ fontSize:18, fontWeight:600, letterSpacing:'0.12em', color:'#e8dcc6' }}>EMOVRA</span>
+            <span style={{ fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(212,197,160,0.7)', marginTop:2 }}>
+              Breathe. Balance. Become.
+            </span>
+          </div>
         </div>
+
         <div style={{ display:'flex', gap:28, fontSize:13, color:'rgba(232,220,198,0.6)' }}>
           <span onClick={goTop} style={{ color:'#d4c5a0', borderBottom:'1px solid #d4c5a0', cursor:'pointer' }}>Home</span>
           <span onClick={()=>scrollTo('about')} style={{cursor:'pointer'}}>About</span>
