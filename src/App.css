@@ -2,35 +2,70 @@
 .hero{display:flex;justify-content:center;padding:16px 0}
 .ticks{height:1px;background:var(--border);margin:24px 0;width:100%}
 #spacer{height:40px}
-.primary-btn{padding:10px 20px;background:#7c3aed;color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:700;font-size:13px;transition:0.2s}
+.primary-btn{
+  padding:10px 20px;
+  background:#d4b07a;
+  color:#000;
+  border:none;
+  border-radius:20px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:13px;
+  transition:0.2s
+}
 .primary-btn:hover{opacity:0.9;transform:translateY(-1px)}
 .primary-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-.secondary-btn{padding:10px 18px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-weight:600;font-size:13px;transition:0.2s}
-.secondary-btn:hover{background:var(--bg)}
-textarea{font-family:inherit;background:var(--card-bg);color:var(--text);border:1px solid var(--border);outline:none}
-textarea:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,0.15)}
+.secondary-btn{
+  padding:10px 18px;
+  border-radius:20px;
+  cursor:pointer;
+  border:0.5px solid rgba(212,197,160,0.3);
+  background:transparent;
+  color:#d4c5a0;
+  font-weight:600;
+  font-size:13px;
+  transition:0.2s
+}
+.secondary-btn:hover{background:rgba(212,197,160,0.08)}
+textarea{
+  font-family:inherit;
+  background:#0f0f11;
+  color:#e8dcc6;
+  border:0.5px solid rgba(212,197,160,0.18);
+  outline:none;
+  border-radius:12px
+}
+textarea:focus{border-color:#d4b07a;box-shadow:0 0 0 3px rgba(212,176,122,0.15)}
 
-/* === THEME VARIABLES - SINGLE SOURCE OF TRUTH === */
+/* === THEME VARIABLES - BLACK & GOLD FOR BOTH MODES === */
 :root {
-  --bg: #f8f7ff;
-  --card-bg: #ffffff;
-  --text: #1a1033;
-  --text-h: #1a1033;
-  --border: #e9d5ff;
-  --muted: #8b7aa8;
+  --bg: #0a0a0c;
+  --card-bg: rgba(18,18,20,0.95);
+  --text: #e8dcc6;
+  --text-h: #d4c5a0;
+  --border: rgba(212,197,160,0.18);
+  --muted: rgba(232,220,198,0.5);
 }
 [data-theme="dark"] {
-  --bg: #0a0015;
-  --card-bg: #1a1033;
-  --text: #e9d5ff;
-  --text-h: #ffffff;
-  --border: #2a1a4a;
-  --muted: #a78bfa;
+  --bg: #0a0a0c;
+  --card-bg: rgba(18,18,20,0.95);
+  --text: #e8dcc6;
+  --text-h: #d4c5a0;
+  --border: rgba(212,197,160,0.18);
+  --muted: rgba(232,220,198,0.5);
+}
+[data-theme="light"] {
+  --bg: #0a0a0c;
+  --card-bg: rgba(18,18,20,0.95);
+  --text: #e8dcc6;
+  --text-h: #d4c5a0;
+  --border: rgba(212,197,160,0.18);
+  --muted: rgba(232,220,198,0.5);
 }
 
-body, #root { background: var(--bg); color: var(--text); min-height:100vh; margin:0; transition: background 0.2s, color 0.2s; }
+body, #root { background: var(--bg) !important; color: var(--text) !important; min-height:100vh; margin:0; transition: background 0.2s, color 0.2s; }
 
-/* === FIX: HEADER - NO OVERLAP === */
+/* === FIX: HEADER - BLACK GOLD === */
 .app-header{
   display:flex;
   justify-content:space-between;
@@ -43,9 +78,9 @@ body, #root { background: var(--bg); color: var(--text); min-height:100vh; margi
   position:sticky;
   top:0;
   z-index:100;
-  background:var(--card-bg);
-  border-bottom:1px solid var(--border);
-  backdrop-filter: blur(8px);
+  background:rgba(10,10,12,0.95) !important;
+  border-bottom:0.5px solid rgba(212,197,160,0.15);
+  backdrop-filter: blur(20px);
 }
 .header-actions{
   display:flex;
@@ -54,7 +89,7 @@ body, #root { background: var(--bg); color: var(--text); min-height:100vh; margi
   flex-wrap:wrap;
 }
 
-/* === FIX: RED ALERT SHOULD NEVER BE OVERRIDDEN BY DARK MODE === */
+/* === FIX: RED ALERT SHOULD NEVER BE OVERRIDDEN === */
 .red-alert-box{
   background:#fee2e2 !important;
   border:2px solid #ef4444 !important;
@@ -72,7 +107,17 @@ body, #root { background: var(--bg); color: var(--text); min-height:100vh; margi
   color:#991b1b !important;
 }
 
-/* === DARK MODE - SAFE, NO !important ABUSE === */
+/* === FORCE CHILD COMPONENTS - KILL PURPLE === */
+div[style*="var(--card-bg)"], div[style*="var(--bg)"]{
+  background: rgba(18,18,20,0.95) !important;
+  border-color: rgba(212,197,160,0.18) !important;
+  color:#e8dcc6 !important;
+}
+div[style*="#2a1f"], div[style*="#1a1033"], div[style*="#1e1b2e"]{
+  background: rgba(18,18,20,0.95) !important;
+  border: 0.5px solid rgba(212,197,160,0.18) !important;
+}
+
 [data-theme="dark"] p,
 [data-theme="dark"] small,
 [data-theme="dark"] h1,
@@ -85,7 +130,13 @@ body, #root { background: var(--bg); color: var(--text); min-height:100vh; margi
 }
 
 [data-theme="dark"] .helpline-box {
-  background: #1e293b !important;
-  color: #f1f5f9 !important;
-  border: 1px solid #334155 !important;
+  background: rgba(18,18,20,0.95) !important;
+  color: #e8dcc6 !important;
+  border: 0.5px solid rgba(212,197,160,0.18) !important;
+}
+
+/* Extra: MoodTracker, Journal, Grounding, TeleManas purple fix */
+button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
+  background:#d4b07a !important;
+  color:#000 !important;
 }
