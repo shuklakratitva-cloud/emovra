@@ -45,9 +45,7 @@ export default function MindGuardApp() {
   const token = localStorage.getItem('token');
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
 
-  // === NEW: PRE-WARM BACKEND ON PAGE LOAD - NO USER DATA LOGGED ===
   useEffect(() => {
-    // Lightest ping - wakes Render from sleep, saves 400ms on first analyze
     fetch(`${API.replace('/api','')}/health`).catch(()=>{});
     fetch(`${API}/health`).catch(()=>{});
   }, []);
@@ -60,9 +58,9 @@ export default function MindGuardApp() {
       if (old && old.text) setAnalysis(old);
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
-       .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
-       .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
-       .catch(() => {});
+      .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
+      .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+      .catch(() => {});
       }
     } catch {}
   }, [token]);
@@ -227,7 +225,7 @@ export default function MindGuardApp() {
     }
 
     const withTime = {
-   ...result,
+  ...result,
       counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel),
       topEmotions: getTopEmotions(inputText),
       voiceTone: voiceData,
@@ -288,7 +286,7 @@ export default function MindGuardApp() {
           </div>
         </div>
 
-        <div style={{ maxWidth: 720, margin: "18px auto", padding: "0 16px" }}>
+        <main id="main-content" style={{ maxWidth: 720, margin: "18px auto", padding: "0 16px" }}>
           <div style={{ padding: 20, borderRadius: 16, border: "0.5px solid rgba(212,197,160,0.18)", background: "rgba(18,18,20,0.95)" }}>
             <h3 style={{ margin: "0 0 12px 0", color:'#e8dcc6' }}>How are you feeling today?</h3>
             <textarea rows={5} value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" &&!e.shiftKey) { e.preventDefault(); handleAnalyze(); } }} placeholder="Type what's on your mind..." style={{ width: "100%", padding: 14, borderRadius: 12, border: "0.5px solid rgba(212,197,160,0.18)", background: "#0f0f11", color: "#e8dcc6", outline:'none' }} />
@@ -346,7 +344,7 @@ export default function MindGuardApp() {
           <div style={{ marginTop: 20, padding: '16px', textAlign: 'center', fontSize: '11px', color: 'rgba(232,220,198,0.4)', borderTop: '0.5px solid rgba(212,197,160,0.12)' }}>
             <span style={{ color:'#d4c5a0', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span> - Wellness support only
           </div>
-        </div>
+        </main>
         <LegalCookieBanner />
       </div>
     </>
