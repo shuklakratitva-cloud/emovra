@@ -8,7 +8,8 @@ import dataRoutes from "./routes/data.js";
 import alertRoutes from "./routes/alert.js";
 import adminRoutes from "./routes/admin.js";
 import emotionRoutes from "./routes/emotion.js";
-import geminiRoutes from "./routes/gemini.js"; // <-- ADDED
+import geminiRoutes from "./routes/gemini.js";
+import analyzeRoutes from "./routes/analyze.js"; // <-- FIXED ESM
 
 dotenv.config();
 const app = express();
@@ -37,16 +38,15 @@ mongoose
     process.exit(1);
   });
 
-// --- START: ADDED CHECKS (doesn't break anything) ---
+// Checks
 if (!process.env.GEMINI_API_KEY) {
-  console.warn("⚠️ GEMINI_API_KEY is missing - Gemini chatbot will fail");
+  console.warn("⚠ GEMINI_API_KEY is missing - Gemini will fail");
 } else {
   console.log("✅ GEMINI_API_KEY found");
 }
 if (!process.env.ENCRYPTION_SECRET) {
-  console.warn("⚠️ ENCRYPTION_SECRET missing - using fallback. Set it in Render!");
+  console.warn("⚠ ENCRYPTION_SECRET missing - using fallback. Set it in Render!");
 }
-// --- END: ADDED CHECKS ---
 
 app.get("/", (req, res) => {
   res.send("MindGuard Backend Running - AI Enabled");
@@ -57,17 +57,19 @@ app.get("/api", (req, res) => {
     success: true,
     name: "MindGuard API",
     version: "1.0.0",
-    status: "Running - Admin + AI + Gemini + Encryption enabled",
+    status: "Running - Admin + AI + Gemini + Encryption + Analyze enabled",
+    endpoints: ["/api/auth", "/api/data", "/api/alerts", "/api/admin", "/api/emotion", "/api/chat", "/api/analyze"]
   });
 });
 
+// Routes - ALL FEATURES
 app.use("/api/auth", authRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/emotion", emotionRoutes);
-app.use("/api", geminiRoutes); // <-- ADDED - for /api/chat (Gemini)
-app.use('/api/analyze', require('./routes/analyze'));
+app.use("/api", geminiRoutes); // /api/chat
+app.use("/api/analyze", analyzeRoutes); // FIXED - now works for negations + hinglish
 
 app.use((req, res) => {
   res.status(404).json({
