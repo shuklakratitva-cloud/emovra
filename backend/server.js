@@ -31,6 +31,14 @@ app.use(
 
 app.use(express.json());
 
+// PRIVACY: Never log req.body.text - only method + path
+app.use((req, res, next) => {
+  if (req.path.includes('/analyze')) {
+    console.log(`[REQ] ${req.method} ${req.path} - body length: ${req.body?.text?.length || 0}`);
+  }
+  next();
+});
+
 mongoose
 .connect(process.env.MONGO_URI)
 .then(() => console.log("✅ MongoDB connected"))
@@ -50,7 +58,9 @@ if (!process.env.ENCRYPTION_SECRET) {
 
 app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled"));
 
-app.get("/health", (req, res) => res.json({ status: "ok", time: new Date(), gemini:!!process.env.GEMINI_API_KEY, mongo: mongoose.connection.readyState === 1 }));
+// Health for UptimeRobot - light, no DB, no logs of user data
+app.get("/health", (req, res) => res.status(200).send("OK"));
+app.get("/api/health", (req, res) => res.json({ status: "ok", time: new Date(), gemini:!!process.env.GEMINI_API_KEY, mongo: mongoose.connection.readyState === 1 }));
 
 app.get("/api", (req, res) => {
   res.json({
@@ -76,7 +86,7 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error("SERVER ERROR:", err.stack);
+  console.error("SERVER ERROR:", err.message); // Only message, never body
   res.status(500).json({ success: false, message: err.message });
 });
 

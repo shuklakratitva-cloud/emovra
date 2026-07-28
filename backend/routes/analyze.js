@@ -24,6 +24,13 @@ Text: "my boyfriend beats me and says I'm worthless" => {"risk":"ORANGE","score"
 Text: "uske bina nahi jee paunga, mar jaunga" => {"risk":"RED","score":85,"reason":"Parasocial dependency with self-harm","triggers":["paras","self-harm"],"category":"self_harm"}
 `;
 
+// === PRIVACY: Never log req.body.text in production ===
+const isProd = process.env.NODE_ENV === "production";
+function safeLogRisk(source, risk, score, category, extra="") {
+  // Only log risk level, never user text
+  console.log(`[${source}] Risk:${risk} Score:${score} Cat:${category} ${extra}`);
+}
+
 router.post('/', async (req, res) => {
   const text = req.body.text || "";
   if (!text.trim()) return res.json({ risk: "GREEN", score: 0, reason: "Empty", triggers: [], category: "general", isAI: true });
@@ -34,19 +41,20 @@ router.post('/', async (req, res) => {
   const abusePatterns = /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|abuse karti|toxic relationship|gaslighting|worthless bolta|bewakoof bolta|kutta jaise|blackmail karta|dhamki deta|treats me like|slaps me|torture karta)/i;
   const isAbuse = abusePatterns.test(lower);
 
-  // Quick keyword RED - instant safety
+  // === QUICK RED - NO GEMINI CALL - MUST BE FIRST ===
   const isDirectRed = /(mujhe marna hai|i want to die|kill myself|end my life|mar jaunga|mar jaungi|khudkushi karunga|khatam karna hai.*khud ko)/i.test(lower);
   const hasNegation = /(nahi|nahin|don't|do not|not|never|matlab nahi)/i.test(lower);
 
-  // FIXED ERROR 1: Added space in &&!
   if (isDirectRed &&!hasNegation) {
     const cat = isAbuse? "emotional_abuse" : "self_harm";
     const triggers = isAbuse? ["self-harm", "emotional_abuse"] : ["self-harm"];
+    safeLogRisk("QUICK-RED", "RED", 95, cat, "keyword safety net - NO GEMINI");
     return res.json({ risk: "RED", score: 95, reason: "Direct intent - keyword safety net", triggers, category: cat, isAI: false, isSafetyNet: true });
   }
 
   // If only abuse (no self-harm), return ORANGE with abuse category - INSTANT, no AI call needed
   if (isAbuse &&!isDirectRed) {
+    safeLogRisk("QUICK-ABUSE", "ORANGE", 75, "emotional_abuse", "keyword safety net - NO GEMINI");
     return res.json({
       risk: "ORANGE",
       score: 75,
@@ -68,7 +76,7 @@ router.post('/', async (req, res) => {
         contents: SYSTEM_PROMPT + "\n\nText to analyze: \"" + text + "\""
       });
     } catch (e1) {
-      console.log("2.0-flash failed, trying 1.5-flash-latest:", e1.message);
+      safeLogRisk("GEMINI", "RETRY", 0, "general", `2.0-flash failed: ${e1.message}`);
       response = await ai.models.generateContent({
         model: "gemini-1.5-flash-latest",
         contents: SYSTEM_PROMPT + "\n\nText to analyze: \"" + text + "\""
@@ -76,22 +84,27 @@ router.post('/', async (req, res) => {
     }
 
     const txt = response.text || "";
-    console.log("Gemini raw:", txt);
+    // PRIVACY FIX: Never log Gemini raw which contains user text - log only length
+    if (!isProd) console.log("Gemini raw length:", txt.length);
 
     const match = txt.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);
       if (!['GREEN','ORANGE','RED'].includes(parsed.risk)) parsed.risk = 'ORANGE';
       if (!parsed.category) parsed.category = parsed.triggers?.includes("emotional_abuse")? "emotional_abuse" : "general";
+      safeLogRisk("GEMINI-AI", parsed.risk, parsed.score, parsed.category, "AI success");
       return res.json({...parsed, isAI: true });
     }
+    safeLogRisk("GEMINI-AI", "ORANGE", 50, "general", "AI unclear");
     return res.json({ risk: "ORANGE", score: 50, reason: "AI unclear", triggers: ["unclear"], category: "general", isAI: true });
 
   } catch (e) {
-    console.error("Gemini error:", e.message);
+    console.error("Gemini error:", e.message); // Only error message, never text
     if (/(akela|lonely|depressed|anxiety|ro raha|tired|khatam)/i.test(lower)) {
+      safeLogRisk("FALLBACK", "ORANGE", 60, "general", "AI error");
       return res.json({ risk: "ORANGE", score: 60, reason: "AI error, keyword fallback", triggers: ["fallback","distress"], category: "general", isAI: false });
     }
+    safeLogRisk("FALLBACK", "GREEN", 20, "general", "AI error");
     return res.json({ risk: "GREEN", score: 20, reason: "AI error fallback", triggers: ["error"], category: "general", isAI: false });
   }
 });
