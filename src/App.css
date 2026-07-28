@@ -140,33 +140,42 @@ button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
   background:#d4b07a !important;
   color:#000 !important;
 }
-/* ===== ADDED: LOGO OPTION 2 - Breathe. Balance. Become. ===== */
-.logo-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0;
+
+/* === NEW: RISK COLORS - GREEN ORANGE RED - BLACK GOLD THEME === */
+.risk-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 12px;
+  border-radius:20px;
+  font-weight:800;
+  font-size:12px;
+  letter-spacing:0.5px;
+  border:1px solid;
 }
-.logo-text-main {
-  font-family: 'Times New Roman', serif;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 16px;
-  margin-left: 10px;
-  color: #EFE6D5;
+.risk-GREEN, .risk-green{
+  background: rgba(22,163,74,0.15) !important;
+  color: #4ade80 !important;
+  border-color: rgba(74,222,128,0.3) !important;
 }
-.logo-divider {
-  width: 1px;
-  height: 18px;
-  background: rgba(255,255,255,0.15);
-  margin: 0 14px;
+.risk-ORANGE, .risk-orange, .risk-YELLOW, .risk-yellow{
+  background: rgba(234,88,12,0.15) !important;
+  color: #fb923c !important;
+  border-color: rgba(251,146,60,0.3) !important;
 }
-.logo-sub {
-  font-family: 'Inter', sans-serif;
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: #9A958E;
-  line-height: 1;
-  white-space: nowrap;
+.risk-RED, .risk-red{
+  background: rgba(220,38,38,0.15) !important;
+  color: #f87171 !important;
+  border-color: rgba(248,113,113,0.3) !important;
+}
+.orange-alert-box{
+  background: rgba(234,88,12,0.12) !important;
+  border: 1.5px solid rgba(251,146,60,0.4) !important;
+  color: #fb923c !important;
+  border-radius:12px;
+  padding:12px;
+}
+.voice-card{
+  background: rgba(18,18,20,0.95) !important;
+  border: 0.5px solid rgba(212,197,160,0.18) !important;
+  color: #e8dcc6 !important;
 }

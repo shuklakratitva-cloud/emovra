@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import Otp from "../models/Otp.js";
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ async function handleSignup(req, res) {
       password: hashed,
       age: Number(age),
       emergencyName,
-      emergencyPhone: emergencyPhone.replace(/\D/g,""),
+      emergencyPhone: emergencyPhone.replace(/\D/g, ""),
       countryCode,
       role,
       legalConsent: {
@@ -87,6 +88,71 @@ router.post("/login", async (req, res) => {
 
   } catch (err) {
     console.error("Login Error:", err);
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+// --- NEW: MOBILE VERIFICATION + FORGOT PASSWORD ---
+
+router.post('/send-verify-otp', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ msg: "Phone required" });
+    const cleanPhone = phone.replace(/\D/g, "");
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
+    await Otp.create({ phone: cleanPhone, otp, purpose: 'verify' });
+    console.log(`VERIFY OTP ${cleanPhone}: ${otp}`);
+    res.json({ success: true, message: "OTP sent - check Render Logs" });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+router.post('/verify-phone', async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    const cleanPhone = phone.replace(/\D/g, "");
+    const found = await Otp.findOne({ phone: cleanPhone, otp, purpose: 'verify' });
+    if (!found) return res.status(400).json({ verified: false, msg: "Invalid OTP" });
+    await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
+    res.json({ verified: true });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+router.post('/forgot-password/send', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ msg: "Phone required" });
+    const cleanPhone = phone.replace(/\D/g, "");
+    const user = await User.findOne({ emergencyPhone: cleanPhone });
+    if (!user) return res.status(404).json({ msg: "No user with this phone number" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await Otp.deleteMany({ phone: cleanPhone, purpose: 'reset' });
+    await Otp.create({ phone: cleanPhone, otp, purpose: 'reset' });
+    console.log(`RESET OTP ${cleanPhone}: ${otp}`);
+    res.json({ success: true, message: "OTP sent - check Render Logs" });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+router.post('/forgot-password/reset', async (req, res) => {
+  try {
+    const { phone, otp, newPassword } = req.body;
+    if (!phone ||!otp ||!newPassword) return res.status(400).json({ msg: "All fields required" });
+    const cleanPhone = phone.replace(/\D/g, "");
+    const found = await Otp.findOne({ phone: cleanPhone, otp, purpose: 'reset' });
+    if (!found) return res.status(400).json({ msg: "Invalid or expired OTP" });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await User.findOneAndUpdate({ emergencyPhone: cleanPhone }, { password: hashed });
+    await Otp.deleteMany({ phone: cleanPhone, purpose: 'reset' });
+    res.json({ success: true, message: "Password reset successful, login now" });
+  } catch (err) {
     res.status(500).json({ msg: err.message });
   }
 });

@@ -21,8 +21,7 @@ const API = import.meta.env.VITE_API_URL || "https://emovra.onrender.com/api";
 function getAdvice(level) {
   const lvl = String(level || "").toUpperCase();
   if (lvl === "GREEN") return "You're in a stable range. Maintain healthy habits. Keep smiling! 😊";
-  if (lvl === "YELLOW") return "Slight stress detected. Try Box Breathing 4-4-4-4.";
-  if (lvl === "ORANGE") return "Please talk to a trusted friend or counselor.";
+  if (lvl === "ORANGE" || lvl === "YELLOW") return "Moderate stress detected. Please talk to a trusted friend or counselor. Try Box Breathing 4-4-4-4.";
   return "You matter. You are not alone. Help is available if you need it.";
 }
 
@@ -35,6 +34,9 @@ export default function MindGuardApp() {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState(() => { try { const s = localStorage.getItem('emovra_history'); return s? JSON.parse(s) : []; } catch { return []; } });
 
+  // TOKEN FIX - SINGLE SOURCE
+  const token = localStorage.getItem('token');
+
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
   useEffect(() => { if (transcript) setInputText(transcript); }, [transcript]);
 
@@ -42,12 +44,11 @@ export default function MindGuardApp() {
     try {
       const old = loadAnalysis();
       if (old && old.text) setAnalysis(old);
-      const token = localStorage.getItem('token');
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
-     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-     .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
-     .catch(() => {});
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+    .catch(() => {});
       }
     } catch {}
   }, []);
@@ -55,8 +56,8 @@ export default function MindGuardApp() {
   useEffect(() => { try { localStorage.setItem('emovra_history', JSON.stringify(history)); } catch {} }, [history]);
 
   async function saveToBackend(entry) {
-    const t = localStorage.getItem('token'); if (!t) return;
-    try { await fetch(`${API}/data/save`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` }, body: JSON.stringify(entry) }); } catch {}
+    if (!token) return;
+    try { await fetch(`${API}/data/save`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(entry) }); } catch {}
   }
 
   function handleLogout() { localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('emovra_history'); setUser(null); navigate("/", { replace: true }); }
@@ -67,12 +68,11 @@ export default function MindGuardApp() {
     const redKeys = ["i want to die", "kill myself", "end my life", "suicide", "no one will know if i die", "want to kill", "murder", "slit", "choke", "mujhe marna hai", "marna hai mujhe", "mar jana hai", "mar jau", "jeena nahi hai", "khatam karna hai", "khud ko khatam", "khudkushi", "zindagi khatam", "marna chahta hu", "nahi jeena", "zindagi se tang", "life se tang", "pareshan hu marna", "i will kill him"];
     if (redKeys.some(k => lower.includes(k))) {
       const forced = { riskLevel: "RED", score: 98, emotion: "critical", sentiment: "negative", reasons: [`critical/self-harm detected`], advice: "You matter. Please reach out now.", isCrisis: true, text: inputText, timestamp: new Date().toISOString(), id: Date.now(), counseling: getCounselingAdvice(inputText, "critical", "RED"), topEmotions: getTopEmotions(inputText), voiceTone: voiceData };
-      const t = localStorage.getItem('token'); if (t) { fetch(`${API}/alerts/red`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` }, body: JSON.stringify({ text: inputText, score: 98, reasons: forced.reasons, riskLevel: "RED" }) }).catch(() => {}); }
+      if (token) { fetch(`${API}/alerts/red`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ text: inputText, score: 98, reasons: forced.reasons, riskLevel: "RED" }) }).catch(() => {}); }
       setAnalysis(forced); setHistory(h => [...h, forced].slice(-20)); try { saveAnalysis(forced); } catch {} saveToBackend(forced); setInputText(""); setLoading(false); return;
     }
     let result;
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`${API}/emotion/analyze`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: token? `Bearer ${token}` : "" }, body: JSON.stringify({ text: inputText }) });
       if (res.ok) { const data = await res.json(); result = { riskLevel: data.color || data.riskLevel || "GREEN", score: data.score || 85, emotion: data.emotion || "happy", sentiment: data.sentiment || "positive", reasons: data.triggers? [data.triggers] : data.reasons || ["ai analysis"], advice: data.advice || "", source: data.isAI? "gemini-backend" : "backend-ai", confidence: data.confidence || 0.9 }; } else { throw new Error("backend failed"); }
     } catch (e) {
@@ -114,7 +114,6 @@ export default function MindGuardApp() {
       `}</style>
 
       <div style={{ minHeight:'100vh', background:'#0a0a0c', color:'#e8dcc6' }}>
-        {/* HEADER - KEPT AS EMOVRA TEXT ONLY LIKE SCREENSHOT 3 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,0.95)", backdropFilter:'blur(20px)', borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
           <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "#d4c5a0", letterSpacing:'0.15em', cursor: "pointer" }}>
             EMOVRA
@@ -149,6 +148,12 @@ export default function MindGuardApp() {
                   </div>
                 </div>
               )}
+              {analysis.riskLevel === "ORANGE" && (
+                <div style={{ padding: 16, background: "rgba(234,88,12,0.08)", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 12, color: "#fb923c", marginBottom: 12 }}>
+                  <b>⚠️ ORANGE - Moderate Stress</b>
+                  <div style={{ fontSize: 13, marginTop: 6, color:'rgba(255,255,255,0.7)' }}>Stress/anxiety detected. Take a break, try grounding exercises below.</div>
+                </div>
+              )}
               <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:8 }}>
                 <RiskCard analysis={analysis} text={analysis.text} />
                 <MoodChart history={history.length? history : [analysis]} />
@@ -159,14 +164,13 @@ export default function MindGuardApp() {
           )}
 
           <div style={{ marginTop: 20, display:'flex', flexDirection:'column', gap:16 }}>
-            <VoiceToneAnalyzer onResult={setVoiceData} />
+            {/* FIXED TOKEN HERE - THIS IS THE ONLY CHANGE FOR VOICE */}
+            <VoiceToneAnalyzer token={token} onResult={setVoiceData} />
             <MoodTracker />
             <Journal />
             <GroundingExercises />
             <TeleManas />
           </div>
-
-          {/* SUPPORT REMOVED FROM APP - NOW ONLY ON LANDING PAGE AS YOU WANTED */}
 
           <div style={{ marginTop: 20, padding: '16px', textAlign: 'center', fontSize: '11px', color: 'rgba(232,220,198,0.4)', borderTop: '0.5px solid rgba(212,197,160,0.12)' }}>
             <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:8, marginBottom:8 }}>
