@@ -1,11 +1,14 @@
-const express = require('express');
-const router = express.Router();
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+import express from "express";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-router.post('/chat', async (req,res) => {
+const router = express.Router();
+
+router.post('/chat', async (req, res) => {
   try {
     const { message } = req.body;
-    if(!process.env.GEMINI_API_KEY) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "GEMINI_API_KEY missing" });
+    }
     
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -21,4 +24,4 @@ router.post('/chat', async (req,res) => {
   }
 });
 
-module.exports = router;
+export default router;
