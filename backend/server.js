@@ -3,6 +3,9 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 
+// Load env FIRST
+dotenv.config();
+
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
 import alertRoutes from "./routes/alert.js";
@@ -11,7 +14,6 @@ import emotionRoutes from "./routes/emotion.js";
 import geminiRoutes from "./routes/gemini.js";
 import analyzeRoutes from "./routes/analyze.js";
 
-dotenv.config();
 const app = express();
 
 app.use(
@@ -30,9 +32,9 @@ app.use(
 app.use(express.json());
 
 mongoose
- .connect(process.env.MONGO_URI)
- .then(() => console.log("✅ MongoDB connected"))
- .catch((err) => {
+.connect(process.env.MONGO_URI)
+.then(() => console.log("✅ MongoDB connected"))
+.catch((err) => {
     console.error("❌ MongoDB Connection Error", err);
     process.exit(1);
   });
@@ -43,10 +45,12 @@ if (!process.env.GEMINI_API_KEY) {
   console.log("✅ GEMINI_API_KEY found");
 }
 if (!process.env.ENCRYPTION_SECRET) {
-  console.warn("⚠ ENCRYPTION_SECRET missing");
+  console.warn("⚠ ENCRYPTION_SECRET missing - using fallback key, set it in Render env");
 }
 
 app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled"));
+
+app.get("/health", (req, res) => res.json({ status: "ok", time: new Date(), gemini:!!process.env.GEMINI_API_KEY, mongo: mongoose.connection.readyState === 1 }));
 
 app.get("/api", (req, res) => {
   res.json({
@@ -72,7 +76,7 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error("SERVER ERROR:", err.stack);
   res.status(500).json({ success: false, message: err.message });
 });
 

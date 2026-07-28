@@ -27,32 +27,56 @@ Text: "mujhe marna hai" => {"risk":"RED","score":95,"reason":"Direct self-harm i
 
 router.post('/', async (req, res) => {
   const text = req.body.text || "";
-  if (!text.trim()) return res.json({ risk: "GREEN", score: 0, reason: "Empty" });
+  if (!text.trim()) return res.json({ risk: "GREEN", score: 0, reason: "Empty", triggers: [] });
 
   const lower = text.toLowerCase();
-  // Quick keyword RED - instant safety
-  if (/(mujhe marna hai|i want to die|kill myself|end my life)/i.test(lower) &&!lower.includes("nahi") &&!lower.includes("don't") &&!lower.includes("not")) {
-    return res.json({ risk: "RED", score: 95, reason: "Direct intent", triggers: ["self-harm"] });
+
+  // Quick keyword RED - instant safety (kept your feature)
+  const isDirectRed = /(mujhe marna hai|i want to die|kill myself|end my life|mar jaunga|mar jaungi)/i.test(lower);
+  const hasNegation = /(nahi|nahin|don't|do not|not|never|matlab nahi)/i.test(lower);
+
+  if (isDirectRed &&!hasNegation) {
+    return res.json({ risk: "RED", score: 95, reason: "Direct intent - keyword safety net", triggers: ["self-harm"] });
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: SYSTEM_PROMPT + "\n\nText to analyze: \"" + text + "\""
-    });
+
+    // FIX: gemini-1.5-flash is deprecated on v1beta, use 2.0-flash
+    // Try 2.0-flash first, fallback to flash-latest
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: SYSTEM_PROMPT + "\n\nText to analyze: \"" + text + "\""
+      });
+    } catch (e1) {
+      console.log("2.0-flash failed, trying 1.5-flash-latest:", e1.message);
+      response = await ai.models.generateContent({
+        model: "gemini-1.5-flash-latest",
+        contents: SYSTEM_PROMPT + "\n\nText to analyze: \"" + text + "\""
+      });
+    }
 
     const txt = response.text || "";
     console.log("Gemini raw:", txt);
+
     const match = txt.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);
+      // Validate risk
+      if (!['GREEN','ORANGE','RED'].includes(parsed.risk)) parsed.risk = 'ORANGE';
       return res.json(parsed);
     }
-    return res.json({ risk: "ORANGE", score: 50, reason: "AI unclear", triggers: [] });
+    return res.json({ risk: "ORANGE", score: 50, reason: "AI unclear", triggers: ["unclear"] });
+
   } catch (e) {
     console.error("Gemini error:", e.message);
-    return res.json({ risk: "GREEN", score: 20, reason: "AI error fallback", triggers: [] });
+    // SAFE FALLBACK: if AI fails, don't return GREEN for risky text, use keyword logic
+    if (/(akela|lonely|depressed|anxiety|ro raha|tired|khatam)/i.test(lower)) {
+      return res.json({ risk: "ORANGE", score: 60, reason: "AI error, keyword fallback - distress detected", triggers: ["fallback","distress"] });
+    }
+    return res.json({ risk: "GREEN", score: 20, reason: "AI error fallback", triggers: ["error"] });
   }
 });
 

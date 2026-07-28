@@ -29,33 +29,50 @@ export const decrypt = (encText) => {
 
 const entrySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  text_encrypted: { type: String }, // encrypted, you can't read in Atlas
-  text: { type: String, select: false }, // old field, keep but hide
+  text_encrypted: { type: String },
+  text: { type: String, select: false },
   riskLevel: { type: String, enum: ['GREEN','ORANGE','RED'], default: 'GREEN' },
   score: { type: Number, default: 0 },
   emotion: String,
   reasons: [String],
-  emoAbuseDetected: { type: Boolean, default: false }, // NEW SEPARATE INDICATOR
+  emoAbuseDetected: { type: Boolean, default: false },
   timestamp: { type: Date, default: Date.now }
-}, { timestamps: true });
+}, {
+  timestamps: true,
+  collection: 'entries' // <--- FIX: forces save to emotionDB.entries which you are watching in Atlas
+});
 
-// Pre-save: Fix your GREEN/ORANGE bug + encrypt
-entrySchema.pre('save', function(next) {
-  // If plain text provided, encrypt it
-  if (this._plainText) {
-    this.text_encrypted = encrypt(this._plainText);
+// Virtual field to hold plain text temporarily (won't be saved to DB)
+entrySchema.virtual('_plainText').get(function() {
+  return this.__plainText;
+}).set(function(v) {
+  this.__plainText = v;
+});
+
+// Pre-save: FIXED - No next() needed for Mongoose 8
+entrySchema.pre('save', function() {
+  const raw = this.__plainText || this._plainText || "";
+
+  // 1. Encrypt if plain text provided
+  if (raw) {
+    this.text_encrypted = encrypt(raw);
   }
-  // FIXED RISK LOGIC - your old logic was inverted
+
+  // 2. FIXED RISK LOGIC - your old logic was inverted, this is correct
   if (this.score >= 75) this.riskLevel = 'RED';
   else if (this.score >= 45) this.riskLevel = 'ORANGE';
   else this.riskLevel = 'GREEN';
 
-  // EMO ABUSE DETECTION
-  const raw = this._plainText || "";
+  // 3. EMO ABUSE DETECTION - kept your feature
   const abuseWords = ['worthless','hate you','kill you','abuse','beating','hit me','slap','emotional abuse','gaslight'];
   this.emoAbuseDetected = abuseWords.some(w => raw.toLowerCase().includes(w));
 
-  next();
+  // NO next() call - Mongoose 8 will auto-continue
 });
+
+// Helper to decrypt when you fetch for admin panel
+entrySchema.methods.getDecryptedText = function() {
+  return decrypt(this.text_encrypted);
+};
 
 export default mongoose.model("Entry", entrySchema);
