@@ -5,6 +5,7 @@ export default function Admin() {
   const [reds, setReds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState("all"); // NEW: all | self_harm | emotional_abuse | RED | ORANGE
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
@@ -30,27 +31,53 @@ export default function Admin() {
     fetchReds();
   }, []);
 
-  // Helper: Clean phone for WhatsApp link (needs digits only, no +, spaces)
   const getCleanPhoneForWhatsApp = (phone) => {
     if (!phone) return "";
-    return phone.replace(/\D/g, ''); // +91 9876543210 -> 919876543210
+    return phone.replace(/\D/g, '');
   };
 
-  if (loading) return <div style={{ padding: 40 }}>Loading RED alerts...</div>;
+  // === NEW: FILTER LOGIC FOR SEPARATE SECTIONS ===
+  const filteredReds = reds.filter((entry) => {
+    const category = entry.category || (entry.triggers?.includes("emotional_abuse") ? "emotional_abuse" : "self_harm");
+    const risk = (entry.riskLevel || entry.risk || "RED").toUpperCase();
+    if (filter === "all") return true;
+    if (filter === "self_harm") return category === "self_harm" || risk === "RED";
+    if (filter === "emotional_abuse") return category === "emotional_abuse";
+    if (filter === "RED") return risk === "RED";
+    if (filter === "ORANGE") return risk === "ORANGE";
+    return true;
+  });
+
+  const counts = {
+    all: reds.length,
+    self_harm: reds.filter(e => (e.category || "self_harm") === "self_harm" && (e.riskLevel || "RED").toUpperCase() === "RED").length,
+    emotional_abuse: reds.filter(e => e.category === "emotional_abuse" || e.triggers?.includes("emotional_abuse")).length,
+    RED: reds.filter(e => (e.riskLevel || e.risk || "RED").toUpperCase() === "RED").length,
+    ORANGE: reds.filter(e => (e.riskLevel || e.risk || "").toUpperCase() === "ORANGE").length,
+  };
+
+  if (loading) return <div style={{ padding: 40 }}>Loading alerts...</div>;
   if (error) return <div style={{ padding: 40 }}><h2 style={{ color: "red" }}>{error}</h2><button onClick={() => { localStorage.clear(); window.location.href = "/app"; }}>Logout & Login Again</button></div>;
 
   return (
-    <div style={{ padding: 20, maxWidth: 900, margin: "0 auto", minHeight: "100vh", background: "#f8fafc" }}>
-      <h1>Admin - RED CODE ({reds.length})</h1>
-      <p style={{ color: "#666" }}>Only RED emergencies - International support enabled</p>
+    <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto", minHeight: "100vh", background: "#0a0a0c", color: "#e8dcc6" }}>
+      <h1 style={{ color: "#d4c5a0" }}>Admin Panel - {filter === "emotional_abuse" ? "EMOTIONAL ABUSE" : filter === "self_harm" ? "SELF-HARM" : "ALL ALERTS"} ({filteredReds.length})</h1>
+      <p style={{ color: "#666" }}>Encrypted journal stays private. Only RED/ORANGE with user consent shown here.</p>
 
-      {reds.length === 0 && <div style={{ background: "white", padding: 30, borderRadius: 12, marginTop: 20, textAlign: "center" }}>No RED alerts yet. Type "i want to kill myself" in main app to test.</div>}
+      {/* === NEW: TABS FOR SEPARATE SECTIONS === */}
+      <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+        <button onClick={() => setFilter("all")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #d4c5a0", background: filter === "all" ? "#d4c5a0" : "transparent", color: filter === "all" ? "#000" : "#d4c5a0", cursor: "pointer", fontWeight: 700 }}>All ({counts.all})</button>
+        <button onClick={() => setFilter("self_harm")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #ef4444", background: filter === "self_harm" ? "#ef4444" : "transparent", color: filter === "self_harm" ? "#fff" : "#fca5a5", cursor: "pointer", fontWeight: 700 }}>🚨 Self-Harm ({counts.RED})</button>
+        <button onClick={() => setFilter("emotional_abuse")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #fb923c", background: filter === "emotional_abuse" ? "#fb923c" : "transparent", color: filter === "emotional_abuse" ? "#000" : "#fb923c", cursor: "pointer", fontWeight: 700 }}>⚠️ Emotional Abuse ({counts.emotional_abuse})</button>
+        <button onClick={() => setFilter("ORANGE")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #f59e0b", background: filter === "ORANGE" ? "rgba(251,146,60,0.2)" : "transparent", color: "#fbbf24", cursor: "pointer", fontWeight: 700 }}>ORANGE ({counts.ORANGE})</button>
+      </div>
 
-      {reds.map((entry) => {
-        // Support both entry.userId and entry.user (depends on your backend populate)
+      {filteredReds.length === 0 && <div style={{ background: "rgba(18,18,20,0.95)", padding: 30, borderRadius: 12, marginTop: 20, textAlign: "center", border: "0.5px solid rgba(212,197,160,0.18)" }}>No alerts in {filter} category. Try "my boyfriend beats me" or "i want to die" in main app to test.</div>}
+
+      {filteredReds.map((entry) => {
         const userData = entry.userId || entry.user || {};
-        const name = userData.name || entry.name || "Unknown";
-        const email = userData.email || entry.email || "No email";
+        const name = userData.name || entry.name || entry.userName || "Unknown";
+        const email = userData.email || entry.email || entry.userEmail || "No email";
         const phone = userData.emergencyPhone || entry.emergencyPhone || entry.phone || "";
         const emergencyName = userData.emergencyName || entry.emergencyName || "Emergency Contact";
         const countryCode = userData.countryCode || "";
@@ -59,21 +86,26 @@ export default function Admin() {
         const level = entry.score || entry.level || 98;
         const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "";
         const age = userData.age || entry.age || "";
-
+        const category = entry.category || (triggers.includes("emotional_abuse") ? "emotional_abuse" : "self_harm");
+        const riskLevel = (entry.riskLevel || entry.risk || "RED").toUpperCase();
+        const isAbuse = category === "emotional_abuse";
         const cleanPhoneWA = getCleanPhoneForWhatsApp(phone);
 
         return (
-          <div key={entry._id} style={{ background: "white", border: "2px solid #ef4444", borderRadius: 12, padding: 16, marginTop: 15 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div key={entry._id} style={{ background: "rgba(18,18,20,0.95)", border: isAbuse ? "2px solid #fb923c" : "2px solid #ef4444", borderRadius: 12, padding: 16, marginTop: 15 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <b style={{ fontSize: 16 }}>{name} {age ? `(${age}y)` : ""}</b>
-              <span style={{ background: "#fee2e2", color: "#dc2626", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: "bold" }}>RED - {level}%</span>
+              <div style={{ display: "flex", gap: 8 }}>
+                <span style={{ background: isAbuse ? "#fff7ed" : "#fee2e2", color: isAbuse ? "#ea580c" : "#dc2626", padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: "bold" }}>{isAbuse ? "ABUSE" : category.toUpperCase()}</span>
+                <span style={{ background: riskLevel === "RED" ? "#fee2e2" : "#fef3c7", color: riskLevel === "RED" ? "#dc2626" : "#d97706", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: "bold" }}>{riskLevel} - {level}%</span>
+              </div>
             </div>
             
-            <div style={{ fontSize: 13, color: "#555", marginTop: 4 }}>
-              📧 {email} | 🕒 {date} {countryCode ? `| 🌍 ${countryCode}` : ""}
+            <div style={{ fontSize: 13, color: "#999", marginTop: 4 }}>
+              📧 {email} | 🕒 {date} {countryCode ? `| 🌍 ${countryCode}` : ""} | Cat: {category}
             </div>
 
-            <div style={{ marginTop: 10, fontSize: 14, background: "#f9fafb", padding: 10, borderRadius: 8 }}>
+            <div style={{ marginTop: 10, fontSize: 14, background: "#141416", padding: 10, borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.12)" }}>
               <div><b>Message:</b> "{text}"</div>
               <div style={{ marginTop: 4 }}><b>Triggers:</b> {triggers}</div>
               <div style={{ marginTop: 4 }}><b>Emergency Contact:</b> {emergencyName} - <b>{phone}</b></div>
@@ -94,8 +126,9 @@ export default function Admin() {
                   </a>
                 </>
               ) : (
-                <span style={{ background: "#fef2f2", color: "#dc2626", padding: "10px", borderRadius: 8, fontSize: 13 }}>⚠️ No emergency phone - user registered before fix</span>
+                <span style={{ background: "#fef2f2", color: "#dc2626", padding: "10px", borderRadius: 8, fontSize: 13 }}>⚠ No emergency phone - user registered before fix</span>
               )}
+              <button onClick={() => navigator.clipboard.writeText(`User: ${name} (${email})\nMessage: ${text}\nPhone: ${phone}`)} style={{ background: "#1f2937", color: "white", padding: "10px 12px", border: "none", borderRadius: 8, cursor: "pointer" }}>📋 Copy</button>
             </div>
           </div>
         );

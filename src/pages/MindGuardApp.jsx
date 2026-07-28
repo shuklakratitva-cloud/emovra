@@ -29,15 +29,22 @@ export default function MindGuardApp() {
   const navigate = useNavigate();
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState(null);
-  const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } });
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('user')); }
+    catch { return null; }
+  });
   const [voiceData, setVoiceData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState(() => { try { const s = localStorage.getItem('emovra_history'); return s? JSON.parse(s) : []; } catch { return []; } });
+  const [history, setHistory] = useState(() => {
+    try {
+      const s = localStorage.getItem('emovra_history');
+      return s? JSON.parse(s) : [];
+    } catch { return []; }
+  });
 
-  // TOKEN FIX - SINGLE SOURCE
   const token = localStorage.getItem('token');
-
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
+
   useEffect(() => { if (transcript) setInputText(transcript); }, [transcript]);
 
   useEffect(() => {
@@ -46,43 +53,199 @@ export default function MindGuardApp() {
       if (old && old.text) setAnalysis(old);
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
-    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
-    .catch(() => {});
+        .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
+        .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+        .catch(() => {});
       }
     } catch {}
-  }, []);
+  }, [token]);
 
-  useEffect(() => { try { localStorage.setItem('emovra_history', JSON.stringify(history)); } catch {} }, [history]);
+  useEffect(() => {
+    try { localStorage.setItem('emovra_history', JSON.stringify(history)); } catch {}
+  }, [history]);
 
   async function saveToBackend(entry) {
     if (!token) return;
-    try { await fetch(`${API}/data/save`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(entry) }); } catch {}
+    try {
+      await fetch(`${API}/data/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(entry)
+      });
+    } catch {}
   }
 
-  function handleLogout() { localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('emovra_history'); setUser(null); navigate("/", { replace: true }); }
+  async function saveAlertToAdmin(text, score, riskLevel, reasons, category) {
+    if (!token) return;
+    try {
+      await fetch(`${API}/alerts/red`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          text: text,
+          score: score,
+          riskLevel: riskLevel,
+          reasons: reasons,
+          category: category || "general",
+          userEmail: user?.email,
+          userName: user?.name,
+          userId: user?._id || user?.id,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (e) {
+      console.warn("Alert save failed:", e.message);
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('emovra_history');
+    setUser(null);
+    navigate("/", { replace: true });
+  }
 
   async function handleAnalyze() {
-    if (!inputText.trim()) return; setLoading(true);
-    const lower = inputText.toLowerCase().replace(/[^a-z0-9 ]/g, " ");
-    const redKeys = ["i want to die", "kill myself", "end my life", "suicide", "no one will know if i die", "want to kill", "murder", "slit", "choke", "mujhe marna hai", "marna hai mujhe", "mar jana hai", "mar jau", "jeena nahi hai", "khatam karna hai", "khud ko khatam", "khudkushi", "zindagi khatam", "marna chahta hu", "nahi jeena", "zindagi se tang", "life se tang", "pareshan hu marna", "i will kill him"];
-    if (redKeys.some(k => lower.includes(k))) {
-      const forced = { riskLevel: "RED", score: 98, emotion: "critical", sentiment: "negative", reasons: [`critical/self-harm detected`], advice: "You matter. Please reach out now.", isCrisis: true, text: inputText, timestamp: new Date().toISOString(), id: Date.now(), counseling: getCounselingAdvice(inputText, "critical", "RED"), topEmotions: getTopEmotions(inputText), voiceTone: voiceData };
-      if (token) { fetch(`${API}/alerts/red`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ text: inputText, score: 98, reasons: forced.reasons, riskLevel: "RED" }) }).catch(() => {}); }
-      setAnalysis(forced); setHistory(h => [...h, forced].slice(-20)); try { saveAnalysis(forced); } catch {} saveToBackend(forced); setInputText(""); setLoading(false); return;
+    if (!inputText.trim()) return;
+    setLoading(true);
+
+    const rawLower = inputText.toLowerCase();
+    const lower = rawLower.replace(/[^a-z0-9 ]/g, " ");
+    const hasNegation = /(nahi|nahin|matlab nahi|don't|dont|do not|not want|never|nahin hai)\b/.test(rawLower) || lower.includes("dont") || lower.includes("not");
+
+    const redKeys = ["kill myself", "end my life", "suicide", "no one will know if i die", "want to kill", "slit", "choke", "mar jana hai", "mar jau", "jeena nahi hai", "khatam karna hai", "khud ko khatam", "khudkushi", "zindagi khatam", "marna chahta hu", "nahi jeena", "zindagi se tang", "i will kill him"];
+    const abuseKeys = ["beats me", "hits me", "maarta hai", "gaali deta", "abuse karta", "toxic relationship", "gaslighting"];
+
+    const wantsToDie = lower.includes("i want to die") || lower.includes("mujhe marna hai") || lower.includes("marna hai mujhe");
+    const isAbuseLocal = abuseKeys.some(k => lower.includes(k));
+
+    if (wantsToDie &&!hasNegation) {
+      const cat = isAbuseLocal? "emotional_abuse" : "self_harm";
+      const forced = {
+        riskLevel: "RED", score: 98, emotion: "critical", sentiment: "needs support",
+        reasons: isAbuseLocal? ["critical/self-harm detected", "emotional_abuse"] : ["critical/self-harm detected"],
+        advice: "You matter. Please reach out now.", isCrisis: true, text: inputText,
+        timestamp: new Date().toISOString(), id: Date.now(),
+        counseling: getCounselingAdvice(inputText, "critical", "RED"),
+        topEmotions: getTopEmotions(inputText), voiceTone: voiceData,
+        isAI: false, isSafetyNet: true, category: cat
+      };
+      saveAlertToAdmin(inputText, 98, "RED", forced.reasons, cat);
+      setAnalysis(forced);
+      setHistory(h => [...h, forced].slice(-20));
+      try { saveAnalysis(forced); } catch {}
+      saveToBackend(forced);
+      setInputText("");
+      setLoading(false);
+      return;
     }
+
+    if (redKeys.some(k => lower.includes(k))) {
+      const forced = {
+        riskLevel: "RED", score: 98, emotion: "critical", sentiment: "needs support",
+        reasons: ["critical/self-harm detected"], advice: "You matter. Please reach out now.",
+        isCrisis: true, text: inputText, timestamp: new Date().toISOString(),
+        id: Date.now(), counseling: getCounselingAdvice(inputText, "critical", "RED"),
+        topEmotions: getTopEmotions(inputText), voiceTone: voiceData, category: "self_harm"
+      };
+      saveAlertToAdmin(inputText, 98, "RED", forced.reasons, "self_harm");
+      setAnalysis(forced);
+      setHistory(h => [...h, forced].slice(-20));
+      try { saveAnalysis(forced); } catch {}
+      saveToBackend(forced);
+      setInputText("");
+      setLoading(false);
+      return;
+    }
+
     let result;
     try {
-      const res = await fetch(`${API}/emotion/analyze`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: token? `Bearer ${token}` : "" }, body: JSON.stringify({ text: inputText }) });
-      if (res.ok) { const data = await res.json(); result = { riskLevel: data.color || data.riskLevel || "GREEN", score: data.score || 85, emotion: data.emotion || "happy", sentiment: data.sentiment || "positive", reasons: data.triggers? [data.triggers] : data.reasons || ["ai analysis"], advice: data.advice || "", source: data.isAI? "gemini-backend" : "backend-ai", confidence: data.confidence || 0.9 }; } else { throw new Error("backend failed"); }
+      const res = await fetch(`${API}/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: token? `Bearer ${token}` : "" },
+        body: JSON.stringify({ text: inputText })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const riskUpper = (data.risk || data.riskLevel || "GREEN").toUpperCase();
+        // FIX: Never show positive when RED - force correct sentiment
+        let fixedSentiment = "positive";
+        if (riskUpper === "RED") fixedSentiment = "needs support";
+        else if (riskUpper === "ORANGE") fixedSentiment = "distressed";
+        else fixedSentiment = "positive";
+
+        result = {
+          riskLevel: riskUpper,
+          score: data.score || 50,
+          emotion: data.emotion || (riskUpper === "GREEN"? "neutral" : "stressed"),
+          sentiment: fixedSentiment,
+          reasons: data.triggers || data.reasons || [data.reason || "ai analysis"],
+          advice: data.reason || "",
+          source: data.isAI? "gemini-backend" : "backend-safety",
+          confidence: 0.9,
+          isAI: data.isAI!== false,
+          category: data.category || (data.triggers?.includes("emotional_abuse")? "emotional_abuse" : "general")
+        };
+      } else {
+        throw new Error("backend failed");
+      }
     } catch (e) {
-      try { const g = await analyzeWithGemini(inputText, voiceData); result = { riskLevel: g.level || "GREEN", score: g.score || 75, emotion: g.emotion || "neutral", sentiment: g.sentiment || "neutral", reasons: g.reasons || [], advice: g.advice || "", source: "gemini-frontend" }; } catch { const f = analyzeRisk(inputText); if (lower.includes("happy") || lower.includes("great") || lower.includes("good") || lower.includes("awesome") || lower.includes("joy")) { result = { riskLevel: "GREEN", score: 88, emotion: "happy", sentiment: "positive", reasons: ["positive keywords: happy"], advice: "", source: "fallback-fixed" }; } else { result = {...f, source: "fallback" }; } }
+      console.warn("Backend analyze failed:", e.message);
+      try {
+        const g = await analyzeWithGemini(inputText, voiceData);
+        const lvl = (g.level || "GREEN").toUpperCase();
+        result = {
+          riskLevel: lvl,
+          score: g.score || 75,
+          emotion: g.emotion || "neutral",
+          sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : (g.sentiment || "neutral"),
+          reasons: g.reasons || [],
+          advice: g.advice || "",
+          source: "gemini-frontend",
+          category: "general"
+        };
+      } catch {
+        const f = analyzeRisk(inputText);
+        if (lower.includes("happy") || lower.includes("great") || lower.includes("good") || lower.includes("awesome") || lower.includes("joy")) {
+          result = { riskLevel: "GREEN", score: 88, emotion: "happy", sentiment: "positive", reasons: ["positive keywords: happy"], advice: "", source: "fallback-fixed", category: "general" };
+        } else {
+          const lvl = (f.riskLevel || f.level || "GREEN").toUpperCase();
+          result = {...f, riskLevel: lvl, sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : "positive", source: "fallback", category: "general" };
+        }
+      }
     }
-    const withTime = {...result, counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel), topEmotions: getTopEmotions(inputText), voiceTone: voiceData, timestamp: new Date().toISOString(), id: Date.now(), text: inputText };
-    setAnalysis(withTime); setHistory(h => [...h, withTime].slice(-20)); try { saveAnalysis(withTime); } catch {} saveToBackend(withTime); setInputText(""); setLoading(false);
+
+    if (result.riskLevel === "RED" || result.riskLevel === "ORANGE") {
+      saveAlertToAdmin(inputText, result.score, result.riskLevel, result.reasons, result.category);
+    }
+
+    const withTime = {
+    ...result,
+      counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel),
+      topEmotions: getTopEmotions(inputText),
+      voiceTone: voiceData,
+      timestamp: new Date().toISOString(),
+      id: Date.now(),
+      text: inputText
+    };
+
+    setAnalysis(withTime);
+    setHistory(h => [...h, withTime].slice(-20));
+    try { saveAnalysis(withTime); } catch {}
+    saveToBackend(withTime);
+    setInputText("");
+    setLoading(false);
   }
 
-  if (!user) { return ( <> <Auth onAuth={setUser} onLogin={setUser} /> <LegalCookieBanner /> </> ); }
+  if (!user) {
+    return (
+      <>
+        <Auth onAuth={setUser} onLogin={setUser} />
+        <LegalCookieBanner />
+      </>
+    );
+  }
 
   const advice = getAdvice(analysis?.riskLevel);
   const counselingArray = Array.isArray(analysis?.counseling)? analysis.counseling : [];
@@ -103,10 +266,6 @@ export default function MindGuardApp() {
           border: 0.5px solid rgba(212,197,160,0.18)!important;
           color:#e8dcc6!important;
         }
-        div[style*="#2a1f"], div[style*="#1e1b2e"], div[style*="rgb(42"], div[style*="rgb(30"]{
-          background: rgba(18,18,20,0.95)!important;
-          border: 0.5px solid rgba(212,197,160,0.18)!important;
-        }
         button[style*="linear-gradient"], button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
           background:#d4b07a!important; color:#000!important; border:none!important;
         }
@@ -115,9 +274,7 @@ export default function MindGuardApp() {
 
       <div style={{ minHeight:'100vh', background:'#0a0a0c', color:'#e8dcc6' }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,0.95)", backdropFilter:'blur(20px)', borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
-          <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "#d4c5a0", letterSpacing:'0.15em', cursor: "pointer" }}>
-            EMOVRA
-          </div>
+          <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "#d4c5a0", letterSpacing:'0.15em', cursor: "pointer" }}>EMOVRA</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 12, color:'#e8dcc6', opacity:0.7 }}>Hi, {user.name} {isAdmin && "👑"}</span>
             {isAdmin && (<button onClick={() => navigate("/admin")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "rgba(212,197,160,0.12)", color: "#d4c5a0", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Admin</button>)}
@@ -138,19 +295,29 @@ export default function MindGuardApp() {
 
           {analysis && (
             <div style={{ marginTop: 16 }}>
+              {/* FIXED: 🫂 Supportive box, not scary RED error */}
               {analysis.riskLevel === "RED" && (
-                <div style={{ padding: 16, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12, color: "#fca5a5", marginBottom: 12 }}>
-                  <b>🚨 RED CODE - We are here for you</b>
-                  <div style={{ fontSize: 13, marginTop: 6, color:'rgba(255,255,255,0.7)' }}>We noticed you're going through a tough time. You are not alone.</div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
-                    <a href="tel:14416" style={{ padding: "10px 16px", background: "#d4c5a0", color: "#000", borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize:12 }}>Call Tele-MANAS 14416</a>
-                    {user.emergencyPhone && (<a href={`tel:${user.emergencyPhone}`} style={{ padding: "10px 16px", background: "#dc2626", color: "#fff", borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize:12 }}>Call SOS: {user.emergencyPhone}</a>)}
+                <div style={{ padding: 20, background: "rgba(212,197,160,0.12)", border: "1px solid rgba(212,197,160,0.3)", borderRadius: 16, marginBottom: 16 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 24 }}>🫂</span>
+                    <b style={{ color: "#d4c5a0", fontSize: 16 }}>We are here for you</b>
+                  </div>
+                  <div style={{ fontSize: 13, color: 'rgba(232,220,198,0.85)', lineHeight: 1.5 }}>
+                    We noticed you're going through a tough time. You are not alone. Talking to someone can help — it's confidential and free.
+                  </div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                    <a href="tel:14416" style={{ padding: "12px 18px", background: "#d4c5a0", color: "#000", borderRadius: 10, textDecoration: "none", fontWeight: 800, fontSize: 13 }}>💛 Call Tele-MANAS 14416</a>
+                    {user.emergencyPhone && (
+                      <a href={`tel:${user.emergencyPhone}`} style={{ padding: "12px 18px", background: "rgba(255,255,255,0.08)", color: "#e8dcc6", border: "0.5px solid rgba(212,197,160,0.2)", borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
+                        📞 Call Your SOS: {user.emergencyPhone}
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
               {analysis.riskLevel === "ORANGE" && (
                 <div style={{ padding: 16, background: "rgba(234,88,12,0.08)", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 12, color: "#fb923c", marginBottom: 12 }}>
-                  <b>⚠️ ORANGE - Moderate Stress</b>
+                  <b>⚠ ORANGE - Moderate Stress</b>
                   <div style={{ fontSize: 13, marginTop: 6, color:'rgba(255,255,255,0.7)' }}>Stress/anxiety detected. Take a break, try grounding exercises below.</div>
                 </div>
               )}
@@ -164,7 +331,6 @@ export default function MindGuardApp() {
           )}
 
           <div style={{ marginTop: 20, display:'flex', flexDirection:'column', gap:16 }}>
-            {/* FIXED TOKEN HERE - THIS IS THE ONLY CHANGE FOR VOICE */}
             <VoiceToneAnalyzer token={token} onResult={setVoiceData} />
             <MoodTracker />
             <Journal />
@@ -173,10 +339,7 @@ export default function MindGuardApp() {
           </div>
 
           <div style={{ marginTop: 20, padding: '16px', textAlign: 'center', fontSize: '11px', color: 'rgba(232,220,198,0.4)', borderTop: '0.5px solid rgba(212,197,160,0.12)' }}>
-            <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:8, marginBottom:8 }}>
-              <span style={{ color:'#d4c5a0', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span>
-            </div>
-            EMOVRA is for wellness support only and does not provide medical diagnosis or treatment. If you are in crisis, call Kiran 1800-599-0019 or 112.
+            <span style={{ color:'#d4c5a0', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span> - Wellness support only
           </div>
         </div>
         <LegalCookieBanner />
