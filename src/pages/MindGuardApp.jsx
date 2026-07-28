@@ -45,10 +45,13 @@ export default function MindGuardApp() {
   const token = localStorage.getItem('token');
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
 
-  useEffect(() => {
+useEffect(() => {
+  const timer = setTimeout(() => {
     fetch(`${API.replace('/api','')}/health`).catch(()=>{});
     fetch(`${API}/health`).catch(()=>{});
-  }, []);
+  }, 3500);
+  return () => clearTimeout(timer);
+}, []);
 
   useEffect(() => { if (transcript) setInputText(transcript); }, [transcript]);
 
