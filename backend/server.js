@@ -67,6 +67,7 @@ app.use("/api/alerts", alertRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/emotion", emotionRoutes);
 app.use("/api", geminiRoutes); // <-- ADDED - for /api/chat (Gemini)
+app.use('/api/analyze', require('./routes/analyze'));
 
 app.use((req, res) => {
   res.status(404).json({
