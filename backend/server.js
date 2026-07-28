@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
 
 // Load env FIRST
 dotenv.config();
@@ -30,6 +31,29 @@ app.use(
 );
 
 app.use(express.json());
+
+// ✅ STEP 1.1: Rate Limiter - Protects Gemini API from abuse
+const analyzeLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 15, // 15 requests per minute per IP (generous for real users, blocks bots)
+  message: { success: false, message: "Too many requests, please wait a minute" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100, // 100 requests per minute for other APIs
+  message: { success: false, message: "Too many requests" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply general limiter to all /api
+app.use("/api/", generalLimiter);
+// Apply stricter limiter only to analyze
+app.use("/api/analyze", analyzeLimiter);
+app.use("/api/chat", analyzeLimiter);
 
 // PRIVACY: Never log req.body.text - only method + path
 app.use((req, res, next) => {
@@ -93,4 +117,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🛡 Rate Limit: 15 analyze/min, 100 general/min`);
 });

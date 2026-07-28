@@ -1,13 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import RiskCard from "../components/RiskCard";
 import MoodTracker from "../components/MoodTracker";
-import MoodChart from "../components/MoodChart";
-import Journal from "../components/Journal";
-import GroundingExercises from "../components/GroundingExercises";
-import TeleManas from "../components/TeleManas";
 import { getCounselingAdvice, getTopEmotions } from "../utils/counselor.js";
-import VoiceToneAnalyzer from "../components/VoiceToneAnalyzer.jsx";
 import { saveAnalysis, loadAnalysis } from "../utils/storage";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
 import { analyzeWithGemini } from "../utils/geminiAnalyzer.js";
@@ -15,6 +10,13 @@ import { analyzeRisk } from "../utils/analyzeRisk.js";
 import Auth from "../components/Auth.jsx";
 import LegalCookieBanner from "../components/LegalCookieBanner.jsx";
 import '../App.css';
+
+// ✅ STEP 2 EFFICIENCY - Lazy load heavy components (loads only when needed)
+const MoodChart = lazy(() => import("../components/MoodChart"));
+const Journal = lazy(() => import("../components/Journal"));
+const GroundingExercises = lazy(() => import("../components/GroundingExercises"));
+const TeleManas = lazy(() => import("../components/TeleManas"));
+const VoiceToneAnalyzer = lazy(() => import("../components/VoiceToneAnalyzer.jsx"));
 
 const API = import.meta.env.VITE_API_URL || "https://emovra.onrender.com/api";
 
@@ -24,6 +26,8 @@ function getAdvice(level) {
   if (lvl === "ORANGE" || lvl === "YELLOW") return "Moderate stress detected. Please talk to a trusted friend or counselor. Try Box Breathing 4-4-4-4.";
   return "You matter. You are not alone. Help is available if you need it.";
 }
+
+const Loader = () => <div style={{ padding: 12, textAlign: 'center', color: '#d4c5a0', fontSize: 11 }}>Loading...</div>;
 
 export default function MindGuardApp() {
   const navigate = useNavigate();
@@ -61,9 +65,9 @@ useEffect(() => {
       if (old && old.text) setAnalysis(old);
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
-      .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
-      .catch(() => {});
+    .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
+    .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+    .catch(() => {});
       }
     } catch {}
   }, [token]);
@@ -90,14 +94,8 @@ useEffect(() => {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          text: text,
-          score: score,
-          riskLevel: riskLevel,
-          reasons: reasons,
-          category: category || "general",
-          userEmail: user?.email,
-          userName: user?.name,
-          userId: user?._id || user?.id,
+          text, score, riskLevel, reasons, category: category || "general",
+          userEmail: user?.email, userName: user?.name, userId: user?._id || user?.id,
           timestamp: new Date().toISOString()
         })
       });
@@ -176,7 +174,12 @@ useEffect(() => {
       });
       if (res.ok) {
         const data = await res.json();
-        const riskUpper = (data.risk || data.riskLevel || "GREEN").toUpperCase();
+        let riskUpper = (data.risk || data.riskLevel || "GREEN").toUpperCase();
+        const confidence = data.confidence || data.score || 75;
+        if (confidence < 60 && riskUpper === "RED") {
+          riskUpper = "ORANGE";
+          console.log("Low confidence RED downgraded to ORANGE");
+        }
         let fixedSentiment = "positive";
         if (riskUpper === "RED") fixedSentiment = "needs support";
         else if (riskUpper === "ORANGE") fixedSentiment = "distressed";
@@ -190,7 +193,7 @@ useEffect(() => {
           reasons: data.triggers || data.reasons || [data.reason || "ai analysis"],
           advice: data.reason || "",
           source: data.isAI? "gemini-backend" : "backend-safety",
-          confidence: 0.9,
+          confidence: confidence,
           isAI: data.isAI!== false,
           category: data.category || (data.triggers?.includes("emotional_abuse")? "emotional_abuse" : "general")
         };
@@ -210,15 +213,22 @@ useEffect(() => {
           reasons: g.reasons || [],
           advice: g.advice || "",
           source: "gemini-frontend",
-          category: "general"
+          category: "general",
+          confidence: 70
         };
       } catch {
         const f = analyzeRisk(inputText);
-        if (lower.includes("happy") || lower.includes("great") || lower.includes("good") || lower.includes("awesome") || lower.includes("joy")) {
-          result = { riskLevel: "GREEN", score: 88, emotion: "happy", sentiment: "positive", reasons: ["positive keywords: happy"], advice: "", source: "fallback-fixed", category: "general" };
+        const positiveWords = ["happy", "great", "good", "awesome", "joy", "excited", "love"];
+        const hasPositive = positiveWords.some(w => lower.includes(w));
+        const hasNegative = ["sad", "depressed", "anxious", "alone", "tired", "upset", "angry", "hate", "lonely"].some(w => lower.includes(w));
+
+        if (hasPositive &&!hasNegative) {
+          result = { riskLevel: "GREEN", score: 82, emotion: "happy", sentiment: "positive", reasons: ["positive keywords detected"], advice: "", source: "fallback-positive", category: "general", confidence: 65 };
+        } else if (hasPositive && hasNegative) {
+          result = { riskLevel: "ORANGE", score: 55, emotion: "mixed", sentiment: "mixed - needs attention", reasons: ["mixed emotions detected"], advice: "", source: "fallback-mixed", category: "general", confidence: 60 };
         } else {
-          const lvl = (f.riskLevel || f.level || "GREEN").toUpperCase();
-          result = {...f, riskLevel: lvl, sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : "positive", source: "fallback", category: "general" };
+          const lvl = (f.riskLevel || f.level || "ORANGE").toUpperCase();
+          result = {...f, riskLevel: lvl, sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : "positive", source: "fallback", category: "general", confidence: 50 };
         }
       }
     }
@@ -228,7 +238,7 @@ useEffect(() => {
     }
 
     const withTime = {
-  ...result,
+    ...result,
       counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel),
       topEmotions: getTopEmotions(inputText),
       voiceTone: voiceData,
@@ -261,21 +271,10 @@ useEffect(() => {
   return (
     <>
       <style>{`
-        :root{
-          --bg:#0a0a0c!important;
-          --card-bg:rgba(18,18,20,0.95)!important;
-          --border:rgba(212,197,160,0.18)!important;
-          --text:#e8dcc6!important;
-        }
+        :root{ --bg:#0a0a0c!important; --card-bg:rgba(18,18,20,0.95)!important; --border:rgba(212,197,160,0.18)!important; --text:#e8dcc6!important; }
         body{background:#0a0a0c!important; color:#e8dcc6!important}
-        div[style*="var(--card-bg)"], div[style*="var(--bg)"]{
-          background: rgba(18,18,20,0.95)!important;
-          border: 0.5px solid rgba(212,197,160,0.18)!important;
-          color:#e8dcc6!important;
-        }
-        button[style*="linear-gradient"], button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
-          background:#d4b07a!important; color:#000!important; border:none!important;
-        }
+        div[style*="var(--card-bg)"], div[style*="var(--bg)"]{ background: rgba(18,18,20,0.95)!important; border: 0.5px solid rgba(212,197,160,0.18)!important; color:#e8dcc6!important; }
+        button[style*="linear-gradient"], button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{ background:#d4b07a!important; color:#000!important; border:none!important; }
         button{font-family:Inter,sans-serif}
       `}</style>
 
@@ -329,7 +328,7 @@ useEffect(() => {
               )}
               <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:8 }}>
                 <RiskCard analysis={analysis} text={analysis.text} />
-                <MoodChart history={history.length? history : [analysis]} />
+                <Suspense fallback={<Loader />}><MoodChart history={history.length? history : [analysis]} /></Suspense>
               </div>
               <div style={{ marginTop: 12, padding: 14, border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 12, background: "rgba(18,18,20,0.9)", color: "#e8dcc6", fontSize:13 }}><b style={{ color:'#d4c5a0' }}>Advice:</b> {advice}</div>
               {counselingArray.length > 0 && (<div style={{ marginTop: 12 }}><h4 style={{ color:'#d4c5a0' }}>Solutions</h4>{counselingArray.map((c, i) => (<div key={i} style={{ padding: 12, border: "0.5px solid rgba(212,197,160,0.15)", background:'rgba(18,18,20,0.9)', borderRadius: 10, marginTop: 8, fontSize:13 }}><b style={{ color:'#d4c5a0' }}>{c.technique}</b><p style={{ margin:'6px 0 0 0', color:'rgba(232,220,198,0.7)' }}>{c.advice}</p></div>))}</div>)}
@@ -337,15 +336,17 @@ useEffect(() => {
           )}
 
           <div style={{ marginTop: 20, display:'flex', flexDirection:'column', gap:16 }}>
-            <VoiceToneAnalyzer token={token} onResult={setVoiceData} />
-            <MoodTracker />
-            <Journal />
-            <GroundingExercises />
-            <TeleManas />
+            <Suspense fallback={<Loader />}>
+              <VoiceToneAnalyzer token={token} onResult={setVoiceData} />
+              <MoodTracker />
+              <Journal />
+              <GroundingExercises />
+              <TeleManas />
+            </Suspense>
           </div>
 
           <div style={{ marginTop: 20, padding: '16px', textAlign: 'center', fontSize: '11px', color: 'rgba(232,220,198,0.4)', borderTop: '0.5px solid rgba(212,197,160,0.12)' }}>
-            <span style={{ color:'#d4c5a0', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span> - Wellness support only
+            <span style={{ color:'#d4c5a0', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span> - Wellness support only • Not a medical diagnosis. Call 14416 in crisis.
           </div>
         </main>
         <LegalCookieBanner />

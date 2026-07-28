@@ -12,12 +12,39 @@ import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// ✅ STEP 1.4: Human Review Logger Middleware
+const humanReviewLogger = (req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(data) {
+    // Log if this was a RED alert creation
+    if (req.body?.riskLevel === "RED" || req.body?.score >= 90) {
+      console.log("🚨🚨 CRITICAL RED ALERT FOR HUMAN REVIEW 🚨🚨🚨");
+      console.log("Time:", new Date().toISOString());
+      console.log("User:", req.body.userEmail, req.body.userName, req.body.userId);
+      console.log("Text preview:", req.body.text?.slice(0, 150));
+      console.log("Category:", req.body.category);
+      console.log("Reasons:", req.body.reasons);
+      console.log("------------------------------------------------");
+      // Later: Add email to shukla.kratitva@gmail.com via nodemailer
+    }
+    return originalJson.call(this, data);
+  };
+  next();
+};
+
 /* =====================================
    Create Alert
    POST /api/alerts
 ===================================== */
 
-router.post("/", protect, createAlert);
+router.post("/", protect, humanReviewLogger, createAlert);
+
+/* =====================================
+   Create RED Alert - Frontend calls this
+   POST /api/alerts/red  <-- THIS WAS MISSING, FIXED
+===================================== */
+
+router.post("/red", protect, humanReviewLogger, createAlert);
 
 /* =====================================
    Get Current Active Alert

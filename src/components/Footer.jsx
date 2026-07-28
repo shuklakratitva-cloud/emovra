@@ -6,7 +6,8 @@ export default function Footer(){
         If you feel unsafe, please reach out now — <b>Tele-MANAS: 14416</b> | <b>Kiran: 1800-599-0019</b> | <b>AASRA: 1800-233-3330</b>
         <br/> You are not alone. Talking to a trusted person or professional can help.
       </p>
-      <p style={{margin:"12px 0 0", fontSize:11, opacity:0.6}}>© {new Date().getFullYear()} Emovra / MindGuard • Built for well-being</p>
+      <p style={{margin:"12px 0 0", fontSize:11, opacity:0.6}}>© {new Date().getFullYear()} Emovra / MindGuard • Built for well-being • Privacy-first • No data sold</p>
+      <p style={{margin:"8px 0 0", fontSize:10, opacity:0.4}}>Emovra is for wellness support only, not medical advice. In crisis call 112. All data stays local & private.</p>
     </footer>
   )
 }
