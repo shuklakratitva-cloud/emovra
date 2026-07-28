@@ -45,6 +45,13 @@ export default function MindGuardApp() {
   const token = localStorage.getItem('token');
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
 
+  // === NEW: PRE-WARM BACKEND ON PAGE LOAD - NO USER DATA LOGGED ===
+  useEffect(() => {
+    // Lightest ping - wakes Render from sleep, saves 400ms on first analyze
+    fetch(`${API.replace('/api','')}/health`).catch(()=>{});
+    fetch(`${API}/health`).catch(()=>{});
+  }, []);
+
   useEffect(() => { if (transcript) setInputText(transcript); }, [transcript]);
 
   useEffect(() => {
@@ -53,9 +60,9 @@ export default function MindGuardApp() {
       if (old && old.text) setAnalysis(old);
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
-        .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
-        .catch(() => {});
+       .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
+       .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+       .catch(() => {});
       }
     } catch {}
   }, [token]);
@@ -169,7 +176,6 @@ export default function MindGuardApp() {
       if (res.ok) {
         const data = await res.json();
         const riskUpper = (data.risk || data.riskLevel || "GREEN").toUpperCase();
-        // FIX: Never show positive when RED - force correct sentiment
         let fixedSentiment = "positive";
         if (riskUpper === "RED") fixedSentiment = "needs support";
         else if (riskUpper === "ORANGE") fixedSentiment = "distressed";
@@ -221,7 +227,7 @@ export default function MindGuardApp() {
     }
 
     const withTime = {
-    ...result,
+   ...result,
       counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel),
       topEmotions: getTopEmotions(inputText),
       voiceTone: voiceData,
@@ -295,7 +301,6 @@ export default function MindGuardApp() {
 
           {analysis && (
             <div style={{ marginTop: 16 }}>
-              {/* FIXED: 🫂 Supportive box, not scary RED error */}
               {analysis.riskLevel === "RED" && (
                 <div style={{ padding: 20, background: "rgba(212,197,160,0.12)", border: "1px solid rgba(212,197,160,0.3)", borderRadius: 16, marginBottom: 16 }}>
                   <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
