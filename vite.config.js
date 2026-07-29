@@ -10,7 +10,7 @@ export default defineConfig({
     compression({ algorithm: 'brotliCompress', ext: '.br', threshold: 1024 }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'robots.txt'],
+      includeAssets: ['favicon.ico', 'robots.txt', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Emovra - Mental Wellness',
         short_name: 'Emovra',
@@ -40,9 +40,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          charts: ['chart.js']
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('chart.js')) {
+              return 'charts'
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor'
+            }
+            return 'vendor'
+          }
         }
       }
     }
