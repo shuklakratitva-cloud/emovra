@@ -14,6 +14,7 @@ import adminRoutes from "./routes/admin.js";
 import emotionRoutes from "./routes/emotion.js";
 import geminiRoutes from "./routes/gemini.js";
 import analyzeRoutes from "./routes/analyze.js";
+import otpRoutes from "./routes/otp.js"; // <-- ADDED FOR RANDOM OTP + PHONE VERIFY
 
 const app = express();
 
@@ -52,14 +53,27 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// ADDED: OTP limiter - 5 OTPs per minute to prevent spam, but random every time
+const otpLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { success: false, message: "Too many OTP requests, wait 1 min" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use("/api/", generalLimiter);
 app.use("/api/analyze", analyzeLimiter);
 app.use("/api/chat", analyzeLimiter);
+app.use("/api/otp", otpLimiter); // ADDED
 
-// PRIVACY: Never log req.body.text
+// PRIVACY: Never log req.body.text or OTP
 app.use((req, res, next) => {
   if (req.path.includes('/analyze')) {
-    console.log(`[REQ] ${req.method} ${req.path} - body length: ${req.body?.text?.length || 0}`);
+    console.log(`[REQ] ${req.method} ${req.path} - body length: ${req.body?.text?.length || 0} Cat:${req.body?.category || 'auto'}`);
+  }
+  if (req.path.includes('/otp')) {
+    console.log(`[REQ] ${req.method} ${req.path} - phone: ${req.body?.phone ? req.body.phone.slice(0,3)+'***' : 'none'}`);
   }
   next();
 });
@@ -68,7 +82,9 @@ mongoose
 .connect(process.env.MONGO_URI)
 .then(() => {
   console.log("✅ MongoDB connected");
-  console.log(`🔒 Privacy: GREEN/YELLOW not saved, RED/ORANGE -> alerts encrypted`);
+  console.log(`🔒 Privacy: GREEN/YELLOW not saved, RED/ORANGE -> entries encrypted`);
+  console.log(`🏫 Alerts: ONLY school_emotional_abuse -> alerts collection`);
+  console.log(`📱 OTP: Random every time + phone verification ENABLED`);
 })
 .catch((err) => {
     console.error("❌ MongoDB Connection Error", err);
@@ -86,7 +102,7 @@ if (!process.env.ENCRYPT_KEY && !process.env.ENCRYPTION_SECRET) {
   console.log("✅ ENCRYPT_KEY found - privacy encryption enabled");
 }
 
-app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled + Privacy RED/ORANGE only"));
+app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled + Privacy RED/ORANGE only + OTP Random"));
 
 app.get("/health", (req, res) => res.status(200).send("OK"));
 app.get("/api/health", (req, res) => res.json({ 
@@ -94,23 +110,27 @@ app.get("/api/health", (req, res) => res.json({
   time: new Date(), 
   gemini: !!process.env.GEMINI_API_KEY, 
   mongo: mongoose.connection.readyState === 1,
-  privacyMode: "RED_ORANGE_ONLY",
-  features: ["school_emotional_abuse","home_abuse","negation","hinglish"]
+  privacyMode: "RED_ORANGE_ONLY_ENTRIES",
+  alertsMode: "SCHOOL_EMOTIONAL_ABUSE_ONLY",
+  otpMode: "RANDOM_EVERY_TIME",
+  features: ["school_emotional_abuse","home_abuse","negation","hinglish","otp_phone_verify"]
 }));
 
 app.get("/api", (req, res) => {
   res.json({
     success: true,
     name: "MindGuard API",
-    version: "1.1.0",
-    endpoints: ["/api/auth", "/api/data", "/api/alerts", "/api/admin", "/api/emotion", "/api/chat", "/api/analyze"]
+    version: "1.2.0",
+    endpoints: ["/api/auth", "/api/data", "/api/alerts", "/api/admin", "/api/emotion", "/api/chat", "/api/analyze", "/api/otp/send", "/api/otp/verify"]
   });
 });
 
-app.use("/api/analyze", analyzeRoutes);
+// --- ALL ROUTES ---
+app.use("/api/otp", otpRoutes); // <-- ADDED: /api/otp/send and /api/otp/verify - random every time
+app.use("/api/analyze", analyzeRoutes); // contains school abuse + RED/ORANGE entries logic
 app.use("/api/auth", authRoutes);
 app.use("/api/data", dataRoutes);
-app.use("/api/alerts", alertRoutes);
+app.use("/api/alerts", alertRoutes); // now filtered to ONLY school_emotional_abuse
 app.use("/api/admin", adminRoutes);
 app.use("/api/emotion", emotionRoutes);
 app.use("/api", geminiRoutes);
@@ -128,6 +148,8 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🛡 Rate Limit: 15 analyze/min, 100 general/min`);
-  console.log(`🏫 School emotional abuse detection: ENABLED`);
+  console.log(`🛡 Rate Limit: 15 analyze/min, 5 OTP/min, 100 general/min`);
+  console.log(`🏫 School emotional abuse detection: ENABLED -> alerts collection only`);
+  console.log(`🔴 Entries: RED + ORANGE only -> entries collection`);
+  console.log(`📱 OTP: Random OTP every time + phone verify -> otps + users collection`);
 });
