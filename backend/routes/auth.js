@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/User.js";
-import Otp from "../models/Otp.js";
+import Otp from "../models/otp.js";
 
 const router = express.Router();
 
@@ -47,7 +47,7 @@ async function handleSignup(req, res) {
       emergencyPhone: emergencyPhone.replace(/\D/g, ""),
       countryCode,
       role,
-      phoneVerified: false, // ADDED
+      phoneVerified: false,
       legalConsent: {
         given: true,
         type: legalConsent?.type || "all",
@@ -110,7 +110,7 @@ router.post('/send-verify-otp', async (req, res) => {
     await Otp.create({ phone: cleanPhone, otp, purpose: 'verify' });
 
     console.log(`VERIFY OTP ${cleanPhone}: ${otp} - RANDOM EVERY TIME`);
-    res.json({ success: true, message: "OTP sent - check Render Logs", phone: cleanPhone, otp: otp }); // remove otp in prod
+    res.json({ success: true, message: "OTP sent - check Render Logs", phone: cleanPhone, otp: otp });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
@@ -125,7 +125,6 @@ router.post('/verify-phone', async (req, res) => {
 
     await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
 
-    // ADDED: Save verification to User so alerts entries get phone field fixed
     if (email) {
       await User.findOneAndUpdate({ email: email.toLowerCase() }, { phoneVerified: true, phone: cleanPhone });
     } else if (req.body.userId) {
@@ -147,12 +146,11 @@ router.post('/forgot-password/send', async (req, res) => {
     const user = await User.findOne({ emergencyPhone: cleanPhone });
     if (!user) return res.status(404).json({ msg: "No user with this phone number" });
 
-    // RANDOM EVERY TIME
     const otp = crypto.randomInt(100000, 999999).toString();
     await Otp.deleteMany({ phone: cleanPhone, purpose: 'reset' });
     await Otp.create({ phone: cleanPhone, otp, purpose: 'reset' });
     console.log(`RESET OTP ${cleanPhone}: ${otp} - RANDOM EVERY TIME`);
-    res.json({ success: true, message: "OTP sent - check Render Logs", otp: otp }); // remove otp in prod
+    res.json({ success: true, message: "OTP sent - check Render Logs", otp: otp });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
