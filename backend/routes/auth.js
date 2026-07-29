@@ -1,6 +1,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import User from "../models/User.js";
 import Otp from "../models/Otp.js";
 
@@ -46,6 +47,7 @@ async function handleSignup(req, res) {
       emergencyPhone: emergencyPhone.replace(/\D/g, ""),
       countryCode,
       role,
+      phoneVerified: false, // ADDED
       legalConsent: {
         given: true,
         type: legalConsent?.type || "all",
@@ -60,7 +62,7 @@ async function handleSignup(req, res) {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.status(201).json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role }
+      user: { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role, phoneVerified: user.phoneVerified }
     });
 
   } catch (err) {
@@ -84,7 +86,7 @@ router.post("/login", async (req, res) => {
     if (!match) return res.status(400).json({ msg: "Invalid password" });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role || "user" } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role || "user", phoneVerified: user.phoneVerified || false } });
 
   } catch (err) {
     console.error("Login Error:", err);
@@ -92,18 +94,23 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// --- NEW: MOBILE VERIFICATION + FORGOT PASSWORD ---
+// --- NEW: MOBILE VERIFICATION + FORGOT PASSWORD - RANDOM EVERY TIME ---
 
 router.post('/send-verify-otp', async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ msg: "Phone required" });
     const cleanPhone = phone.replace(/\D/g, "");
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // RANDOM EVERY TIME - using crypto for true randomness
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    // Delete old so new random is generated every time
     await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
     await Otp.create({ phone: cleanPhone, otp, purpose: 'verify' });
-    console.log(`VERIFY OTP ${cleanPhone}: ${otp}`);
-    res.json({ success: true, message: "OTP sent - check Render Logs" });
+
+    console.log(`VERIFY OTP ${cleanPhone}: ${otp} - RANDOM EVERY TIME`);
+    res.json({ success: true, message: "OTP sent - check Render Logs", phone: cleanPhone, otp: otp }); // remove otp in prod
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
@@ -111,12 +118,22 @@ router.post('/send-verify-otp', async (req, res) => {
 
 router.post('/verify-phone', async (req, res) => {
   try {
-    const { phone, otp } = req.body;
+    const { phone, otp, email } = req.body;
     const cleanPhone = phone.replace(/\D/g, "");
     const found = await Otp.findOne({ phone: cleanPhone, otp, purpose: 'verify' });
     if (!found) return res.status(400).json({ verified: false, msg: "Invalid OTP" });
+
     await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
-    res.json({ verified: true });
+
+    // ADDED: Save verification to User so alerts entries get phone field fixed
+    if (email) {
+      await User.findOneAndUpdate({ email: email.toLowerCase() }, { phoneVerified: true, phone: cleanPhone });
+    } else if (req.body.userId) {
+      await User.findByIdAndUpdate(req.body.userId, { phoneVerified: true, phone: cleanPhone });
+    }
+
+    console.log(`[PHONE VERIFIED] ${cleanPhone}`);
+    res.json({ verified: true, phone: cleanPhone, msg: "Phone verified successfully" });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
@@ -130,11 +147,12 @@ router.post('/forgot-password/send', async (req, res) => {
     const user = await User.findOne({ emergencyPhone: cleanPhone });
     if (!user) return res.status(404).json({ msg: "No user with this phone number" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // RANDOM EVERY TIME
+    const otp = crypto.randomInt(100000, 999999).toString();
     await Otp.deleteMany({ phone: cleanPhone, purpose: 'reset' });
     await Otp.create({ phone: cleanPhone, otp, purpose: 'reset' });
-    console.log(`RESET OTP ${cleanPhone}: ${otp}`);
-    res.json({ success: true, message: "OTP sent - check Render Logs" });
+    console.log(`RESET OTP ${cleanPhone}: ${otp} - RANDOM EVERY TIME`);
+    res.json({ success: true, message: "OTP sent - check Render Logs", otp: otp }); // remove otp in prod
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
