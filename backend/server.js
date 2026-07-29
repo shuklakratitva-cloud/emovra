@@ -17,6 +17,9 @@ import analyzeRoutes from "./routes/analyze.js";
 
 const app = express();
 
+// FIX 1: Trust proxy for Render - fixes X-Forwarded-For error in your logs
+app.set('trust proxy', 1);
+
 app.use(
   cors({
     origin: [
@@ -32,10 +35,10 @@ app.use(
 
 app.use(express.json());
 
-// ✅ STEP 1.1: Rate Limiter - Protects Gemini API from abuse
+// ✅ Rate Limiters
 const analyzeLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 15, // 15 requests per minute per IP (generous for real users, blocks bots)
+  windowMs: 60 * 1000,
+  max: 15,
   message: { success: false, message: "Too many requests, please wait a minute" },
   standardHeaders: true,
   legacyHeaders: false,
@@ -43,19 +46,17 @@ const analyzeLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100, // 100 requests per minute for other APIs
+  max: 100,
   message: { success: false, message: "Too many requests" },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Apply general limiter to all /api
 app.use("/api/", generalLimiter);
-// Apply stricter limiter only to analyze
 app.use("/api/analyze", analyzeLimiter);
 app.use("/api/chat", analyzeLimiter);
 
-// PRIVACY: Never log req.body.text - only method + path
+// PRIVACY: Never log req.body.text
 app.use((req, res, next) => {
   if (req.path.includes('/analyze')) {
     console.log(`[REQ] ${req.method} ${req.path} - body length: ${req.body?.text?.length || 0}`);
@@ -65,7 +66,10 @@ app.use((req, res, next) => {
 
 mongoose
 .connect(process.env.MONGO_URI)
-.then(() => console.log("✅ MongoDB connected"))
+.then(() => {
+  console.log("✅ MongoDB connected");
+  console.log(`🔒 Privacy: GREEN/YELLOW not saved, RED/ORANGE -> alerts encrypted`);
+})
 .catch((err) => {
     console.error("❌ MongoDB Connection Error", err);
     process.exit(1);
@@ -76,26 +80,33 @@ if (!process.env.GEMINI_API_KEY) {
 } else {
   console.log("✅ GEMINI_API_KEY found");
 }
-if (!process.env.ENCRYPTION_SECRET) {
-  console.warn("⚠ ENCRYPTION_SECRET missing - using fallback key, set it in Render env");
+if (!process.env.ENCRYPT_KEY && !process.env.ENCRYPTION_SECRET) {
+  console.warn("⚠ ENCRYPT_KEY / ENCRYPTION_SECRET missing - using fallback, set in Render env");
+} else {
+  console.log("✅ ENCRYPT_KEY found - privacy encryption enabled");
 }
 
-app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled"));
+app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled + Privacy RED/ORANGE only"));
 
-// Health for UptimeRobot - light, no DB, no logs of user data
 app.get("/health", (req, res) => res.status(200).send("OK"));
-app.get("/api/health", (req, res) => res.json({ status: "ok", time: new Date(), gemini:!!process.env.GEMINI_API_KEY, mongo: mongoose.connection.readyState === 1 }));
+app.get("/api/health", (req, res) => res.json({ 
+  status: "ok", 
+  time: new Date(), 
+  gemini: !!process.env.GEMINI_API_KEY, 
+  mongo: mongoose.connection.readyState === 1,
+  privacyMode: "RED_ORANGE_ONLY",
+  features: ["school_emotional_abuse","home_abuse","negation","hinglish"]
+}));
 
 app.get("/api", (req, res) => {
   res.json({
     success: true,
     name: "MindGuard API",
-    version: "1.0.0",
+    version: "1.1.0",
     endpoints: ["/api/auth", "/api/data", "/api/alerts", "/api/admin", "/api/emotion", "/api/chat", "/api/analyze"]
   });
 });
 
-// FIXED ORDER - specific routes first
 app.use("/api/analyze", analyzeRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/data", dataRoutes);
@@ -110,7 +121,7 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error("SERVER ERROR:", err.message); // Only message, never body
+  console.error("SERVER ERROR:", err.message);
   res.status(500).json({ success: false, message: err.message });
 });
 
@@ -118,4 +129,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🛡 Rate Limit: 15 analyze/min, 100 general/min`);
+  console.log(`🏫 School emotional abuse detection: ENABLED`);
 });
