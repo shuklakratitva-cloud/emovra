@@ -11,7 +11,6 @@ import Auth from "../components/Auth.jsx";
 import LegalCookieBanner from "../components/LegalCookieBanner.jsx";
 import '../App.css';
 
-// ✅ STEP 2 EFFICIENCY - Lazy load heavy components (loads only when needed)
 const MoodChart = lazy(() => import("../components/MoodChart"));
 const Journal = lazy(() => import("../components/Journal"));
 const GroundingExercises = lazy(() => import("../components/GroundingExercises"));
@@ -20,8 +19,9 @@ const VoiceToneAnalyzer = lazy(() => import("../components/VoiceToneAnalyzer.jsx
 
 const API = import.meta.env.VITE_API_URL || "https://emovra.onrender.com/api";
 
-function getAdvice(level) {
+function getAdvice(level, category) {
   const lvl = String(level || "").toUpperCase();
+  if (category === "school_emotional_abuse") return "It's painful when words from a teacher hurt in front of class. Your worth isn't defined by one remark. Try 5-4-3-2-1 grounding and consider talking to a counselor you trust. You are not alone. 💛";
   if (lvl === "GREEN") return "You're in a stable range. Maintain healthy habits. Keep smiling! 😊";
   if (lvl === "ORANGE" || lvl === "YELLOW") return "Moderate stress detected. Please talk to a trusted friend or counselor. Try Box Breathing 4-4-4-4.";
   return "You matter. You are not alone. Help is available if you need it.";
@@ -65,9 +65,9 @@ useEffect(() => {
       if (old && old.text) setAnalysis(old);
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
-    .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
-    .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
-    .catch(() => {});
+   .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
+   .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+   .catch(() => {});
       }
     } catch {}
   }, [token]);
@@ -77,6 +77,11 @@ useEffect(() => {
   }, [history]);
 
   async function saveToBackend(entry) {
+    // PRIVACY FIX: Only RED/ORANGE to backend, GREEN/YELLOW only local
+    if (entry.riskLevel!== "RED" && entry.riskLevel!== "ORANGE") {
+      console.log("Privacy: GREEN not saved to backend, only local");
+      return;
+    }
     if (!token) return;
     try {
       await fetch(`${API}/data/save`, {
@@ -87,7 +92,9 @@ useEffect(() => {
     } catch {}
   }
 
-  async function saveAlertToAdmin(text, score, riskLevel, reasons, category) {
+  async function saveAlertToAdmin(text, score, riskLevel, reasons, category, abuseType, abuseSource) {
+    // PRIVACY: Only RED/ORANGE - userId will appear twice if 2 REDs
+    if (riskLevel!== "RED" && riskLevel!== "ORANGE") return;
     if (!token) return;
     try {
       await fetch(`${API}/alerts/red`, {
@@ -95,7 +102,8 @@ useEffect(() => {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           text, score, riskLevel, reasons, category: category || "general",
-          userEmail: user?.email, userName: user?.name, userId: user?._id || user?.id,
+          abuseType: abuseType || "none", abuseSource: abuseSource || "none",
+          userEmail: user?.email, userName: user?.name, userId: user?._id || user?.id || localStorage.getItem('userId'),
           timestamp: new Date().toISOString()
         })
       });
@@ -122,22 +130,25 @@ useEffect(() => {
 
     const redKeys = ["kill myself", "end my life", "suicide", "no one will know if i die", "want to kill", "slit", "choke", "mar jana hai", "mar jau", "jeena nahi hai", "khatam karna hai", "khud ko khatam", "khudkushi", "zindagi khatam", "marna chahta hu", "nahi jeena", "zindagi se tang", "i will kill him"];
     const abuseKeys = ["beats me", "hits me", "maarta hai", "gaali deta", "abuse karta", "toxic relationship", "gaslighting"];
+    // NEW: School teacher subtle remarks
+    const schoolAbuseKeys = ["teacher said i am useless", "teacher insulted", "teacher beizzati", "sir ne daanta", "ma'am ne beizzati", "teacher targets me", "teacher says i will fail", "teacher makes fun", "teacher compares", "teacher always shouts", "nikamma bola", "nalayak bola teacher", "sabke samne daanta", "class me beizzati", "teacher said worthless"];
 
     const wantsToDie = lower.includes("i want to die") || lower.includes("mujhe marna hai") || lower.includes("marna hai mujhe");
     const isAbuseLocal = abuseKeys.some(k => lower.includes(k));
+    const isSchoolAbuseLocal = schoolAbuseKeys.some(k => rawLower.includes(k)) || /teacher.*(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|beizzati|daanta)/i.test(rawLower);
 
     if (wantsToDie &&!hasNegation) {
-      const cat = isAbuseLocal? "emotional_abuse" : "self_harm";
+      const cat = isSchoolAbuseLocal? "school_emotional_abuse" : isAbuseLocal? "emotional_abuse" : "self_harm";
       const forced = {
         riskLevel: "RED", score: 98, emotion: "critical", sentiment: "needs support",
-        reasons: isAbuseLocal? ["critical/self-harm detected", "emotional_abuse"] : ["critical/self-harm detected"],
-        advice: "You matter. Please reach out now.", isCrisis: true, text: inputText,
+        reasons: isSchoolAbuseLocal? ["teacher_remark","public_shaming"] : isAbuseLocal? ["critical/self-harm detected", "emotional_abuse"] : ["critical/self-harm detected"],
+        advice: getAdvice("RED", cat), isCrisis: true, text: inputText,
         timestamp: new Date().toISOString(), id: Date.now(),
         counseling: getCounselingAdvice(inputText, "critical", "RED"),
         topEmotions: getTopEmotions(inputText), voiceTone: voiceData,
-        isAI: false, isSafetyNet: true, category: cat
+        isAI: false, isSafetyNet: true, category: cat, abuseType: cat, abuseSource: isSchoolAbuseLocal?"teacher": isAbuseLocal?"parent":"none"
       };
-      saveAlertToAdmin(inputText, 98, "RED", forced.reasons, cat);
+      saveAlertToAdmin(inputText, 98, "RED", forced.reasons, cat, forced.abuseType, forced.abuseSource);
       setAnalysis(forced);
       setHistory(h => [...h, forced].slice(-20));
       try { saveAnalysis(forced); } catch {}
@@ -150,12 +161,32 @@ useEffect(() => {
     if (redKeys.some(k => lower.includes(k))) {
       const forced = {
         riskLevel: "RED", score: 98, emotion: "critical", sentiment: "needs support",
-        reasons: ["critical/self-harm detected"], advice: "You matter. Please reach out now.",
+        reasons: ["critical/self-harm detected"], advice: getAdvice("RED","self_harm"),
         isCrisis: true, text: inputText, timestamp: new Date().toISOString(),
         id: Date.now(), counseling: getCounselingAdvice(inputText, "critical", "RED"),
-        topEmotions: getTopEmotions(inputText), voiceTone: voiceData, category: "self_harm"
+        topEmotions: getTopEmotions(inputText), voiceTone: voiceData, category: "self_harm", abuseType:"none", abuseSource:"none"
       };
-      saveAlertToAdmin(inputText, 98, "RED", forced.reasons, "self_harm");
+      saveAlertToAdmin(inputText, 98, "RED", forced.reasons, "self_harm", "none", "none");
+      setAnalysis(forced);
+      setHistory(h => [...h, forced].slice(-20));
+      try { saveAnalysis(forced); } catch {}
+      saveToBackend(forced);
+      setInputText("");
+      setLoading(false);
+      return;
+    }
+
+    // NEW: School abuse quick local detection - goes to ORANGE + alerts
+    if (isSchoolAbuseLocal) {
+      const forced = {
+        riskLevel: "ORANGE", score: 85, emotion: "humiliated", sentiment: "distressed",
+        reasons: ["teacher_remark","public_shaming"], advice: getAdvice("ORANGE","school_emotional_abuse"),
+        text: inputText, timestamp: new Date().toISOString(), id: Date.now(),
+        counseling: getCounselingAdvice(inputText, "humiliated", "ORANGE"),
+        topEmotions: getTopEmotions(inputText), voiceTone: voiceData,
+        isAI: false, isSafetyNet: true, category: "school_emotional_abuse", abuseType:"school_emotional_abuse", abuseSource:"teacher"
+      };
+      saveAlertToAdmin(inputText, 85, "ORANGE", forced.reasons, "school_emotional_abuse", "school_emotional_abuse", "teacher");
       setAnalysis(forced);
       setHistory(h => [...h, forced].slice(-20));
       try { saveAnalysis(forced); } catch {}
@@ -170,7 +201,12 @@ useEffect(() => {
       const res = await fetch(`${API}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: token? `Bearer ${token}` : "" },
-        body: JSON.stringify({ text: inputText })
+        body: JSON.stringify({
+          text: inputText,
+          message: inputText,
+          userId: user?._id || user?.id || localStorage.getItem('userId') || `user_${Date.now()}`,
+          userEmail: user?.email
+        })
       });
       if (res.ok) {
         const data = await res.json();
@@ -185,17 +221,25 @@ useEffect(() => {
         else if (riskUpper === "ORANGE") fixedSentiment = "distressed";
         else fixedSentiment = "positive";
 
+        // FIX: Advice like earlier - use backend reason/reply
+        let backendAdvice = data.reply || data.reason || "";
+        if (!backendAdvice || backendAdvice.toLowerCase().includes("error")) {
+          backendAdvice = getAdvice(riskUpper, data.category || data.abuseType);
+        }
+
         result = {
           riskLevel: riskUpper,
           score: data.score || 50,
-          emotion: data.emotion || (riskUpper === "GREEN"? "neutral" : "stressed"),
+          emotion: data.emotion || (riskUpper === "GREEN"? "neutral" : data.category === "school_emotional_abuse"?"humiliated":"stressed"),
           sentiment: fixedSentiment,
-          reasons: data.triggers || data.reasons || [data.reason || "ai analysis"],
-          advice: data.reason || "",
+          reasons: (data.triggers || data.reasons || ["general"]).filter(t=> t!=="error"), // FIX error trigger
+          advice: backendAdvice,
           source: data.isAI? "gemini-backend" : "backend-safety",
           confidence: confidence,
           isAI: data.isAI!== false,
-          category: data.category || (data.triggers?.includes("emotional_abuse")? "emotional_abuse" : "general")
+          category: data.category || (data.abuseType?.includes("school")? "school_emotional_abuse" : data.triggers?.includes("emotional_abuse")? "emotional_abuse" : "general"),
+          abuseType: data.abuseType || data.category || "none",
+          abuseSource: data.abuseSource || (data.category === "school_emotional_abuse"?"teacher":"none")
         };
       } else {
         throw new Error("backend failed");
@@ -210,10 +254,12 @@ useEffect(() => {
           score: g.score || 75,
           emotion: g.emotion || "neutral",
           sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : (g.sentiment || "neutral"),
-          reasons: g.reasons || [],
-          advice: g.advice || "",
+          reasons: (g.reasons || ["general"]).filter(t=> t!=="error"),
+          advice: g.advice || getAdvice(lvl,"general"),
           source: "gemini-frontend",
           category: "general",
+          abuseType: "none",
+          abuseSource: "none",
           confidence: 70
         };
       } catch {
@@ -223,22 +269,22 @@ useEffect(() => {
         const hasNegative = ["sad", "depressed", "anxious", "alone", "tired", "upset", "angry", "hate", "lonely"].some(w => lower.includes(w));
 
         if (hasPositive &&!hasNegative) {
-          result = { riskLevel: "GREEN", score: 82, emotion: "happy", sentiment: "positive", reasons: ["positive keywords detected"], advice: "", source: "fallback-positive", category: "general", confidence: 65 };
+          result = { riskLevel: "GREEN", score: 82, emotion: "happy", sentiment: "positive", reasons: ["positive keywords detected"], advice: getAdvice("GREEN","general"), source: "fallback-positive", category: "general", abuseType:"none", abuseSource:"none", confidence: 65 };
         } else if (hasPositive && hasNegative) {
-          result = { riskLevel: "ORANGE", score: 55, emotion: "mixed", sentiment: "mixed - needs attention", reasons: ["mixed emotions detected"], advice: "", source: "fallback-mixed", category: "general", confidence: 60 };
+          result = { riskLevel: "ORANGE", score: 55, emotion: "mixed", sentiment: "mixed - needs attention", reasons: ["mixed emotions detected"], advice: getAdvice("ORANGE","general"), source: "fallback-mixed", category: "general", abuseType:"none", abuseSource:"none", confidence: 60 };
         } else {
           const lvl = (f.riskLevel || f.level || "ORANGE").toUpperCase();
-          result = {...f, riskLevel: lvl, sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : "positive", source: "fallback", category: "general", confidence: 50 };
+          result = {...f, riskLevel: lvl, sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : "positive", reasons:["general"], advice: getAdvice(lvl,"general"), source: "fallback", category: "general", abuseType:"none", abuseSource:"none", confidence: 50 };
         }
       }
     }
 
     if (result.riskLevel === "RED" || result.riskLevel === "ORANGE") {
-      saveAlertToAdmin(inputText, result.score, result.riskLevel, result.reasons, result.category);
+      saveAlertToAdmin(inputText, result.score, result.riskLevel, result.reasons, result.category, result.abuseType, result.abuseSource);
     }
 
     const withTime = {
-    ...result,
+   ...result,
       counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel),
       topEmotions: getTopEmotions(inputText),
       voiceTone: voiceData,
@@ -248,7 +294,11 @@ useEffect(() => {
     };
 
     setAnalysis(withTime);
-    setHistory(h => [...h, withTime].slice(-20));
+    setHistory(h => {
+      const newH = [...h, withTime].slice(-20);
+      try { localStorage.setItem('emovra_history', JSON.stringify(newH)); } catch {}
+      return newH;
+    });
     try { saveAnalysis(withTime); } catch {}
     saveToBackend(withTime);
     setInputText("");
@@ -264,7 +314,7 @@ useEffect(() => {
     );
   }
 
-  const advice = getAdvice(analysis?.riskLevel);
+  const advice = analysis?.advice || getAdvice(analysis?.riskLevel, analysis?.category);
   const counselingArray = Array.isArray(analysis?.counseling)? analysis.counseling : [];
   const isAdmin = user.role === "admin";
 
@@ -321,9 +371,11 @@ useEffect(() => {
                 </div>
               )}
               {analysis.riskLevel === "ORANGE" && (
-                <div style={{ padding: 16, background: "rgba(234,88,12,0.08)", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 12, color: "#fb923c", marginBottom: 12 }}>
-                  <b>⚠ ORANGE - Moderate Stress</b>
-                  <div style={{ fontSize: 13, marginTop: 6, color:'rgba(255,255,255,0.7)' }}>Stress/anxiety detected. Take a break, try grounding exercises below.</div>
+                <div style={{ padding: 16, background: analysis.category === "school_emotional_abuse"? "rgba(251,146,60,0.15)" : "rgba(234,88,12,0.08)", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 12, color: "#fb923c", marginBottom: 12 }}>
+                  <b>{analysis.category === "school_emotional_abuse"? "🏫 School Emotional Abuse Detected - ORANGE" : "⚠ ORANGE - Moderate Stress"}</b>
+                  <div style={{ fontSize: 13, marginTop: 6, color:'rgba(255,255,255,0.7)' }}>
+                    {analysis.category === "school_emotional_abuse"? `Teacher remark: ${analysis.reasons?.join(", ")} | AbuseType: ${analysis.abuseType}` : "Stress/anxiety detected. Take a break, try grounding exercises below."}
+                  </div>
                 </div>
               )}
               <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:8 }}>
