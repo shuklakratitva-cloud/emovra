@@ -9,9 +9,19 @@ const otpSchema = new mongoose.Schema({
     default: 'verify',
     index: true
   },
-  verified: { type: Boolean, default: false },
-  attempts: { type: Number, default: 0 },
-  createdAt: { type: Date, default: Date.now, expires: 300 }
+  verified: {
+    type: Boolean,
+    default: false
+  },
+  attempts: {
+    type: Number,
+    default: 0
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now, 
+    expires: 300
+  }
 });
 
 otpSchema.index({ phone: 1, purpose: 1 });
