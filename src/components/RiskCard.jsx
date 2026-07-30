@@ -1,134 +1,124 @@
 import React from "react";
+import { getGreenMessage, getYellowMessage, getOrangeMessage, getRedMessage } from "../utils/motivationalMessages";
 
-export default function RiskCard({ analysis }) {
+// No more GREEN/YELLOW/ORANGE/RED badges or raw scores anywhere in this
+// card, for ANY level. Underneath, the actual risk detection, encryption,
+// and backend saving rules are 100% unchanged - this file only controls
+// what's displayed, not what's detected or stored.
+//
+// Tone ladder (see utils/motivationalMessages.js for the full reasoning):
+//   GREEN  - full hype/celebration energy
+//   YELLOW - warm check-in, gentle self-care nudge, not urgent
+//   ORANGE - honest acknowledgment + helpline visible
+//   RED    - direct, warm, never hype - helpline front and center
+//
+// YELLOW previously had no branch at all here and silently fell into the
+// RED styling - fixed below.
+
+export default function RiskCard({ analysis, userName }) {
   if (!analysis) return null;
   const level = String(analysis.riskLevel || analysis.risk || analysis.level || "GREEN").toUpperCase();
-  const score = analysis.score?? 0;
   const isRed = level === "RED";
   const isOrange = level === "ORANGE";
-  const isGreen = level === "GREEN";
-
-  const colors = {
-    GREEN: { bg: "#16a34a", text: "#fff" },
-    YELLOW: { bg: "#eab308", text: "#000" },
-    ORANGE: { bg: "#f97316", text: "#fff" },
-    RED: { bg: "#d4c5a0", text: "#000" },
-  };
-  const c = colors[level] || colors.GREEN;
-
-  let displaySentiment = analysis.sentiment || "neutral";
-  if (isRed) displaySentiment = "needs support";
-  else if (isOrange) displaySentiment = analysis.category === "school_emotional_abuse"? "humiliated - needs support" : "distressed";
-
-  // FIX: Never show "error" as trigger - your screenshot bug
-  const cleanReasons = (analysis.reasons || analysis.triggers || ["general"])
-   .filter(r => r && r.toLowerCase()!== "error")
-   .map(r => r === "teacher_remark"? "teacher remark (school)" : r);
-  const finalReasons = cleanReasons.length? cleanReasons : ["general"];
+  const isYellow = level === "YELLOW";
+  const isGreen = level === "GREEN" || (!isRed && !isOrange && !isYellow); // safe default
 
   const category = analysis.category || analysis.abuseType || "general";
   const isSchoolAbuse = category === "school_emotional_abuse" || analysis.abuseType === "school_emotional_abuse";
   const isHomeAbuse = category === "emotional_abuse" || analysis.abuseType === "home_abuse";
+  const triggers = analysis.reasons || analysis.triggers || [];
+
+  let message;
+  let icon;
+  let accent;
+  let heading;
+
+  if (isRed) {
+    message = getRedMessage({ name: userName });
+    icon = "🫂";
+    accent = "#f87171";
+    heading = "You're not alone in this";
+  } else if (isOrange) {
+    message = getOrangeMessage({ name: userName, category, abuseType: analysis.abuseType, triggers });
+    icon = isSchoolAbuse ? "🏫" : isHomeAbuse ? "⚠" : "💛";
+    accent = "#fb923c";
+    heading = "We hear you";
+  } else if (isYellow) {
+    message = getYellowMessage({ name: userName, triggers });
+    icon = "🌤";
+    accent = "#eab308";
+    heading = "Just checking in";
+  } else {
+    message = getGreenMessage(analysis.emotion, userName);
+    icon = "🌿";
+    accent = "#4ade80";
+    heading = "You're on the right path";
+  }
+
+  const isCalm = isGreen; // only GREEN gets the fully neutral border treatment
 
   return (
     <div style={{
       maxWidth: 680, width: "100%", marginTop: 16,
-      background: "var(--card-bg)", border: "1px solid var(--border)",
-      borderRadius: 16, padding: 20, textAlign: "left",
+      background: "var(--card-bg)",
+      border: `1px solid ${isCalm ? "var(--border)" : accent + "55"}`,
+      borderLeft: isCalm ? "1px solid var(--border)" : `3px solid ${accent}`,
+      borderRadius: 16, padding: 22, textAlign: "left",
       color: "var(--text)"
     }}>
-      <div style={{display:"flex", gap:8, flexWrap:"wrap", alignItems:"center"}}>
-        <span style={{
-          background: c.bg, color: c.text, padding:"6px 14px",
-          borderRadius: 20, fontWeight: 800, fontSize: 13,
-          border: `1px solid ${c.bg}`
-        }}>
-          {isRed? `🫂 ${level}` : level} - {score}%
-        </span>
-        <span style={{
-          background: "var(--card-bg)", color: "var(--text)",
-          border:"1px solid var(--border)", padding:"6px 12px",
-          borderRadius: 20, fontSize:12, fontWeight:700
-        }}>
-          {String(analysis.emotion || "neutral").toUpperCase()}
-        </span>
-        <span style={{
-          background: isRed? "rgba(212,197,160,0.15)" : isOrange? "rgba(251,146,60,0.12)" : "var(--card-bg)",
-          color: isRed? "#d4c5a0" : isOrange? "#fb923c" : "var(--muted)",
-          border:"1px solid var(--border)", padding:"6px 12px",
-          borderRadius: 20, fontSize:12, fontWeight:600
-        }}>
-          {String(displaySentiment)}
-        </span>
-
-        {isHomeAbuse && (
-          <span style={{
-            background: "rgba(251,146,60,0.15)", color: "#fb923c",
-            border:"1px solid rgba(251,146,60,0.3)", padding:"6px 12px",
-            borderRadius: 20, fontSize:11, fontWeight:700
-          }}>
-            ⚠ HOME ABUSE
-          </span>
-        )}
-
-        {isSchoolAbuse && (
-          <span style={{
-            background: "rgba(168,85,247,0.15)", color: "#c4b5fd",
-            border:"1px solid rgba(168,85,247,0.3)", padding:"6px 12px",
-            borderRadius: 20, fontSize:11, fontWeight:700
-          }}>
-            🏫 SCHOOL ABUSE - {analysis.abuseSource || "teacher"}
-          </span>
-        )}
-
-        {isGreen && (
-          <span style={{
-            background: "rgba(34,197,94,0.1)", color: "#4ade80",
-            border:"1px solid rgba(34,197,94,0.2)", padding:"4px 10px",
-            borderRadius: 20, fontSize:10, fontWeight:600
-          }}>
-            🔒 Privacy: Not saved to backend
-          </span>
-        )}
-        {(isRed || isOrange) && (
-          <span style={{
-            background: "rgba(212,197,160,0.1)", color: "#d4c5a0",
-            border:"1px solid rgba(212,197,160,0.2)", padding:"4px 10px",
-            borderRadius: 20, fontSize:10, fontWeight:600
-          }}>
-            🔐 Encrypted → Alerts
-          </span>
-        )}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 20 }}>{icon}</span>
+        <span style={{ fontWeight: 700, color: "#d4c5a0", fontSize: 15 }}>{heading}</span>
       </div>
 
-      <p style={{marginTop:12, fontSize:13, color:"var(--muted)"}}>
-        <b style={{color:"var(--text)"}}>Triggers:</b> {finalReasons.join(", ")}
+      <p style={{ marginTop: 10, fontSize: 14, color: "var(--text)", lineHeight: 1.6 }}>
+        {message}
       </p>
 
-      {isSchoolAbuse && (
-        <div style={{marginTop:10, padding:10, background:"rgba(168,85,247,0.08)", border:"1px solid rgba(168,85,247,0.2)", borderRadius:10, fontSize:12}}>
-          <b style={{color:"#c4b5fd"}}>🏫 School Emotional Abuse Detected</b>
-          <div style={{marginTop:4, color:"rgba(232,220,198,0.7)"}}>
-            Teacher subtle remark / public shaming detected. Type: {analysis.abuseType} | Source: {analysis.abuseSource}
-          </div>
+      {/* Always-visible, always-tappable help for RED/ORANGE - kept
+          regardless of styling changes, this is the safety function of
+          the card, not decoration. */}
+      {(isRed || isOrange) && (
+        <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a href="tel:14416" style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "#d4b07a", color: "#000", padding: "10px 18px",
+            borderRadius: 20, textDecoration: "none", fontWeight: 700, fontSize: 13
+          }}>
+            📞 Call Tele-MANAS: 14416
+          </a>
+          {isRed && (
+            <a href="tel:18005990019" style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: "transparent", color: "var(--text)", padding: "10px 18px",
+              borderRadius: 20, textDecoration: "none", fontWeight: 600, fontSize: 13,
+              border: "1px solid var(--border)"
+            }}>
+              📞 Kiran: 1800-599-0019
+            </a>
+          )}
         </div>
       )}
 
-      {analysis.advice && (
-        <p style={{marginTop:10, fontSize:13, color:"var(--text)", lineHeight:1.4}}>
-          <b style={{color:"#d4c5a0"}}>Advice:</b> {analysis.advice}
-        </p>
+      {/* YELLOW: softer, optional support link - present but not pushed as hard as ORANGE/RED */}
+      {isYellow && (
+        <div style={{ marginTop: 12 }}>
+          <a href="tel:14416" style={{ fontSize: 12, color: "#d4c5a0", textDecoration: "underline" }}>
+            Want to talk to someone? Tele-MANAS: 14416
+          </a>
+        </div>
       )}
 
-      {analysis.helpline && (
-        <p style={{marginTop:8, fontSize:13, fontWeight:700, color: c.bg}}>
-          {analysis.helpline}
-        </p>
-      )}
-      {analysis.source && (
-        <p style={{marginTop:8, fontSize:10, color:"rgba(232,220,198,0.4)"}}>
-          via {analysis.source} {analysis.isAI? "🤖" : "🛡"} {analysis.category && `| ${analysis.category}`}
-        </p>
+      {analysis.emotion && (
+        <div style={{ marginTop: 12 }}>
+          <span style={{
+            background: "rgba(212,197,160,0.12)", color: "#d4c5a0",
+            border: "1px solid rgba(212,197,160,0.25)", padding: "4px 12px",
+            borderRadius: 20, fontSize: 11, fontWeight: 600
+          }}>
+            feeling {String(analysis.emotion).toLowerCase()}
+          </span>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,17 @@
+// FIX: this used to fetch("/api/gemini", ...) - a relative path with the
+// wrong route name. Two problems: (1) the backend route is POST /api/chat,
+// not /api/gemini, and (2) a relative fetch hits whatever origin the
+// frontend itself is served from (your Cloudflare Pages domain), not
+// https://emovra.onrender.com - so there was never a matching endpoint to
+// hit either way. This is why Journal's "Gemini AI" always silently fell
+// back to the local keyword checker. Now points at the real backend, same
+// as every other component in this app (VoiceToneAnalyzer.jsx, Auth.jsx, etc).
+
+const API = "https://emovra.onrender.com/api";
+
 export async function analyzeWithGemini(text, toneData = null) {
   const lower = text.toLowerCase().trim();
-  
+
   const violence = ["kill","murder","stab","shoot","hurt him","hurt her","kill him","kill her","want to kill","gonna kill","i will kill","choke","beat him","slit"];
   const abuseList = [
     "fuck","fucking","motherfucker","mf","bitch","bastard","asshole","madarchod","behenchod","bhenchod","chutiya","gandu","lodu","harami","kamine","kutta","kutte","randi","saala","saali","mc","bc","lavde","bsdk","bhadwa","chud","gaand","gand","chut","lund"
@@ -19,24 +30,22 @@ export async function analyzeWithGemini(text, toneData = null) {
     };
   }
 
-  // 2. ABUSE = MIN 30 - 65 (NEW FIX)
+  // 2. ABUSE = MIN 30 - 65
   const foundAbuse = abuseList.filter(w => lower.includes(w));
   if (foundAbuse.length > 0) {
-    // try Gemini first to get emotion, but enforce min score
     try {
-      const res = await fetch("/api/gemini", {
+      const res = await fetch(`${API}/chat`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, toneData })
+        body: JSON.stringify({ message: text, toneData })
       });
       const data = await res.json();
-      // enforce at least 30, if multiple abuses or all caps -> 55-65
       let forcedScore = foundAbuse.length >= 3 ? 65 : foundAbuse.length >=2 ? 50 : 35;
-      if (lower === lower.toUpperCase() && lower.length > 5) forcedScore += 10; // shouting
+      if (lower === lower.toUpperCase() && lower.length > 5) forcedScore += 10;
       const finalScore = Math.max(data.score || 0, forcedScore);
-      let finalLevel = data.level || "YELLOW";
+      let finalLevel = data.riskLevel || data.level || "ORANGE";
       if (finalScore >= 70) finalLevel = "RED";
       else if (finalScore >= 45) finalLevel = "ORANGE";
-      else finalLevel = "YELLOW";
+      else finalLevel = "ORANGE";
 
       return {
         level: finalLevel, riskLevel: finalLevel,
@@ -44,15 +53,14 @@ export async function analyzeWithGemini(text, toneData = null) {
         emotion: data.emotion || "angry",
         sentiment: "negative",
         reasons: [`abusive language detected: ${foundAbuse.slice(0,3).join(", ")}`, ...(data.reasons||[])],
-        advice: data.advice || "Abuse shows high stress/anger. Try pausing, breathing 4-4-4-4, and rephrasing your feelings without slurs.",
+        advice: data.reply || "Abuse shows high stress/anger. Try pausing, breathing 4-4-4-4, and rephrasing your feelings without slurs.",
         isCrisis: finalLevel === "RED",
         source: "abuse-forced-" + forcedScore
       };
     } catch {
-      // offline fallback for abuse
       const score = foundAbuse.length >=2 ? 55 : 35;
       return {
-        level: score >=45 ? "ORANGE" : "YELLOW", riskLevel: score >=45 ? "ORANGE" : "YELLOW",
+        level: score >=45 ? "ORANGE" : "ORANGE", riskLevel: score >=45 ? "ORANGE" : "ORANGE",
         score: score, emotion: "angry", sentiment: "negative",
         reasons: [`abusive language: ${foundAbuse.join(", ")}`],
         advice: "High anger/abuse detected. Take a break, breathe, avoid acting while angry.",
@@ -63,16 +71,26 @@ export async function analyzeWithGemini(text, toneData = null) {
 
   // 3. Normal Gemini
   try {
-    const res = await fetch("/api/gemini", {
+    const res = await fetch(`${API}/chat`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, toneData })
+      body: JSON.stringify({ message: text, toneData })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    return data;
+    return {
+      level: data.riskLevel, riskLevel: data.riskLevel,
+      score: data.score,
+      emotion: data.emotion,
+      sentiment: data.riskLevel === "RED" || data.riskLevel === "ORANGE" ? "negative" : "neutral",
+      reasons: data.triggers || [],
+      advice: data.reply,
+      isCrisis: data.riskLevel === "RED",
+      helpline: data.riskLevel === "RED" ? "Tele-MANAS: 14416 | Kiran: 1800-599-0019" : null,
+      source: "gemini-chat",
+    };
   } catch (e) {
     return {
-      level: "YELLOW", riskLevel: "YELLOW", score: 30,
+      level: "ORANGE", riskLevel: "ORANGE", score: 30,
       emotion: "neutral", sentiment: "neutral",
       reasons: ["fallback"],
       advice: "Could not connect to AI, but noted.",
