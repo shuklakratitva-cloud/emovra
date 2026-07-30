@@ -4,7 +4,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 
-// Load env FIRST
 dotenv.config();
 
 import authRoutes from "./routes/auth.js";
@@ -14,11 +13,22 @@ import adminRoutes from "./routes/admin.js";
 import emotionRoutes from "./routes/emotion.js";
 import geminiRoutes from "./routes/gemini.js";
 import analyzeRoutes from "./routes/analyze.js";
-import otpRoutes from "./routes/otp.js"; // <-- ADDED FOR RANDOM OTP + PHONE VERIFY
+import otpRoutes from "./routes/otp.js";
+import voiceRoutes from "./routes/voice.js"; // FIX: was never imported/mounted - /api/voice/analyze always 404'd
+import journalShareRoutes from "./routes/journalShare.js"; // NEW: invite-a-friend shared journal feature
+import gamificationRoutes from "./routes/gamification.js"; // NEW: xp/level/streak/badges
+import challengesRoutes from "./routes/challenges.js"; // NEW: daily challenges
+import habitsRoutes from "./routes/habits.js"; // NEW: habit tracker
+import chatbotRoutes from "./routes/chatbot.js"; // NEW: AI chatbot with follow-up questions
+import dashboardRoutes from "./routes/dashboard.js"; // NEW: personalized dashboard aggregation
+import insightsRoutes from "./routes/insights.js"; // NEW: mental health insights + early warning + monthly calendar
+import sleepRoutes from "./routes/sleep.js"; // NEW: sleep assistant log
+import goalsRoutes from "./routes/goals.js"; // NEW: goal planner
+import quizRoutes from "./routes/quiz.js"; // NEW: personality/strength quiz
+import profileRoutes from "./routes/profile.js"; // NEW: theme/avatar/birthday settings
 
 const app = express();
 
-// FIX 1: Trust proxy for Render - fixes X-Forwarded-For error in your logs
 app.set('trust proxy', 1);
 
 app.use(
@@ -36,7 +46,6 @@ app.use(
 
 app.use(express.json());
 
-// ✅ Rate Limiters
 const analyzeLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 15,
@@ -53,7 +62,6 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ADDED: OTP limiter - 5 OTPs per minute to prevent spam, but random every time
 const otpLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
@@ -65,7 +73,9 @@ const otpLimiter = rateLimit({
 app.use("/api/", generalLimiter);
 app.use("/api/analyze", analyzeLimiter);
 app.use("/api/chat", analyzeLimiter);
-app.use("/api/otp", otpLimiter); // ADDED
+app.use("/api/voice", analyzeLimiter); // FIX: voice analysis also hits Gemini, same rate-limit treatment as analyze/chat
+app.use("/api/chatbot", analyzeLimiter); // NEW: chatbot also hits Gemini, same treatment
+app.use("/api/otp", otpLimiter);
 
 // PRIVACY: Never log req.body.text or OTP
 app.use((req, res, next) => {
@@ -82,7 +92,7 @@ mongoose
 .connect(process.env.MONGO_URI)
 .then(() => {
   console.log("✅ MongoDB connected");
-  console.log(`🔒 Privacy: GREEN/YELLOW not saved, RED/ORANGE -> entries encrypted`);
+  console.log(`🔒 Privacy: GREEN not saved, RED/ORANGE -> entries encrypted`);
   console.log(`🏫 Alerts: ONLY school_emotional_abuse -> alerts collection`);
   console.log(`📱 OTP: Random every time + phone verification ENABLED`);
 })
@@ -102,18 +112,18 @@ if (!process.env.ENCRYPT_KEY && !process.env.ENCRYPTION_SECRET) {
   console.log("✅ ENCRYPT_KEY found - privacy encryption enabled");
 }
 
-app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled + Privacy RED/ORANGE only + OTP Random"));
+app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled + Privacy RED/ORANGE only"));
 
 app.get("/health", (req, res) => res.status(200).send("OK"));
-app.get("/api/health", (req, res) => res.json({ 
-  status: "ok", 
-  time: new Date(), 
-  gemini: !!process.env.GEMINI_API_KEY, 
+app.get("/api/health", (req, res) => res.json({
+  status: "ok",
+  time: new Date(),
+  gemini: !!process.env.GEMINI_API_KEY,
   mongo: mongoose.connection.readyState === 1,
   privacyMode: "RED_ORANGE_ONLY_ENTRIES",
   alertsMode: "SCHOOL_EMOTIONAL_ABUSE_ONLY",
   otpMode: "RANDOM_EVERY_TIME",
-  features: ["school_emotional_abuse","home_abuse","negation","hinglish","otp_phone_verify"]
+  features: ["school_emotional_abuse","home_abuse","negation","hinglish","otp_phone_verify","voice_analysis"]
 }));
 
 app.get("/api", (req, res) => {
@@ -121,19 +131,31 @@ app.get("/api", (req, res) => {
     success: true,
     name: "MindGuard API",
     version: "1.2.0",
-    endpoints: ["/api/auth", "/api/data", "/api/alerts", "/api/admin", "/api/emotion", "/api/chat", "/api/analyze", "/api/otp/send", "/api/otp/verify"]
+    endpoints: ["/api/auth", "/api/data", "/api/alerts", "/api/admin", "/api/emotion", "/api/chat", "/api/analyze", "/api/voice/analyze", "/api/otp/send", "/api/otp/verify", "/api/journal-share"]
   });
 });
 
 // --- ALL ROUTES ---
-app.use("/api/otp", otpRoutes); // <-- ADDED: /api/otp/send and /api/otp/verify - random every time
-app.use("/api/analyze", analyzeRoutes); // contains school abuse + RED/ORANGE entries logic
+app.use("/api/otp", otpRoutes);
+app.use("/api/analyze", analyzeRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/data", dataRoutes);
-app.use("/api/alerts", alertRoutes); // now filtered to ONLY school_emotional_abuse
+app.use("/api/alerts", alertRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/emotion", emotionRoutes);
-app.use("/api", geminiRoutes);
+app.use("/api/voice", voiceRoutes); // FIX: was missing entirely
+app.use("/api/journal-share", journalShareRoutes); // NEW: invite-a-friend shared journal
+app.use("/api/gamification", gamificationRoutes); // NEW
+app.use("/api/challenges", challengesRoutes); // NEW
+app.use("/api/habits", habitsRoutes); // NEW
+app.use("/api/chatbot", chatbotRoutes); // NEW
+app.use("/api/dashboard", dashboardRoutes); // NEW
+app.use("/api/insights", insightsRoutes); // NEW
+app.use("/api/sleep", sleepRoutes); // NEW
+app.use("/api/goals", goalsRoutes); // NEW
+app.use("/api/quiz", quizRoutes); // NEW
+app.use("/api/profile", profileRoutes); // NEW
+app.use("/api", geminiRoutes); // exposes POST /api/chat
 
 app.use((req, res) => {
   console.log("404 for", req.method, req.originalUrl);

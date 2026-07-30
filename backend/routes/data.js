@@ -1,6 +1,8 @@
 import express from "express";
 import Entry, { decrypt } from "../models/Entry.js";
 import auth from "../middleware/auth.js";
+import { awardXP } from "../utils/gamification.js";
+
 const router = express.Router();
 
 // Save entry - encrypted + fixed ORANGE/RED logic + emo abuse flag
@@ -15,17 +17,21 @@ router.post('/save', auth, async (req, res) => {
       emotion: emotion || "neutral",
       reasons: reasons || [],
     });
-    
-    // This triggers encryption + riskLevel + emoAbuse detection in pre-save
+
     entry._plainText = text;
     await entry.save();
 
-    res.json({ 
-      success: true, 
-      riskLevel: entry.riskLevel, 
+    // NEW: XP for journaling - first entry ever also unlocks a badge
+    const totalEntries = await Entry.countDocuments({ userId: req.user.id });
+    const gam = await awardXP(req.user.id, 10, { firstJournalEntry: totalEntries === 1 });
+
+    res.json({
+      success: true,
+      riskLevel: entry.riskLevel,
       score: entry.score,
       emoAbuseDetected: entry.emoAbuseDetected,
-      message: "Saved securely (encrypted)"
+      message: "Saved securely (encrypted)",
+      gamification: gam,
     });
   } catch (err) {
     console.error("Save entry error:", err);
@@ -37,8 +43,7 @@ router.post('/save', auth, async (req, res) => {
 router.get('/my', auth, async (req, res) => {
   try {
     const entries = await Entry.find({ userId: req.user.id }).sort({ timestamp: -1 }).limit(50);
-    
-    // Decrypt only for owner
+
     const decrypted = entries.map(e => {
       const obj = e.toObject();
       return {
@@ -47,7 +52,7 @@ router.get('/my', auth, async (req, res) => {
         score: obj.score,
         emotion: obj.emotion,
         reasons: obj.reasons,
-        emoAbuseDetected: obj.emoAbuseDetected, // new indicator for user too
+        emoAbuseDetected: obj.emoAbuseDetected,
         timestamp: obj.timestamp,
         createdAt: obj.createdAt,
         text: obj.text_encrypted ? decrypt(obj.text_encrypted) : "[old entry - no encryption]"

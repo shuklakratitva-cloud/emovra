@@ -1,73 +1,65 @@
 import mongoose from "mongoose";
-import crypto from "crypto";
+import { encrypt, decrypt } from "../utils/crypto.js";
 
-const ALGO = 'aes-256-cbc';
-const getKey = () => {
-  const secret = process.env.ENCRYPTION_SECRET || 'fallback-emovra-key-change-me-32';
-  return crypto.scryptSync(secret, 'emovra-salt', 32);
-};
-
-export const encrypt = (text) => {
-  if(!text) return "";
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGO, getKey(), iv);
-  let enc = cipher.update(text, 'utf8', 'hex');
-  enc += cipher.final('hex');
-  return iv.toString('hex') + ':' + enc;
-};
-
-export const decrypt = (encText) => {
-  try {
-    if(!encText ||!encText.includes(':')) return encText;
-    const [ivHex, encrypted] = encText.split(':');
-    const decipher = crypto.createDecipheriv(ALGO, getKey(), Buffer.from(ivHex, 'hex'));
-    let dec = decipher.update(encrypted, 'hex', 'utf8');
-    dec += decipher.final('utf8');
-    return dec;
-  } catch { return "[decryption failed]"; }
-};
+// re-export so existing imports like `import Entry, { decrypt } from "../models/Entry.js"` keep working
+export { encrypt, decrypt };
 
 const entrySchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  text_encrypted: { type: String },
-  text: { type: String, select: false },
+  // Real logged-in user, when available. Optional now - AI-classification
+  // calls (analyze.js/gemini.js) aren't always authenticated.
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false, default: null },
+  // Fallback label (e.g. "anonymous" or an email) when there's no real user id.
+  anonId: { type: String, default: "" },
+
+  text_encrypted: { type: String, default: "" },
+  text: { type: String, select: false }, // legacy field, kept for backward compat with old docs
+
   riskLevel: { type: String, enum: ['GREEN','ORANGE','RED'], default: 'GREEN' },
   score: { type: Number, default: 0 },
   emotion: String,
   reasons: [String],
+
+  // AI-classification fields (used by analyze.js / gemini.js via saveAnalysis.js)
+  category: { type: String, default: "general" },
+  abuseType: { type: String, default: "none" },
+  abuseSource: { type: String, default: "none" },
+  triggers: [String],
+
   emoAbuseDetected: { type: Boolean, default: false },
   timestamp: { type: Date, default: Date.now }
 }, {
   timestamps: true,
-  collection: 'entries' // <--- FIX: forces save to emotionDB.entries which you are watching in Atlas
+  collection: 'entries'
 });
 
-// Virtual field to hold plain text temporarily (won't be saved to DB)
+// Virtual field to hold plain text temporarily (won't be saved to DB) -
+// used by the manual journal-save flow (data.js / voice.js), which sets
+// entry._plainText = text before calling .save().
 entrySchema.virtual('_plainText').get(function() {
   return this.__plainText;
 }).set(function(v) {
   this.__plainText = v;
 });
 
-// Pre-save: FIXED - No next() needed for Mongoose 8
+// Pre-save: ONLY runs the auto-detect logic when raw plaintext was actually
+// provided via the virtual (the manual-save flow). The AI-classification
+// flow (saveAnalysis.js) already computes riskLevel/emoAbuseDetected/etc
+// itself and passes text_encrypted directly - this used to get silently
+// overwritten by this hook recalculating against an empty string. Guarding
+// on `raw` fixes that.
 entrySchema.pre('save', function() {
   const raw = this.__plainText || this._plainText || "";
 
-  // 1. Encrypt if plain text provided
   if (raw) {
     this.text_encrypted = encrypt(raw);
+
+    if (this.score >= 75) this.riskLevel = 'RED';
+    else if (this.score >= 45) this.riskLevel = 'ORANGE';
+    else this.riskLevel = 'GREEN';
+
+    const abuseWords = ['worthless','hate you','kill you','abuse','beating','hit me','slap','emotional abuse','gaslight'];
+    this.emoAbuseDetected = abuseWords.some(w => raw.toLowerCase().includes(w));
   }
-
-  // 2. FIXED RISK LOGIC - your old logic was inverted, this is correct
-  if (this.score >= 75) this.riskLevel = 'RED';
-  else if (this.score >= 45) this.riskLevel = 'ORANGE';
-  else this.riskLevel = 'GREEN';
-
-  // 3. EMO ABUSE DETECTION - kept your feature
-  const abuseWords = ['worthless','hate you','kill you','abuse','beating','hit me','slap','emotional abuse','gaslight'];
-  this.emoAbuseDetected = abuseWords.some(w => raw.toLowerCase().includes(w));
-
-  // NO next() call - Mongoose 8 will auto-continue
 });
 
 // Helper to decrypt when you fetch for admin panel

@@ -1,64 +1,63 @@
 import express from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import crypto from "crypto";
+import optionalAuth from "../middleware/optionalAuth.js";
+import { saveAnalysis } from "../utils/saveAnalysis.js";
+import { localRiskFallback } from "../utils/localRiskFallback.js";
+import { alertGeminiDown } from "../utils/alertEmail.js";
 
 const router = express.Router();
 
-// --- YOUR EXISTING MODEL (keep) ---
-// Make sure you have this in models/Alert.js or same file
-// If you already have Alert model imported, use: import Alert from "../models/Alert.js"
+// Standardized model (see analyze.js for the note on why - was gemini-1.5-flash
+// here, gemini-2.0-flash in analyze.js; now both use gemini-1.5-flash per your
+// request).
+const GEMINI_MODEL = "gemini-1.5-flash";
 
-// --- ENCRYPTION (for privacy till RED/ORANGE) ---
-const ENCRYPT_KEY = process.env.ENCRYPT_KEY || "emovra-32-char-secret-key-123456";
-function encrypt(text) {
+// --- CHAT ROUTE ---
+// This is the endpoint the frontend's Journal (via utils/geminiAnalyzer.js)
+// should call. NOTE: the frontend was previously calling the relative path
+// "/api/gemini" - this route is mounted at POST /api/chat, so it always
+// 404'd. See the frontend fix notes for geminiAnalyzer.js.
+router.post('/chat', optionalAuth, async (req, res) => {
   try {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPT_KEY.slice(0,32)), iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ":" + encrypted;
-  } catch { return crypto.createHash('sha256').update(text).digest('hex'); }
-}
+    const { message, userId: bodyUserId } = req.body;
+    const userId = req.user?.id || bodyUserId || "anonymous";
 
-// --- YOUR CHAT ROUTE - NOW WITH ALL FEATURES ---
-router.post('/chat', async (req, res) => {
-  try {
-    const { message, userId } = req.body; // Added userId
+    if (!message || !message.trim()) {
+      return res.json({
+        riskLevel: "GREEN", score: 0, emotion: "neutral", reasons: ["empty"],
+        emoAbuseDetected: false, abuseType: "none", abuseSource: "none",
+        triggers: ["general"], reply: "I'm listening whenever you're ready."
+      });
+    }
+
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "GEMINI_API_KEY missing" });
     }
-    
+
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    // --- NEW: ADVANCED PROMPT WITH SCHOOL EMOTIONAL ABUSE + PRIVACY ---
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+
     const prompt = `
 You are Emovra, a kind mental wellness companion. Breathe. Balance. Become.
 
 User says: "${message}"
 
 TASK: Do 2 things in ONE JSON:
-
 1. Analyze risk for backend privacy (hidden from user)
 2. Give supportive reply (shown to user)
 
-DETECTION RULES - VERY IMPORTANT:
+DETECTION RULES:
 
 A) HOME ABUSE: hitting, beating, forced, unsafe at home, parents abusing => emoAbuseDetected=true, abuseType=home_abuse, RED 95-100
 
-B) SCHOOL EMOTIONAL ABUSE (NEW FEATURE):
-Detect subtle teacher remarks:
-- Words: "you are useless, worthless, will never succeed, nikamma, nalayak, beizzati, daanta, shame on you, worst student, dumb, idiot in front of class"
-- Actions: public humiliation, comparing to others, constant shouting, ignoring, biased grading, making fun of appearance/caste, sarcasm that hurts, targets me, sir ne sabke samne daanta, ma'am ne beizzati ki
-- Feelings: "teacher always targets me", "teacher insulted me", "teacher says I am dumb"
-=> If found => emoAbuseDetected=true, abuseType="school_emotional_abuse", abuseSource="teacher", riskLevel ORANGE 75-89 or RED 90-100 if repeated
+B) SCHOOL EMOTIONAL ABUSE: ONLY when a teacher/sir/ma'am is specifically and clearly named as the source of a demeaning remark or public humiliation - words like "you are useless, worthless, nikamma, nalayak, beizzati, daanta"; actions like public humiliation, comparing to others, constant shouting, biased grading, sarcasm that hurts. Do NOT flag this just because school/teacher/exams are mentioned in passing with no actual demeaning remark attributed to a teacher.
+=> If genuinely found => emoAbuseDetected=true, abuseType="school_emotional_abuse", abuseSource="teacher", riskLevel ORANGE 75-89 or RED 90-100 if repeated
 
-C) Normal feelings => GREEN 0-40, YELLOW 41-74
+C) Normal feelings => GREEN 0-40, ORANGE 41-74
 
 Return ONLY valid JSON like this, no extra text:
-
 {
-  "riskLevel": "GREEN or YELLOW or ORANGE or RED",
+  "riskLevel": "GREEN or ORANGE or RED",
   "score": 0-100,
   "emotion": "neutral / humiliated / anxious / critical etc",
   "reasons": ["teacher_public_humiliation"],
@@ -69,78 +68,59 @@ Return ONLY valid JSON like this, no extra text:
   "reply": "Your warm supportive reply 2-3 lines. If school abuse: 'It's painful when words from a teacher hurt. Your worth isn't defined by one remark. Consider talking to a counselor you trust. You are not alone.' If normal: empathetic short supportive."
 }
 
-IMPORTANT: reply must be like earlier - warm, supportive, wellness only, not medical diagnosis. Never say "error".
+IMPORTANT: reply must be warm, supportive, wellness only, not medical diagnosis. Never say "error".
 `;
-    
-    const result = await model.generateContent(prompt);
-    let text = result.response.text().replace(/```json|```/g, '').trim();
-    
+
     let aiData;
     try {
+      const result = await model.generateContent(prompt);
+      let text = result.response.text().replace(/```json|```/g, '').trim();
       aiData = JSON.parse(text);
-    } catch {
-      // Fallback if JSON fails - still give advice like earlier
+    } catch (aiErr) {
+      console.error("Gemini chat error:", aiErr.message?.slice(0, 300));
+      if (aiErr.message?.includes("429") || aiErr.message?.toLowerCase().includes("quota")) {
+        alertGeminiDown(aiErr.message?.slice(0, 200));
+      }
+      // FIX: previously fell back to a hardcoded GREEN/20 reply on ANY
+      // failure (parse error OR API error, including quota). Now uses the
+      // same local fallback as analyze.js.
+      const fb = localRiskFallback(message);
       aiData = {
-        riskLevel: "GREEN",
-        score: 20,
+        riskLevel: fb.risk,
+        score: fb.score,
         emotion: "neutral",
-        reasons: ["general"],
-        emoAbuseDetected: false,
-        abuseType: "none",
-        abuseSource: "none",
-        triggers: ["general"],
-        reply: text // Use Gemini raw text as reply
+        reasons: [fb.reason],
+        emoAbuseDetected: fb.abuseType !== "none",
+        abuseType: fb.abuseType,
+        abuseSource: fb.abuseSource,
+        triggers: fb.triggers,
+        reply: "I'm having trouble connecting to the AI right now, but I heard you. Take a slow breath - you are not alone.",
+        category: fb.category,
       };
     }
 
-    // --- NEW: PRIVACY LOGIC - ONLY RED/ORANGE SAVES TO ALERTS ---
-    // GREEN/YELLOW = NEVER SAVE (privacy protected)
-    // RED/ORANGE = SAVE TO ALERTS + show userId twice if 2 REDs
-    
-    if (aiData.riskLevel === "RED" || aiData.riskLevel === "ORANGE") {
-      try {
-        // Dynamic import so it doesn't break if you don't have Alert model file
-        const { default: Alert } = await import("../models/Alert.js").catch(async () => {
-          // If no model file, create inline model
-          const mongoose = (await import("mongoose")).default;
-          const schema = new mongoose.Schema({
-            userId: String,
-            riskLevel: String,
-            score: Number,
-            emotion: String,
-            reasons: Array,
-            emoAbuseDetected: Boolean,
-            abuseType: String,
-            abuseSource: String,
-            text_encrypted: String,
-            timestamp: { type: Date, default: Date.now }
-          });
-          return { default: mongoose.models.Alert || mongoose.model("Alert", schema) };
-        });
+    // FIX: this used to build its own inline Alert schema (or, if
+    // ../models/Alert.js imported fine - which it always does - still tried
+    // to save fields like userId/emotion/reasons/abuseType/text_encrypted
+    // that the OLD Alert schema didn't define, while never providing the
+    // OLD schema's required `user`/`text` fields - so this Alert.create()
+    // threw on every single call and was silently swallowed. It also saved
+    // every RED/ORANGE to `alerts`, not just school abuse, contradicting
+    // the "alerts = classroom abuse only" rule. saveAnalysis() now handles
+    // both correctly and consistently with analyze.js.
+    await saveAnalysis({
+      userId,
+      text: message,
+      risk: aiData.riskLevel,
+      score: aiData.score,
+      category: aiData.category || (aiData.abuseType === "school_emotional_abuse" ? "school_emotional_abuse" : aiData.abuseType === "home_abuse" ? "emotional_abuse" : "general"),
+      abuseType: aiData.abuseType,
+      abuseSource: aiData.abuseSource,
+      triggers: aiData.triggers,
+      emotion: aiData.emotion,
+    });
 
-        await Alert.create({
-          userId: userId || "anonymous", // Will show twice if user sends 2 REDs - as you wanted
-          riskLevel: aiData.riskLevel,
-          score: aiData.score,
-          emotion: aiData.emotion,
-          reasons: aiData.reasons,
-          emoAbuseDetected: aiData.emoAbuseDetected,
-          abuseType: aiData.abuseType, // school_emotional_abuse
-          abuseSource: aiData.abuseSource, // teacher
-          text_encrypted: encrypt(message), // Encrypted till RED/ORANGE
-          timestamp: new Date()
-        });
-        console.log(`ALERT SAVED: ${aiData.riskLevel} | ${aiData.abuseType} | User: ${userId}`);
-      } catch (dbErr) {
-        console.error("Alert save error (non-blocking):", dbErr.message);
-      }
-    } else {
-      console.log(`GREEN/YELLOW - Privacy protected, NOT saved to DB: ${message.slice(0,30)}`);
-    }
-
-    // --- RETURN TO FRONTEND - Fixes your GREEN-20% error issue ---
-    // Frontend expects {reply, riskLevel, score...} for advice + graph
-    res.json({ 
+    res.json({
       reply: aiData.reply,
       riskLevel: aiData.riskLevel,
       score: aiData.score,
@@ -152,13 +132,13 @@ IMPORTANT: reply must be like earlier - warm, supportive, wellness only, not med
 
   } catch (e) {
     console.error("GEMINI ERROR:", e.message);
-    res.status(500).json({ 
-      error: e.message, 
+    res.status(500).json({
+      error: e.message,
       riskLevel: "GREEN",
       score: 20,
-      reply: "I'm having trouble connecting right now, but I'm here for you. Take a slow breath. You are not alone. Try again in a moment?" 
+      reply: "I'm having trouble connecting right now, but I'm here for you. Take a slow breath. You are not alone. Try again in a moment?"
     });
   }
 });
 
-export default router;;
+export default router;

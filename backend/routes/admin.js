@@ -1,37 +1,39 @@
 import express from "express";
 import Entry, { decrypt } from "../models/Entry.js";
+import Alert from "../models/Alert.js";
 import User from "../models/User.js";
 import { protect as auth } from "../middleware/auth.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 
 const router = express.Router();
 
-// GET /api/admin/reds - Admin sees all RED critical alerts (FIXED for new schema)
+// GET /api/admin/reds - Admin sees all RED critical alerts
 router.get("/reds", auth, isAdmin, async (req, res) => {
   try {
-    const reds = await Entry.find({ 
+    const reds = await Entry.find({
       $or: [
         { riskLevel: "RED" },
         { score: { $gte: 75 } },
-        { isCritical: true }, // keep old field for backward compat
-        { level: { $gte: 85 } }, // keep old field
       ]
     })
     .populate("userId", "name email age emergencyPhone emergencyName role")
     .sort({ createdAt: -1, timestamp: -1 })
     .limit(100);
 
-    // Decrypt for admin only
     const decrypted = reds.map(e => {
       const obj = e.toObject();
       return {
         _id: obj._id,
-        user: obj.userId, // user info only as you wanted
+        user: obj.userId, // populated user info
         riskLevel: obj.riskLevel,
         score: obj.score,
         emotion: obj.emotion,
+        category: obj.category,
+        abuseType: obj.abuseType,
+        abuseSource: obj.abuseSource,
         emoAbuseDetected: obj.emoAbuseDetected,
         reasons: obj.reasons,
+        triggers: obj.triggers,
         text: obj.text_encrypted ? decrypt(obj.text_encrypted) : obj.text || "[no text]",
         timestamp: obj.timestamp || obj.createdAt,
         createdAt: obj.createdAt
@@ -45,10 +47,13 @@ router.get("/reds", auth, isAdmin, async (req, res) => {
   }
 });
 
-// NEW: GET /api/admin/alerts - RED + ORANGE + Abuse - Main admin view
+// GET /api/admin/alerts - RED + ORANGE + Abuse - Main admin view of ENTRIES
+// (all RED/ORANGE messages, not just school abuse - matches your requirement
+// that RED/ORANGE always shows user info here, while the separate `alerts`
+// collection stays classroom-abuse-only per the privacy rule)
 router.get("/alerts", auth, isAdmin, async (req, res) => {
   try {
-    const alerts = await Entry.find({ 
+    const alerts = await Entry.find({
       $or: [
         { riskLevel: { $in: ['RED', 'ORANGE'] } },
         { emoAbuseDetected: true }
@@ -65,8 +70,12 @@ router.get("/alerts", auth, isAdmin, async (req, res) => {
         user: obj.userId,
         riskLevel: obj.riskLevel,
         score: obj.score,
-        emoAbuseDetected: obj.emoAbuseDetected, // separate indicator - only you see
+        category: obj.category,
+        abuseType: obj.abuseType,
+        abuseSource: obj.abuseSource,
+        emoAbuseDetected: obj.emoAbuseDetected,
         reasons: obj.reasons,
+        triggers: obj.triggers,
         text: obj.text_encrypted ? decrypt(obj.text_encrypted) : obj.text || "",
         timestamp: obj.timestamp || obj.createdAt
       };
@@ -79,7 +88,68 @@ router.get("/alerts", auth, isAdmin, async (req, res) => {
   }
 });
 
-// NEW: GET /api/admin/abuse-only - Separate set ONLY for emotional abuse (encrypted in DB, you see user info)
+// GET /api/admin/school-abuse - ONLY the classroom-abuse `alerts` collection
+router.get("/school-abuse", auth, isAdmin, async (req, res) => {
+  try {
+    const alerts = await Alert.find({ category: "school_emotional_abuse" })
+      .populate("userId", "name email age emergencyPhone emergencyName role")
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    const result = alerts.map(a => {
+      const obj = a.toObject();
+      return {
+        _id: obj._id,
+        user: obj.userId,
+        riskLevel: obj.riskLevel,
+        score: obj.score,
+        category: obj.category,
+        abuseType: obj.abuseType,
+        abuseSource: obj.abuseSource,
+        triggers: obj.triggers,
+        text: obj.text_encrypted ? decrypt(obj.text_encrypted) : "",
+        status: obj.status,
+        timestamp: obj.createdAt
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+// Back-compat alias for AdminPanel.jsx, which called /api/alerts/all
+// (a route that never existed). Kept here rather than under /alerts/* so
+// it still requires admin auth.
+router.get("/all", auth, isAdmin, async (req, res) => {
+  try {
+    const alerts = await Entry.find({ riskLevel: { $in: ['RED', 'ORANGE'] } })
+      .populate("userId", "name email age emergencyPhone emergencyName role")
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    const result = alerts.map(a => {
+      const obj = a.toObject();
+      return {
+        _id: obj._id,
+        userName: obj.userId?.name,
+        user: obj.userId,
+        text: obj.text_encrypted ? decrypt(obj.text_encrypted) : "",
+        sosPhone: obj.userId?.emergencyPhone,
+        emergencyPhone: obj.userId?.emergencyPhone,
+        riskLevel: obj.riskLevel,
+        createdAt: obj.createdAt,
+      };
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+// GET /api/admin/abuse-only
 router.get("/abuse-only", auth, isAdmin, async (req, res) => {
   try {
     const abuse = await Entry.find({ emoAbuseDetected: true })
@@ -91,7 +161,7 @@ router.get("/abuse-only", auth, isAdmin, async (req, res) => {
       const obj = a.toObject();
       return {
         _id: obj._id,
-        user: obj.userId, // only user info as you asked
+        user: obj.userId,
         riskLevel: obj.riskLevel,
         score: obj.score,
         text: obj.text_encrypted ? decrypt(obj.text_encrypted) : obj.text || "",
@@ -106,7 +176,7 @@ router.get("/abuse-only", auth, isAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/users - Admin sees all users (kept as yours)
+// GET /api/admin/users
 router.get("/users", auth, isAdmin, async (req, res) => {
   try {
     const users = await User.find().select("-password").sort({ createdAt: -1 });

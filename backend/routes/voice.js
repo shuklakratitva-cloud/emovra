@@ -7,15 +7,20 @@ import { protect as auth } from "../middleware/auth.js";
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// FIX: standardized model name (was gemini-1.5-flash here already, kept
+// consistent with the other 3 AI routes now that analyze.js no longer
+// diverges to 2.0-flash).
+const GEMINI_MODEL = "gemini-1.5-flash";
+
 router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ msg: "Audio file required" });
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
     const audioBase64 = req.file.buffer.toString('base64');
-    
+
     const prompt = `
     You are Emovra AI. Transcribe the audio and analyze mental health.
     Return ONLY valid JSON:
@@ -42,7 +47,8 @@ router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
     let jsonText = result.response.text().replace(/```json|```/g, "").trim();
     const analysis = JSON.parse(jsonText);
 
-    // Save encrypted (using same logic as text)
+    // Save encrypted (Entry.js's pre-save hook handles encryption via the
+    // shared crypto util now - see models/Entry.js)
     const entry = new Entry({
       userId: req.user.id,
       score: analysis.score,
@@ -50,7 +56,6 @@ router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
       reasons: analysis.reasons,
     });
     entry._plainText = analysis.transcript;
-    // emoAbuseDetected will be set in pre-save from transcript
     if (analysis.emoAbuseDetected) entry.emoAbuseDetected = true;
     await entry.save();
 
@@ -59,7 +64,6 @@ router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
       transcript: analysis.transcript,
       riskLevel: entry.riskLevel,
       score: entry.score,
-      // emoAbuseDetected NOT sent to frontend - only backend
     });
 
   } catch (e) {

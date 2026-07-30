@@ -3,16 +3,19 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const router = express.Router();
 
+// FIX: was "gemini-1.5-flash" already here but standardizing explicitly
+// alongside analyze.js/gemini.js/voice.js so all four AI routes agree.
+const GEMINI_MODEL = "gemini-1.5-flash";
+
 router.post("/analyze", async (req, res) => {
   try {
     const text = (req.body.text || "").trim();
     if (!text) return res.status(400).json({ success: false, msg: "Text required" });
 
-    // --- Try Gemini first (accurate for ALL sentences) ---
     if (process.env.GEMINI_API_KEY) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
         const prompt = `
         Analyze mental health text: "${text}"
@@ -39,7 +42,6 @@ router.post("/analyze", async (req, res) => {
         let jsonText = result.response.text().replace(/```json|```/g, "").replace(/```/g, "").trim();
         const ai = JSON.parse(jsonText);
 
-        // Force correct color from score (fixes ORANGE bug)
         if (ai.score >= 75) ai.color = "RED";
         else if (ai.score >= 45) ai.color = "ORANGE";
         else ai.color = "GREEN";
@@ -51,23 +53,22 @@ router.post("/analyze", async (req, res) => {
         return res.json({
           success: true,
           ...ai,
-          isAI: true, // now using Gemini
+          isAI: true,
         });
 
       } catch (geminiErr) {
         console.error("Gemini analyze failed, fallback to keyword:", geminiErr.message);
-        // fall through to keyword logic below
       }
     }
 
-    // --- Fallback: Fixed keyword logic (your old logic but corrected) ---
+    // --- Fallback: keyword logic ---
     const low = text.toLowerCase();
-    let result = { 
-      color: "GREEN", 
-      score: 20, 
-      label: "POSITIVE", 
-      emotion: "happy", 
-      triggers: "none", 
+    let result = {
+      color: "GREEN",
+      score: 20,
+      label: "POSITIVE",
+      emotion: "happy",
+      triggers: "none",
       risk: "low",
       emoAbuseDetected: false,
       reasons: ["Positive text detected"]

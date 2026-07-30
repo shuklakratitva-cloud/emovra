@@ -1,29 +1,46 @@
 import Alert from "../models/Alert.js";
+import { encrypt, decrypt } from "../utils/crypto.js";
+
+function decryptAlert(alertDoc) {
+  const obj = alertDoc.toObject ? alertDoc.toObject() : alertDoc;
+  return {
+    ...obj,
+    text: obj.text_encrypted ? decrypt(obj.text_encrypted) : "",
+  };
+}
 
 /* =========================================
    Create a New Alert
+   FIX: text is now encrypted before saving. Previously this saved
+   req.body.text as plain text into Alert.text - which broke the "all saved
+   text must be encrypted till RED/ORANGE" rule for the official SOS-alert
+   flow (analyze.js/gemini.js's automatic alerts WERE already being
+   encrypted, just this manually-triggered path wasn't).
 ========================================= */
 export const createAlert = async (req, res) => {
   try {
-    const { text, emotion, riskLevel, score, phone } = req.body;
+    const { text, emotion, riskLevel, score, phone, category, abuseType, abuseSource, reasons } = req.body;
 
     const alert = await Alert.create({
-      user: req.user.id,
-      text,
+      userId: req.user.id,
+      text_encrypted: encrypt(text || ""),
       emotion,
       riskLevel,
       score,
-      phone
+      phone,
+      category: category || "general",
+      abuseType: abuseType || "none",
+      abuseSource: abuseSource || "none",
+      triggers: reasons || [],
     });
 
-    // Populate for immediate frontend use
     const populatedAlert = await Alert.findById(alert._id)
-      .populate("user", "name email age emergencyName emergencyPhone");
+      .populate("userId", "name email age emergencyName emergencyPhone");
 
     res.status(201).json({
       success: true,
       message: "Alert created successfully",
-      alert: populatedAlert
+      alert: decryptAlert(populatedAlert)
     });
 
   } catch (err) {
@@ -41,10 +58,10 @@ export const createAlert = async (req, res) => {
 export const getRedAlert = async (req, res) => {
   try {
     const alert = await Alert.findOne({
-      user: req.user.id,
+      userId: req.user.id,
       status: "ACTIVE"
     })
-    .populate("user", "name email age emergencyName emergencyPhone") // ADDED
+    .populate("userId", "name email age emergencyName emergencyPhone")
     .sort({ createdAt: -1 });
 
     if (!alert) {
@@ -56,7 +73,7 @@ export const getRedAlert = async (req, res) => {
 
     res.json({
       success: true,
-      alert
+      alert: decryptAlert(alert)
     });
 
   } catch (err) {
@@ -74,7 +91,7 @@ export const getRedAlert = async (req, res) => {
 export const callSOS = async (req, res) => {
   try {
     const alert = await Alert.findById(req.params.id)
-      .populate("user", "name email age emergencyName emergencyPhone"); // ADDED
+      .populate("userId", "name email age emergencyName emergencyPhone");
 
     if (!alert) {
       return res.status(404).json({
@@ -90,7 +107,7 @@ export const callSOS = async (req, res) => {
     res.json({
       success: true,
       message: "SOS Call Initiated",
-      alert
+      alert: decryptAlert(alert)
     });
 
   } catch (err) {
@@ -108,7 +125,7 @@ export const callSOS = async (req, res) => {
 export const clearAlert = async (req, res) => {
   try {
     const alert = await Alert.findById(req.params.id)
-      .populate("user", "name email"); // ADDED
+      .populate("userId", "name email");
 
     if (!alert) {
       return res.status(404).json({
@@ -124,7 +141,7 @@ export const clearAlert = async (req, res) => {
     res.json({
       success: true,
       message: "Alert cleared successfully",
-      alert
+      alert: decryptAlert(alert)
     });
 
   } catch (err) {
@@ -142,15 +159,15 @@ export const clearAlert = async (req, res) => {
 export const getAlertHistory = async (req, res) => {
   try {
     const alerts = await Alert.find({
-      user: req.user.id
+      userId: req.user.id
     })
-    .populate("user", "name email") // ADDED
+    .populate("userId", "name email")
     .sort({ createdAt: -1 });
 
     res.json({
       success: true,
       count: alerts.length,
-      alerts
+      alerts: alerts.map(decryptAlert)
     });
 
   } catch (err) {

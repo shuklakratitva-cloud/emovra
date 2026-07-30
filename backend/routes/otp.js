@@ -6,11 +6,10 @@ import mongoose from 'mongoose';
 const router = express.Router();
 
 const getUserModel = () => {
-  try { return mongoose.models.User; } 
+  try { return mongoose.models.User; }
   catch { return null; }
 }
 
-// SEND - Random OTP every time
 router.post('/send', async (req, res) => {
   try {
     const { phone, purpose } = req.body;
@@ -38,7 +37,6 @@ router.post('/send', async (req, res) => {
   }
 });
 
-// RESEND
 router.post('/resend', async (req, res) => {
   try {
     const { phone, purpose } = req.body;
@@ -55,7 +53,6 @@ router.post('/resend', async (req, res) => {
   }
 });
 
-// VERIFY - expiry, attempts, phone fix
 router.post('/verify', async (req, res) => {
   try {
     const { phone, otp, purpose, email, userId } = req.body;
@@ -94,7 +91,6 @@ router.post('/verify', async (req, res) => {
   }
 });
 
-// Compatibility - fixed, no next() bug
 router.post('/send-verify-otp', async (req, res) => {
   try {
     const { phone } = req.body;

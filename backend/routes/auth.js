@@ -7,6 +7,18 @@ import Otp from "../models/otp.js";
 
 const router = express.Router();
 
+// FIX: token now carries `role`. Previously it was
+// jwt.sign({ id: user._id }, ...) - decoded.role was always undefined, so
+// middleware/isAdmin.js's `req.user.role !== 'admin'` was ALWAYS true and
+// every admin route 403'd, for every user, including real admins.
+function signToken(user) {
+  return jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+}
+
 async function handleSignup(req, res) {
   try {
     let { name, email, password, age, emergencyName, emergencyPhone, countryCode, legalConsent } = req.body;
@@ -59,7 +71,7 @@ async function handleSignup(req, res) {
       }
     });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = signToken(user);
     res.status(201).json({
       token,
       user: { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role, phoneVerified: user.phoneVerified }
@@ -85,7 +97,7 @@ router.post("/login", async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ msg: "Invalid password" });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = signToken(user);
     res.json({ token, user: { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role || "user", phoneVerified: user.phoneVerified || false } });
 
   } catch (err) {
@@ -94,7 +106,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// --- NEW: MOBILE VERIFICATION + FORGOT PASSWORD - RANDOM EVERY TIME ---
+// --- MOBILE VERIFICATION + FORGOT PASSWORD - RANDOM EVERY TIME ---
 
 router.post('/send-verify-otp', async (req, res) => {
   try {
@@ -102,10 +114,8 @@ router.post('/send-verify-otp', async (req, res) => {
     if (!phone) return res.status(400).json({ msg: "Phone required" });
     const cleanPhone = phone.replace(/\D/g, "");
 
-    // RANDOM EVERY TIME - using crypto for true randomness
     const otp = crypto.randomInt(100000, 999999).toString();
 
-    // Delete old so new random is generated every time
     await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
     await Otp.create({ phone: cleanPhone, otp, purpose: 'verify' });
 
@@ -117,11 +127,31 @@ router.post('/send-verify-otp', async (req, res) => {
 });
 
 router.post('/verify-phone', async (req, res) => {
+  // FIX: this endpoint used to check the OTP with no expiry check and no
+  // attempt limit at all (routes/otp.js's /verify already had both). Now
+  // matches that same protection.
   try {
     const { phone, otp, email } = req.body;
+    if (!phone || !otp) return res.status(400).json({ verified: false, msg: "Phone + OTP required" });
     const cleanPhone = phone.replace(/\D/g, "");
-    const found = await Otp.findOne({ phone: cleanPhone, otp, purpose: 'verify' });
-    if (!found) return res.status(400).json({ verified: false, msg: "Invalid OTP" });
+
+    const found = await Otp.findOne({ phone: cleanPhone, purpose: 'verify' }).sort({ createdAt: -1 });
+    if (!found) return res.status(400).json({ verified: false, msg: "No OTP found. Please send again." });
+
+    const age = (Date.now() - new Date(found.createdAt).getTime()) / 1000;
+    if (age > 300) {
+      await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
+      return res.status(400).json({ verified: false, msg: "OTP expired. Request new one." });
+    }
+    if (found.attempts >= 5) {
+      await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
+      return res.status(400).json({ verified: false, msg: "Too many attempts. Request new OTP." });
+    }
+    if (found.otp !== otp) {
+      found.attempts += 1;
+      await found.save();
+      return res.status(400).json({ verified: false, msg: "Invalid OTP", attemptsLeft: 5 - found.attempts });
+    }
 
     await Otp.deleteMany({ phone: cleanPhone, purpose: 'verify' });
 
