@@ -7,7 +7,6 @@ import { saveAnalysis } from '../utils/saveAnalysis.js';
 import { localRiskFallback } from '../utils/localRiskFallback.js';
 import { alertGeminiDown } from '../utils/alertEmail.js';
 import { callGeminiResilient, isSelfThrottled } from '../utils/geminiThrottle.js';
-import { classifyWithClaude } from '../utils/claudeFallback.js';
 
 const router = express.Router();
 
