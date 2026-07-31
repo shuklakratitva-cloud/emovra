@@ -13,13 +13,13 @@ function pingMoodCheckin() {
   fetch(`${API}/activity/mood-checkin`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
 }
 
-const MOOD_ORDER = ["Happy","Calm","Neutral","Sad","Anxious","Angry","Lonely","Overwhelmed","Don't Know What To Do","Everything At Once"];
+const MOOD_ORDER = ["Happy","Calm","Neutral","Sad","Anxious","Angry","Lonely","Overwhelmed","Don't Know What To Do","Everything Fell On You At Once"];
 
 // FIX: emoji replaced with the person's own uploaded stickers - "sticker"
 // key points at /public/stickers/*.png (converted to transparent PNG -
 // original .jpg backgrounds removed), served directly by Vite at that
 // path. Two new moods added per request ("Don't Know What To Do",
-// "Everything At Once") - label text is kept for all of them, only the
+// "Everything Fell On You At Once") - label text is kept for all of them, only the
 // icon changed.
 const MOODS = [
   { label: "Happy", sticker: "/stickers/happy.png", color: "#4ade80" },
@@ -31,7 +31,7 @@ const MOODS = [
   { label: "Lonely", sticker: "/stickers/lonely.png", color: "#a78bfa" },
   { label: "Overwhelmed", sticker: "/stickers/overwhelmed.png", color: "#f472b6" },
   { label: "Don't Know What To Do", sticker: "/stickers/dont-know.png", color: "#fbbf24" },
-  { label: "Everything At Once", sticker: "/stickers/everything-at-once.png", color: "#f97316" },
+  { label: "Everything Fell On You At Once", sticker: "/stickers/everything-at-once.png", color: "#f97316" },
 ];
 
 // "Sticker" style tap targets - now renders an actual image instead of an emoji glyph.
@@ -47,12 +47,12 @@ function MoodSticker({ mood, active, onClick }) {
         cursor: "pointer",
         border: active ? `2px solid ${mood.color}` : "1px solid var(--border)",
         background: active ? `${mood.color}22` : "var(--card-bg)",
-        minWidth: 84,
+        minWidth: 96,
         transform: active ? "scale(1.06) rotate(-2deg)" : "scale(1)",
         transition: "transform 0.15s ease, border-color 0.15s ease",
       }}
     >
-      <img src={mood.sticker} alt={mood.label} style={{ width: 44, height: 44, objectFit: "contain" }} />
+      <img src={mood.sticker} alt={mood.label} style={{ width: 64, height: 64, objectFit: "contain" }} />
       <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", textAlign: "center", lineHeight: 1.2 }}>{mood.label}</span>
     </button>
   );

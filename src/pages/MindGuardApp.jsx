@@ -67,12 +67,10 @@ export default function MindGuardApp() {
   });
 
   // --- OTP PHONE VERIFICATION STATES ---
-  const [phoneInput, setPhoneInput] = useState(() => user?.phone || "");
-  const [otpInput, setOtpInput] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(() =>!!user?.phoneVerified ||!!user?.phone);
-  const [otpMessage, setOtpMessage] = useState("");
+  // NOTE: phone "Verify Phone Number" OTP state was removed - that
+  // feature never sent real SMS (no gateway wired up), so it wasn't
+  // providing any real verification. See routes/auth.js for the
+  // replacement: forgot-password now uses real email OTP instead.
 
   const token = localStorage.getItem('token');
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
@@ -113,63 +111,6 @@ useEffect(() => {
     try { localStorage.setItem('emovra_history', JSON.stringify(history)); } catch {}
   }, [history]);
 
-  // --- OTP FUNCTIONS - RANDOM EVERY TIME ---
-  async function sendOtp() {
-    if (!phoneInput || phoneInput.length < 10) {
-      setOtpMessage("Enter valid 10 digit phone");
-      return;
-    }
-    setOtpLoading(true);
-    setOtpMessage("");
-    try {
-      const res = await fetch(`${API}/otp/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: token? `Bearer ${token}` : "" },
-        body: JSON.stringify({ phone: phoneInput })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setOtpSent(true);
-        setOtpMessage(`OTP sent to ${phoneInput}. Check Render logs for OTP if SMS not configured. ${data.otp? `(Dev OTP: ${data.otp})` : ''}`);
-      } else {
-        setOtpMessage(data.msg || "Failed to send OTP");
-      }
-    } catch (e) {
-      setOtpMessage("Network error sending OTP");
-    }
-    setOtpLoading(false);
-  }
-
-  async function verifyOtp() {
-    if (!otpInput) {
-      setOtpMessage("Enter OTP");
-      return;
-    }
-    setOtpLoading(true);
-    try {
-      const res = await fetch(`${API}/otp/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: token? `Bearer ${token}` : "" },
-        body: JSON.stringify({ phone: phoneInput, otp: otpInput })
-      });
-      const data = await res.json();
-      if (res.ok && data.verified) {
-        setPhoneVerified(true);
-        setOtpMessage("✅ Phone verified successfully!");
-        const updatedUser = {...user, phone: phoneInput, phoneVerified: true };
-        setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        setOtpSent(false);
-        setOtpInput("");
-      } else {
-        setOtpMessage(data.msg || "Invalid OTP");
-      }
-    } catch (e) {
-      setOtpMessage("Verification failed");
-    }
-    setOtpLoading(false);
-  }
-
   async function saveToBackend(entry) {
     // PRIVACY: Only RED/ORANGE to backend, GREEN/YELLOW only local
     if (entry.riskLevel!== "RED" && entry.riskLevel!== "ORANGE") {
@@ -201,7 +142,7 @@ useEffect(() => {
         body: JSON.stringify({
           text, score, riskLevel, reasons, category: category || "school_emotional_abuse",
           abuseType: abuseType || "school_emotional_abuse", abuseSource: abuseSource || "teacher",
-          phone: phoneInput || user?.phone || "",
+          phone: user?.emergencyPhone || user?.phone || "",
           userEmail: user?.email, userName: user?.name, userId: user?._id || user?.id || localStorage.getItem('userId'),
           timestamp: new Date().toISOString()
         })
@@ -486,36 +427,6 @@ useEffect(() => {
 
           {tab === "checkin" && (
             <>
-              {!phoneVerified && (
-                <div style={{ padding: 16, borderRadius: 12, border: "1px solid rgba(212,197,160,0.3)", background: "var(--card-bg)", marginBottom: 16 }}>
-                  <b style={{ color: "var(--text-h)", fontSize: 13 }}>📱 Verify Phone Number</b>
-                  <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                    <input
-                      value={phoneInput}
-                      onChange={(e) => setPhoneInput(e.target.value)}
-                      placeholder="10 digit phone number"
-                      style={{ flex: 1, minWidth: 160, padding: "10px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "var(--text)" }}
-                    />
-                    <button onClick={sendOtp} disabled={otpLoading} style={{ padding: "10px 16px", borderRadius: 8, background: "var(--accent)", color: "#000", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>
-                      {otpLoading? "..." : otpSent? "Resend OTP (Random)" : "Send OTP"}
-                    </button>
-                  </div>
-                  {otpSent && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                      <input
-                        value={otpInput}
-                        onChange={(e) => setOtpInput(e.target.value)}
-                        placeholder="Enter 6-digit OTP"
-                        style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "var(--text)" }}
-                      />
-                      <button onClick={verifyOtp} disabled={otpLoading} style={{ padding: "10px 16px", borderRadius: 8, background: "#22c55e", color: "#000", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>
-                        Verify
-                      </button>
-                    </div>
-                  )}
-                  {otpMessage && <div style={{ marginTop: 8, fontSize: 11, color: phoneVerified? "#22c55e" : "var(--text-h)" }}>{otpMessage}</div>}
-                </div>
-              )}
 
               <div style={{ padding: 20, borderRadius: 16, border: "0.5px solid rgba(212,197,160,0.18)", background: "var(--card-bg)" }}>
                 <h3 style={{ margin: "0 0 12px 0", color:'var(--text)' }}>How are you feeling today?</h3>
