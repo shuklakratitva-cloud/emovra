@@ -2,6 +2,17 @@
 import React from "react";
 import useMood from "../hooks/useMood";
 
+const API = "https://emovra.onrender.com/api";
+
+// NEW: fire-and-forget ping to the backend, ONLY so the "log your mood"
+// daily challenge can verify this actually happened today - no mood data
+// is sent, mood tracking itself stays exactly as it was (local only).
+function pingMoodCheckin() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  fetch(`${API}/activity/mood-checkin`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+}
+
 const MOOD_ORDER = ["Happy","Calm","Neutral","Sad","Anxious","Angry","Lonely","Overwhelmed"];
 
 const MOODS = [
@@ -116,7 +127,7 @@ export default function MoodTracker() {
             key={mood.label}
             mood={mood}
             active={currentMood === mood.label}
-            onClick={() => addMood(mood.label)}
+            onClick={() => { addMood(mood.label); pingMoodCheckin(); }}
           />
         ))}
       </div>

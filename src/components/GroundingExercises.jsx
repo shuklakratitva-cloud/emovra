@@ -3,8 +3,11 @@
 import React, { useState } from "react";
 import { GROUNDING_EXERCISES } from "../data/exercises";
 
+const API = "https://emovra.onrender.com/api";
+
 export default function GroundingExercises() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [markedDone, setMarkedDone] = useState(false);
 
   if (!GROUNDING_EXERCISES || GROUNDING_EXERCISES.length === 0) {
     return <div style={{ padding: 24 }}>No grounding exercises configured.</div>;
@@ -18,6 +21,17 @@ export default function GroundingExercises() {
   }
   function previousExercise() {
     setCurrentIndex((i) => Math.max(i - 1, 0));
+  }
+
+  // NEW: explicit "I did this" action, ONLY so the "try a grounding
+  // exercise" daily challenge can verify it actually happened today - a
+  // deliberate click, not an automatic ping just from opening the tab.
+  function markDone() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${API}/activity/grounding-checkin`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      .then(() => setMarkedDone(true))
+      .catch(() => {});
   }
 
   return (
@@ -36,6 +50,12 @@ export default function GroundingExercises() {
         <button onClick={previousExercise} disabled={currentIndex === 0} style={{ padding: "10px 20px", cursor: currentIndex === 0 ? "not-allowed" : "pointer" }}>⬅ Previous</button>
         <span style={{ alignSelf: "center", fontWeight: "bold" }}>{currentIndex + 1} / {GROUNDING_EXERCISES.length}</span>
         <button onClick={nextExercise} disabled={currentIndex === GROUNDING_EXERCISES.length - 1} style={{ padding: "10px 20px", cursor: currentIndex === GROUNDING_EXERCISES.length - 1 ? "not-allowed" : "pointer" }}>Next ➡</button>
+      </div>
+
+      <div style={{ marginTop: 16, textAlign: "center" }}>
+        <button onClick={markDone} disabled={markedDone} style={{ padding: "10px 20px", borderRadius: 999, border: "none", background: markedDone ? "#4ade80" : "var(--accent, #d4b07a)", color: "#000", fontWeight: 700, cursor: markedDone ? "default" : "pointer" }}>
+          {markedDone ? "✓ Marked as done today" : "I did this exercise"}
+        </button>
       </div>
     </div>
   );
