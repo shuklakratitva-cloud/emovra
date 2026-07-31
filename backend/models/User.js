@@ -21,10 +21,17 @@ const userSchema = new mongoose.Schema({
   badges: [{ id: String, earnedAt: { type: Date, default: Date.now } }],
   claimedChallenges: [{ date: String, challengeId: String, claimedAt: { type: Date, default: Date.now } }],
   lastChatbotXPDate: { type: String, default: "" }, // NEW: caps chatbot XP to once/day - see routes/chatbot.js
+  lastMoodCheckinDate: { type: String, default: "" }, // NEW: for verifying the "log your mood" challenge
+  lastGroundingDate: { type: String, default: "" }, // NEW: for verifying the "try a grounding exercise" challenge
 
   // NEW: personalization - theme stays black/gold by default (see
   // data/themes.js), this is purely opt-in.
   themePreference: { type: String, default: "classic-black-gold" },
+  customTheme: {
+    bg: { type: String, default: "" },
+    card: { type: String, default: "" },
+    accent: { type: String, default: "" },
+  }, // NEW: user-picked colors, used when themePreference === "custom"
   avatar: { type: String, default: "🦋" }, // emoji avatar - no image upload complexity/moderation needed
 
   // NEW: birthday messages - deliberately storing ONLY month/day, not a

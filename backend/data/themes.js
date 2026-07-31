@@ -9,3 +9,32 @@ export const THEMES = {
 };
 
 export const AVATARS = ["🦋","🌸","🌊","🌙","⭐","🌻","🦊","🐢","🐝","🍃","🔥","🌈"];
+
+// Shared theme resolution - used by both routes/profile.js and
+// routes/dashboard.js so a custom theme shows up consistently everywhere,
+// not just on the settings screen.
+function readableTextFor(hexBg) {
+  try {
+    const r = parseInt(hexBg.slice(1, 3), 16);
+    const g = parseInt(hexBg.slice(3, 5), 16);
+    const b = parseInt(hexBg.slice(5, 7), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 150 ? "#1a1a1a" : "#e8dcc6";
+  } catch {
+    return "#e8dcc6";
+  }
+}
+
+export function resolveTheme(user) {
+  if (user?.themePreference === "custom" && user?.customTheme?.bg) {
+    return {
+      id: "custom",
+      name: "Custom",
+      bg: user.customTheme.bg,
+      card: user.customTheme.card || user.customTheme.bg,
+      accent: user.customTheme.accent || "#d4b07a",
+      text: readableTextFor(user.customTheme.bg),
+    };
+  }
+  return THEMES[user?.themePreference] || THEMES["classic-black-gold"];
+}

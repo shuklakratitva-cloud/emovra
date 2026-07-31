@@ -23,6 +23,7 @@ import habitsRoutes from "./routes/habits.js"; // NEW: habit tracker
 import chatbotRoutes from "./routes/chatbot.js"; // NEW: AI chatbot with follow-up questions
 import dashboardRoutes from "./routes/dashboard.js"; // NEW: personalized dashboard aggregation
 import privateJournalRoutes from "./routes/privateJournal.js"; // NEW: unanalyzed, encrypted, admin-invisible journal
+import activityTrackingRoutes from "./routes/activityTracking.js"; // NEW: minimal check-in tracking for challenge verification
 import insightsRoutes from "./routes/insights.js"; // NEW: mental health insights + early warning + monthly calendar
 import sleepRoutes from "./routes/sleep.js"; // NEW: sleep assistant log
 import goalsRoutes from "./routes/goals.js"; // NEW: goal planner
@@ -166,6 +167,7 @@ app.use("/api/habits", habitsRoutes); // NEW
 app.use("/api/chatbot", chatbotRoutes); // NEW
 app.use("/api/dashboard", dashboardRoutes); // NEW
 app.use("/api/private-journal", privateJournalRoutes); // NEW: unanalyzed, encrypted journal
+app.use("/api/activity", activityTrackingRoutes); // NEW: minimal check-in tracking
 app.use("/api/insights", insightsRoutes); // NEW
 app.use("/api/sleep", sleepRoutes); // NEW
 app.use("/api/goals", goalsRoutes); // NEW

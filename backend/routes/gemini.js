@@ -8,10 +8,10 @@ import { callGeminiResilient } from "../utils/geminiThrottle.js";
 
 const router = express.Router();
 
-// Standardized model (see analyze.js for the note on why - was gemini-1.5-flash
-// here, gemini-2.0-flash in analyze.js; now both use gemini-1.5-flash per your
-// request).
-const GEMINI_MODEL = "gemini-1.5-flash";
+// Standardized model - was gemini-1.5-flash, which turned out to be a
+// RETIRED model (404 on every call, confirmed via Render logs). See
+// analyze.js for the full note.
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 // --- CHAT ROUTE ---
 // This is the endpoint the frontend's Journal (via utils/geminiAnalyzer.js)

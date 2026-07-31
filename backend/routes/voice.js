@@ -8,10 +8,9 @@ import { callGeminiResilient } from "../utils/geminiThrottle.js";
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// FIX: standardized model name (was gemini-1.5-flash here already, kept
-// consistent with the other 3 AI routes now that analyze.js no longer
-// diverges to 2.0-flash).
-const GEMINI_MODEL = "gemini-1.5-flash";
+// FIX: was gemini-1.5-flash - a RETIRED model (confirmed 404 in your
+// Render logs). Updated to the current model, see analyze.js for details.
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
   try {

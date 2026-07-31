@@ -8,7 +8,7 @@ import SharedJournal from "../models/SharedJournal.js";
 import Entry from "../models/Entry.js";
 import { decrypt } from "../utils/crypto.js";
 import { detectEarlyWarning } from "../utils/earlyWarning.js";
-import { THEMES } from "../data/themes.js";
+import { resolveTheme } from "../data/themes.js";
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ router.get("/", auth, async (req, res) => {
   try {
     const [profile, user, habits, sharedJournals, recentEntries] = await Promise.all([
       getGamificationProfile(req.user.id),
-      User.findById(req.user.id).select("claimedChallenges name themePreference avatar birthdayMonth birthdayDay"),
+      User.findById(req.user.id).select("claimedChallenges name themePreference customTheme avatar birthdayMonth birthdayDay"),
       Habit.find({ userId: req.user.id, archived: false }),
       SharedJournal.find({
         $or: [{ ownerId: req.user.id }, { "collaborators.userId": req.user.id }],
@@ -60,7 +60,7 @@ router.get("/", auth, async (req, res) => {
       success: true,
       name: user?.name || "",
       avatar: user?.avatar || "🦋",
-      theme: THEMES[user?.themePreference] || THEMES["classic-black-gold"],
+      theme: resolveTheme(user),
       isBirthdayToday,
       gamification: profile,
       challenges: challenges.map((c) => ({ ...c, claimed: claimedToday.has(c.id) })),

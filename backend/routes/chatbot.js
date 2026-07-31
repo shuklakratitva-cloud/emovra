@@ -9,7 +9,7 @@ import { chatWithGroq } from "../utils/groqFallback.js";
 import User from "../models/User.js";
 
 const router = express.Router();
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 const SYSTEM_PROMPT = `
 You are Emovra AI, a warm, curious companion for mental wellness check-ins.
@@ -61,8 +61,9 @@ router.post("/", optionalAuth, async (req, res) => {
       }
     }
 
-    // 2. Conversational reply - Gemini first, Groq (free) if Gemini fails,
-    // generic supportive line only if both are unavailable.
+    // 2. Conversational reply - Groq first (free, fast), Gemini as backup
+    // if Groq fails or isn't configured, generic supportive line only if
+    // both are unavailable.
     let reply = "I'm here. Tell me a bit more about what's going on?";
     const transcript = messages
       .slice(-10) // keep prompt small
@@ -71,7 +72,14 @@ router.post("/", optionalAuth, async (req, res) => {
 
     let gotReply = false;
 
-    if (process.env.GEMINI_API_KEY) {
+    const groqReply = await chatWithGroq(SYSTEM_PROMPT, `Conversation so far:\n${transcript}\n\nEmovra:`);
+    if (groqReply) {
+      reply = groqReply;
+      gotReply = true;
+    }
+
+    // Gemini backup - only tried when Groq failed or GROQ_API_KEY isn't set.
+    if (!gotReply && process.env.GEMINI_API_KEY) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
@@ -80,18 +88,6 @@ router.post("/", optionalAuth, async (req, res) => {
         gotReply = true;
       } catch (e) {
         console.error("Chatbot Gemini error:", e.message?.slice(0, 200));
-      }
-    }
-
-    // NEW: Groq fallback - free, only tried when Gemini failed or wasn't
-    // configured at all. Doesn't touch the safety-net check above, which
-    // already ran on the person's message regardless of which AI (if any)
-    // ends up generating this reply.
-    if (!gotReply) {
-      const groqReply = await chatWithGroq(SYSTEM_PROMPT, `Conversation so far:\n${transcript}\n\nEmovra:`);
-      if (groqReply) {
-        reply = groqReply;
-        gotReply = true;
       }
     }
 

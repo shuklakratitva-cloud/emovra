@@ -7,17 +7,20 @@ import { saveAnalysis } from '../utils/saveAnalysis.js';
 import { localRiskFallback } from '../utils/localRiskFallback.js';
 import { alertGeminiDown } from '../utils/alertEmail.js';
 import { callGeminiResilient, isSelfThrottled } from '../utils/geminiThrottle.js';
+import { classifyWithGroq } from '../utils/groqFallback.js';
 
 const router = express.Router();
 
-// Per your request: standardized on gemini-1.5-flash everywhere in this
-// backend (was mixed 1.5/2.0 across files). NOTE: your Render logs show
-// "429 Too Many Requests ... exceeded your current quota" - that's a
-// billing/plan-level limit on the Gemini API key itself, not a bug in this
-// code, and switching models alone won't fix it if the 1.5 quota is also
-// exhausted. The real fix below is that a Gemini failure (quota or
-// otherwise) no longer silently reports GREEN - see localRiskFallback.js.
-const GEMINI_MODEL = "gemini-1.5-flash";
+// UPDATE (confirmed via your Render logs): the real, root-cause problem
+// this whole time was that "gemini-1.5-flash" is a RETIRED model - every
+// call was getting a 404 "model not found", not a quota error. Standardized
+// on "gemini-3.5-flash-lite" instead - Google's current low-latency,
+// high-volume classification model as of when this was fixed (July 2026).
+// If Gemini calls start failing again in the future, check
+// https://ai.google.dev/gemini-api/docs/changelog first for a newer
+// deprecation before assuming it's a code bug - Google retires models on
+// its own schedule, sometimes with only a few months' notice.
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 // Simple cooldown so a quota outage doesn't retry Gemini on every single
 // request (each one still failing) - after 2 back-to-back failures we stop
@@ -51,6 +54,17 @@ Examples:
 
 function safeLogRisk(source, risk, score, category, extra=""){
   console.log(`[${source}] Risk:${risk} Score:${score} Cat:${category} ${extra}`);
+}
+
+// NEW: third tier in the chain - Keywords (instant) -> Gemini -> Groq ->
+// local keyword classifier (final resort). Only reached when Gemini has
+// already failed or is in cooldown. Returns the classification result if
+// Groq succeeds, or null if Groq also fails/isn't configured - callers
+// fall through to localRiskFallback on null, same as any other AI failure.
+async function tryGroqClassification(text) {
+  const groqResult = await classifyWithGroq(SYSTEM_PROMPT, text);
+  if (!groqResult) return null;
+  return { ...groqResult, isAI: true, source: "groq-fallback" };
 }
 
 // FIX: tightened so "teacher" appearing anywhere far from a demeaning word
@@ -194,7 +208,13 @@ router.post('/', optionalAuth, async (req, res) => {
         return res.json({...parsed, isAI: true });
       }
 
-      // Gemini responded but not with parseable JSON - use local fallback rather than guessing
+      // Gemini responded but not with parseable JSON - try Groq before local fallback
+      const groqFb1 = await tryGroqClassification(text);
+      if (groqFb1) {
+        await saveAnalysis({ userId, text, risk: groqFb1.risk, score: groqFb1.score, category: groqFb1.category, abuseType: groqFb1.abuseType, abuseSource: groqFb1.abuseSource, triggers: groqFb1.triggers, phone: userPhone });
+        safeLogRisk("GROQ-AI", groqFb1.risk, groqFb1.score, groqFb1.category, `Gemini unparseable, Groq succeeded User:${userId}`);
+        return res.json({ ...groqFb1, reason: groqFb1.reason || "Gemini unparseable - Groq used" });
+      }
       const fb = localRiskFallback(text);
       await saveAnalysis({ userId, text, risk: fb.risk, score: fb.score, category: fb.category, abuseType: fb.abuseType, abuseSource: fb.abuseSource, triggers: fb.triggers, phone: userPhone });
       return res.json({ ...fb, reason: "AI response unparseable - local fallback used" });
@@ -213,16 +233,30 @@ router.post('/', optionalAuth, async (req, res) => {
       // FIX: this used to unconditionally return { risk: "GREEN", score: 20 }
       // here, meaning ANY Gemini failure (including the quota-exceeded
       // errors visible in your Render logs) made every message look safe.
-      // Now falls back to a real local classifier instead.
+      // Chain is now: Gemini fails -> try Groq -> only THEN local fallback.
+      const groqFb2 = await tryGroqClassification(text);
+      if (groqFb2) {
+        await saveAnalysis({ userId, text, risk: groqFb2.risk, score: groqFb2.score, category: groqFb2.category, abuseType: groqFb2.abuseType, abuseSource: groqFb2.abuseSource, triggers: groqFb2.triggers, phone: userPhone });
+        safeLogRisk("GROQ-AI", groqFb2.risk, groqFb2.score, groqFb2.category, `Gemini failed, Groq succeeded User:${userId}`);
+        return res.json(groqFb2);
+      }
       const fb = localRiskFallback(text);
       await saveAnalysis({ userId, text, risk: fb.risk, score: fb.score, category: fb.category, abuseType: fb.abuseType, abuseSource: fb.abuseSource, triggers: fb.triggers, phone: userPhone });
       return res.json(fb);
     }
   } else {
-    // In cooldown - skip the Gemini call entirely and go straight to local fallback
+    // In cooldown - Gemini is skipped entirely, but Groq is unaffected by
+    // Gemini's cooldown (different provider), so still worth trying before
+    // dropping all the way to the local fallback.
+    const groqFb3 = await tryGroqClassification(text);
+    if (groqFb3) {
+      await saveAnalysis({ userId, text, risk: groqFb3.risk, score: groqFb3.score, category: groqFb3.category, abuseType: groqFb3.abuseType, abuseSource: groqFb3.abuseSource, triggers: groqFb3.triggers, phone: userPhone });
+      safeLogRisk("GROQ-AI", groqFb3.risk, groqFb3.score, groqFb3.category, `Gemini in cooldown, Groq succeeded User:${userId}`);
+      return res.json(groqFb3);
+    }
     const fb = localRiskFallback(text);
     await saveAnalysis({ userId, text, risk: fb.risk, score: fb.score, category: fb.category, abuseType: fb.abuseType, abuseSource: fb.abuseSource, triggers: fb.triggers, phone: userPhone });
-    return res.json({ ...fb, reason: fb.reason + " (Gemini in cooldown after repeated failures)" });
+    return res.json({ ...fb, reason: fb.reason + " (Gemini in cooldown, Groq also unavailable)" });
   }
 });
 

@@ -1,12 +1,13 @@
 import express from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { callGeminiResilient } from "../utils/geminiThrottle.js";
+import { chatWithGroq } from "../utils/groqFallback.js";
 
 const router = express.Router();
 
-// FIX: was "gemini-1.5-flash" already here but standardizing explicitly
+// FIX: was "gemini-3.5-flash-lite" already here but standardizing explicitly
 // alongside analyze.js/gemini.js/voice.js so all four AI routes agree.
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 router.post("/analyze", async (req, res) => {
   try {
@@ -14,30 +15,30 @@ router.post("/analyze", async (req, res) => {
     if (!text) return res.status(400).json({ success: false, msg: "Text required" });
 
     if (process.env.GEMINI_API_KEY) {
+      const prompt = `
+      Analyze mental health text: "${text}"
+      Return ONLY valid JSON, no extra text:
+      {
+        "color": "GREEN or ORANGE or RED",
+        "score": number 0-100 (100 = highest risk),
+        "label": "POSITIVE or STRESSED or CRITICAL",
+        "emotion": "happy, sad, anxious, panic, depressed, angry, etc",
+        "triggers": "short reason",
+        "risk": "low or medium or high",
+        "emoAbuseDetected": true/false,
+        "reasons": ["reason1", "reason2"]
+      }
+      Rules:
+      - "i am having a panic attack, can't breathe, suicide, kill myself, die" = RED, score 90-100, risk high, label CRITICAL
+      - "worthless, hate you, emotional abuse, gaslight, beating, hit me, slap, abuse, hopeless, alone" = ORANGE or RED, score 60-85, emoAbuseDetected true if abuse words
+      - "sad, stressed, anxious, depressed, crying" = ORANGE, score 45-70, STRESSED, medium
+      - "happy, good, fine, great, okay" = GREEN, score 10-30, POSITIVE, low
+      - If mixed, take highest risk
+      `;
+
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-
-        const prompt = `
-        Analyze mental health text: "${text}"
-        Return ONLY valid JSON, no extra text:
-        {
-          "color": "GREEN or ORANGE or RED",
-          "score": number 0-100 (100 = highest risk),
-          "label": "POSITIVE or STRESSED or CRITICAL",
-          "emotion": "happy, sad, anxious, panic, depressed, angry, etc",
-          "triggers": "short reason",
-          "risk": "low or medium or high",
-          "emoAbuseDetected": true/false,
-          "reasons": ["reason1", "reason2"]
-        }
-        Rules:
-        - "i am having a panic attack, can't breathe, suicide, kill myself, die" = RED, score 90-100, risk high, label CRITICAL
-        - "worthless, hate you, emotional abuse, gaslight, beating, hit me, slap, abuse, hopeless, alone" = ORANGE or RED, score 60-85, emoAbuseDetected true if abuse words
-        - "sad, stressed, anxious, depressed, crying" = ORANGE, score 45-70, STRESSED, medium
-        - "happy, good, fine, great, okay" = GREEN, score 10-30, POSITIVE, low
-        - If mixed, take highest risk
-        `;
 
         const result = await callGeminiResilient(() => model.generateContent(prompt));
         let jsonText = result.response.text().replace(/```json|```/g, "").replace(/```/g, "").trim();
@@ -58,7 +59,28 @@ router.post("/analyze", async (req, res) => {
         });
 
       } catch (geminiErr) {
-        console.error("Gemini analyze failed, fallback to keyword:", geminiErr.message);
+        console.error("Gemini analyze failed, trying Groq:", geminiErr.message);
+      }
+
+      // NEW: Groq tier - only reached if Gemini failed above. Reuses the
+      // same prompt/schema this route already defines.
+      try {
+        const raw = await chatWithGroq(prompt, "Respond with the JSON now.");
+        if (raw) {
+          const match = raw.match(/\{[\s\S]*\}/);
+          if (match) {
+            const ai = JSON.parse(match[0]);
+            if (ai.score >= 75) ai.color = "RED";
+            else if (ai.score >= 45) ai.color = "ORANGE";
+            else ai.color = "GREEN";
+            if (ai.color === "RED") { ai.label = "CRITICAL"; ai.risk = "high"; }
+            else if (ai.color === "ORANGE") { ai.label = "STRESSED"; ai.risk = "medium"; }
+            else { ai.label = "POSITIVE"; ai.risk = "low"; }
+            return res.json({ success: true, ...ai, isAI: true, source: "groq-fallback" });
+          }
+        }
+      } catch (groqErr) {
+        console.error("Groq fallback also failed:", groqErr.message);
       }
     }
 
