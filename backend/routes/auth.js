@@ -19,7 +19,7 @@ function signToken(user) {
 }
 
 function publicUser(user) {
-  return { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role, phoneVerified: user.phoneVerified };
+  return { id: user._id, name: user.name, email: user.email, age: user.age, emergencyName: user.emergencyName, emergencyPhone: user.emergencyPhone, countryCode: user.countryCode, role: user.role, phoneVerified: user.phoneVerified, emailVerified: user.emailVerified };
 }
 
 async function handleSignup(req, res) {
@@ -86,6 +86,28 @@ async function handleSignup(req, res) {
 
     const token = signToken(user);
     res.status(201).json({ token, user: publicUser(user) });
+
+    // NEW: fire off an email verification code, best-effort. Deliberately
+    // AFTER the response is already sent - signup succeeds regardless of
+    // whether this email goes through, given the real-world email
+    // deliverability issues already hit during development (self-send
+    // blocking, missing env vars, etc.) - verification is soft, not a
+    // gate on using the app.
+    (async () => {
+      try {
+        const verifyOtp = crypto.randomInt(100000, 999999).toString();
+        await Otp.deleteMany({ email, purpose: 'verify' });
+        await Otp.create({ email, otp: verifyOtp, purpose: 'verify' });
+        await sendEmail({
+          to: email,
+          subject: "Verify your Emovra email",
+          text: `Your Emovra email verification code is ${verifyOtp}. It expires in 5 minutes.`,
+        });
+      } catch (e) {
+        console.error("Signup verification email failed (non-blocking):", e.message);
+      }
+    })();
+    return;
 
   } catch (err) {
     console.error("Signup Error:", err);
@@ -321,6 +343,82 @@ router.post('/forgot-password/reset', async (req, res) => {
     await User.findOneAndUpdate({ email: cleanEmail }, { password: hashed });
     await Otp.deleteMany({ email: cleanEmail, purpose: 'reset' });
     res.json({ success: true, message: "Password reset successful, login now" });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+// ============================================================
+// EMAIL VERIFICATION - soft verification, doesn't block login/signup.
+// Fired automatically on signup (see handleSignup above); these two
+// routes let the frontend resend the code and confirm it. Uses the same
+// email infra as forgot-password (utils/mailer.js).
+// ============================================================
+
+router.post('/verify-email/send', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({ msg: "Email required" });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.json({ success: true, message: "If an account exists for that email, a code has been sent." });
+    }
+    if (user.emailVerified) {
+      return res.json({ success: true, alreadyVerified: true, message: "This email is already verified." });
+    }
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    await Otp.deleteMany({ email: cleanEmail, purpose: 'verify' });
+    await Otp.create({ email: cleanEmail, otp, purpose: 'verify' });
+
+    const sent = await sendEmail({
+      to: cleanEmail,
+      subject: "Verify your Emovra email",
+      text: `Your Emovra email verification code is ${otp}. It expires in 5 minutes.`,
+    });
+
+    if (sent) {
+      return res.json({ success: true, message: "Verification code sent - check your inbox." });
+    }
+    return res.json({ success: true, message: "Email sending isn't configured yet - here's your code directly.", otp, devMode: true });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+router.post('/verify-email/confirm', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (typeof email !== "string" || typeof otp !== "string" || !email || !otp) {
+      return res.status(400).json({ msg: "Email and code required" });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+
+    const found = await Otp.findOne({ email: cleanEmail, purpose: 'verify' }).sort({ createdAt: -1 });
+    if (!found) return res.status(400).json({ msg: "No code found. Please request a new one." });
+
+    const ageSec = (Date.now() - new Date(found.createdAt).getTime()) / 1000;
+    if (ageSec > 300) {
+      await Otp.deleteMany({ email: cleanEmail, purpose: 'verify' });
+      return res.status(400).json({ msg: "Code expired. Request a new one." });
+    }
+    if (found.attempts >= 5) {
+      await Otp.deleteMany({ email: cleanEmail, purpose: 'verify' });
+      return res.status(400).json({ msg: "Too many attempts. Request a new code." });
+    }
+    if (found.otp !== otp) {
+      found.attempts += 1;
+      await found.save();
+      return res.status(400).json({ msg: "Invalid code", attemptsLeft: 5 - found.attempts });
+    }
+
+    await User.findOneAndUpdate({ email: cleanEmail }, { emailVerified: true });
+    await Otp.deleteMany({ email: cleanEmail, purpose: 'verify' });
+    res.json({ success: true, message: "Email verified!" });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }

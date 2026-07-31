@@ -12,7 +12,8 @@ const userSchema = new mongoose.Schema({
 
   phone: { type: String, default: "" },
   phoneVerified: { type: Boolean, default: false },
-  googleId: { type: String, default: "", index: true }, // NEW: links this account to a Google Sign-In identity
+  googleId: { type: String, default: "", index: true },
+  emailVerified: { type: Boolean, default: false }, // NEW: soft verification - doesn't block login/signup, just tracked // NEW: links this account to a Google Sign-In identity
 
   // Gamification (server-authoritative only)
   xp: { type: Number, default: 0 },

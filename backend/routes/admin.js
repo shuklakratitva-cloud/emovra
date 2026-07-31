@@ -1,7 +1,6 @@
 import express from "express";
 import Entry, { decrypt } from "../models/Entry.js";
 import Alert from "../models/Alert.js";
-import User from "../models/User.js";
 import { protect as auth } from "../middleware/auth.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 
@@ -176,14 +175,11 @@ router.get("/abuse-only", auth, isAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/users
-router.get("/users", auth, isAdmin, async (req, res) => {
-  try {
-    const users = await User.find().select("-password").sort({ createdAt: -1 });
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
-});
+// FIX (privacy): /api/admin/users used to return EVERY user's name/email/
+// age/emergency contact, completely unscoped by risk level - the admin
+// frontend never even called it, but it existed and was reachable. Removed
+// entirely. The admin panel is only supposed to surface people who have
+// an actual RED/ORANGE entry, via /alerts and /reds below - never a full
+// user directory.
 
 export default router;
