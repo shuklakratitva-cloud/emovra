@@ -18,7 +18,7 @@ export default function Admin() {
     }
     const fetchReds = async () => {
       try {
-        const res = await axios.get("https://emovra.onrender.com/api/admin/reds", {
+        const res = await axios.get("https://emovra.onrender.com/api/admin/alerts", {
           headers: { Authorization: "Bearer " + token }
         });
         setReds(res.data || []);

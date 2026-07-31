@@ -75,6 +75,54 @@ export default function MindGuardApp() {
   const token = localStorage.getItem('token');
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
   const [avatarProfile, setAvatarProfile] = useState({ avatar: "🦋", avatarType: "emoji", avatarImage: "" }); // NEW
+  // NEW: soft email verification banner state
+  const [emailVerified, setEmailVerified] = useState(() => !!user?.emailVerified);
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyMsg, setVerifyMsg] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+
+  async function resendVerifyEmail() {
+    setVerifyLoading(true);
+    setVerifyMsg("");
+    try {
+      const res = await fetch(`${API}/auth/verify-email/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await res.json();
+      setVerifyMsg(data.devMode ? `Email sending isn't set up yet - your code is ${data.otp}` : (data.message || "Code sent - check your inbox."));
+      setVerifyOpen(true);
+    } catch {
+      setVerifyMsg("Could not send code - try again.");
+    }
+    setVerifyLoading(false);
+  }
+
+  async function confirmVerifyEmail() {
+    if (!verifyCode.trim()) { setVerifyMsg("Enter the code."); return; }
+    setVerifyLoading(true);
+    try {
+      const res = await fetch(`${API}/auth/verify-email/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, otp: verifyCode.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEmailVerified(true);
+        const updatedUser = { ...user, emailVerified: true };
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      } else {
+        setVerifyMsg(data.msg || "Invalid code.");
+      }
+    } catch {
+      setVerifyMsg("Something went wrong - try again.");
+    }
+    setVerifyLoading(false);
+  }
 
   useEffect(() => {
     if (!token) return;
@@ -406,6 +454,35 @@ useEffect(() => {
             <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "#141416", color: "var(--text-h)", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Logout</button>
           </div>
         </div>
+
+        {/* NEW: soft email verification banner - never blocks the app, just a nudge */}
+        {!emailVerified && (
+          <div style={{ maxWidth: 900, margin: "12px auto 0", padding: "0 20px" }}>
+            <div style={{ background: "rgba(212,176,122,0.08)", border: "1px solid rgba(212,176,122,0.25)", borderRadius: 12, padding: "12px 16px" }}>
+              {!verifyOpen ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12, color: "var(--text)" }}>📧 Your email isn't verified yet.</span>
+                  <button onClick={resendVerifyEmail} disabled={verifyLoading} style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                    {verifyLoading ? "Sending..." : "Verify now"}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 12, color: "var(--text-h)", marginBottom: 8 }}>{verifyMsg}</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} placeholder="6-digit code" style={{ flex: 1, minWidth: 140, padding: "8px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "var(--text)" }} />
+                    <button onClick={confirmVerifyEmail} disabled={verifyLoading} style={{ padding: "8px 16px", borderRadius: 8, background: "#22c55e", color: "#000", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>
+                      Confirm
+                    </button>
+                    <button onClick={resendVerifyEmail} disabled={verifyLoading} style={{ padding: "8px 12px", borderRadius: 8, background: "transparent", border: "1px solid rgba(212,197,160,0.2)", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>
+                      Resend
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* NEW: tab bar - organizes everything that used to be one long
             stacked page. Nothing below was removed, just grouped. */}

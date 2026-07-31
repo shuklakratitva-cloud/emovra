@@ -19,18 +19,35 @@ export default function ThemeAvatarSettings() {
   // NEW: avatar upload state
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  // FIX: neither fetch below had error handling - if either one failed
+  // for ANY reason (expired token, network hiccup, server hiccup), this
+  // component silently rendered nothing, forever, with zero indication
+  // anything was wrong. This is what "Settings tab disappeared" actually
+  // was. Now shows a real error state with a retry button instead.
+  const [loadError, setLoadError] = useState("");
 
-  useEffect(() => {
-    fetch(`${API}/profile/options`).then((r) => r.json()).then((d) => { if (d.success) setOptions(d); });
-    fetch(`${API}/profile/me`, { headers: authHeaders() }).then((r) => r.json()).then((d) => {
-      if (d.success) {
-        setCurrent(d);
-        if (d.customTheme?.bg) setCustomBg(d.customTheme.bg);
-        if (d.customTheme?.card) setCustomCard(d.customTheme.card);
-        if (d.customTheme?.accent) setCustomAccent(d.customTheme.accent);
-      }
-    });
-  }, []);
+  function loadProfile() {
+    setLoadError("");
+    Promise.all([
+      fetch(`${API}/profile/options`).then((r) => { if (!r.ok) throw new Error("options"); return r.json(); }),
+      fetch(`${API}/profile/me`, { headers: authHeaders() }).then((r) => { if (!r.ok) throw new Error("profile"); return r.json(); }),
+    ])
+      .then(([optionsData, profileData]) => {
+        if (optionsData.success) setOptions(optionsData);
+        if (profileData.success) {
+          setCurrent(profileData);
+          if (profileData.customTheme?.bg) setCustomBg(profileData.customTheme.bg);
+          if (profileData.customTheme?.card) setCustomCard(profileData.customTheme.card);
+          if (profileData.customTheme?.accent) setCustomAccent(profileData.customTheme.accent);
+        }
+        if (!optionsData.success || !profileData.success) {
+          setLoadError("Couldn't load your settings - try again.");
+        }
+      })
+      .catch(() => setLoadError("Couldn't reach the server - check your connection and try again."));
+  }
+
+  useEffect(() => { loadProfile(); }, []);
 
   async function save(update) {
     try {
@@ -98,7 +115,23 @@ export default function ThemeAvatarSettings() {
     reader.readAsDataURL(file);
   }
 
-  if (!options || !current) return null;
+  if (loadError) {
+    return (
+      <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", marginTop: "20px", textAlign: "center" }}>
+        <p style={{ fontSize: 13, color: "#f87171" }}>{loadError}</p>
+        <button onClick={loadProfile} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12 }}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+  if (!options || !current) {
+    return (
+      <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", marginTop: "20px", textAlign: "center" }}>
+        <p style={{ fontSize: 13, opacity: 0.6 }}>Loading settings...</p>
+      </div>
+    );
+  }
 
   const isCustomActive = current.themePreference === "custom";
 
