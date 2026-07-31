@@ -16,6 +16,9 @@ export default function ThemeAvatarSettings() {
   const [customBg, setCustomBg] = useState("#0a0a0c");
   const [customCard, setCustomCard] = useState("#121214");
   const [customAccent, setCustomAccent] = useState("#d4b07a");
+  // NEW: avatar upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   useEffect(() => {
     fetch(`${API}/profile/options`).then((r) => r.json()).then((d) => { if (d.success) setOptions(d); });
@@ -56,6 +59,43 @@ export default function ThemeAvatarSettings() {
 
   function saveCustomTheme() {
     save({ customTheme: { bg: customBg, card: customCard, accent: customAccent } });
+  }
+
+  // NEW: resizes the uploaded image client-side (max 160x160, JPEG) before
+  // sending it, so we're never uploading a multi-megabyte photo just to
+  // display it at 60px - keeps the request fast and the database small.
+  function handleAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+
+    if (file.size > 8 * 1024 * 1024) {
+      setUploadError("Image too large - please pick something under 8MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const size = 160;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        // cover-crop to a square so the avatar isn't stretched
+        const scale = Math.max(size / img.width, size / img.height);
+        const w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+        setUploading(true);
+        save({ avatarImage: dataUrl }).finally(() => setUploading(false));
+      };
+      img.onerror = () => setUploadError("Couldn't read that image - try a different file.");
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
   }
 
   if (!options || !current) return null;
@@ -117,9 +157,24 @@ export default function ThemeAvatarSettings() {
 
       <div style={{ marginTop: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Avatar</div>
+
+        {/* NEW: current avatar preview, shows either the uploaded image or the emoji */}
+        <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "var(--card-bg)" }}>
+            {current.avatarType === "custom" && current.avatarImage
+              ? <img src={current.avatarImage} alt="Your avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : (current.avatar || "🦋")}
+          </div>
+          <label style={{ fontSize: 12, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 14px", borderRadius: 999, cursor: uploading ? "wait" : "pointer", opacity: uploading ? 0.6 : 1 }}>
+            {uploading ? "Uploading..." : "Upload your own photo"}
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={uploading} style={{ display: "none" }} />
+          </label>
+        </div>
+        {uploadError && <p style={{ fontSize: 11, color: "#f87171", marginBottom: 10 }}>{uploadError}</p>}
+
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {options.avatars.map((a) => (
-            <button key={a} onClick={() => save({ avatar: a })} style={{ fontSize: 22, width: 44, height: 44, borderRadius: "50%", border: current.avatar === a ? "2px solid #d4b07a" : "1px solid var(--border)", background: "transparent", cursor: "pointer" }}>
+            <button key={a} onClick={() => save({ avatar: a })} style={{ fontSize: 22, width: 44, height: 44, borderRadius: "50%", border: current.avatarType !== "custom" && current.avatar === a ? "2px solid #d4b07a" : "1px solid var(--border)", background: "transparent", cursor: "pointer" }}>
               {a}
             </button>
           ))}

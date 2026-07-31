@@ -76,13 +76,13 @@ export default function MindGuardApp() {
 
   const token = localStorage.getItem('token');
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
-  const [avatar, setAvatar] = useState("🦋"); // NEW
+  const [avatarProfile, setAvatarProfile] = useState({ avatar: "🦋", avatarType: "emoji", avatarImage: "" }); // NEW
 
   useEffect(() => {
     if (!token) return;
     fetch(`${API}/profile/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => { if (d.success && d.avatar) setAvatar(d.avatar); })
+      .then(d => { if (d.success) setAvatarProfile({ avatar: d.avatar, avatarType: d.avatarType, avatarImage: d.avatarImage }); })
       .catch(() => {});
   }, [token]);
 
@@ -457,7 +457,9 @@ useEffect(() => {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* NEW: quick link back to the personalized dashboard */}
             <button onClick={() => navigate("/dashboard")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "transparent", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📊 Dashboard</button>
-            <span style={{ fontSize: 20 }}>{avatar}</span>
+            {avatarProfile.avatarType === "custom" && avatarProfile.avatarImage
+              ? <img src={avatarProfile.avatarImage} alt="avatar" style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }} />
+              : <span style={{ fontSize: 20 }}>{avatarProfile.avatar}</span>}
             <span style={{ fontSize: 12, color:'var(--text)', opacity:0.7 }}>Hi, {user.name} {isAdmin && "👑"}</span>
             {isAdmin && (<button onClick={() => navigate("/admin")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "rgba(212,197,160,0.12)", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Admin</button>)}
             <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "#141416", color: "var(--text-h)", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Logout</button>

@@ -16,21 +16,22 @@ function pingMoodCheckin() {
 const MOOD_ORDER = ["Happy","Calm","Neutral","Sad","Anxious","Angry","Lonely","Overwhelmed","Don't Know What To Do","Everything At Once"];
 
 // FIX: emoji replaced with the person's own uploaded stickers - "sticker"
-// key points at /public/stickers/*.jpg, served directly by Vite at that
+// key points at /public/stickers/*.png (converted to transparent PNG -
+// original .jpg backgrounds removed), served directly by Vite at that
 // path. Two new moods added per request ("Don't Know What To Do",
 // "Everything At Once") - label text is kept for all of them, only the
 // icon changed.
 const MOODS = [
-  { label: "Happy", sticker: "/stickers/happy.jpg", color: "#4ade80" },
-  { label: "Calm", sticker: "/stickers/calm.jpg", color: "#60a5fa" },
-  { label: "Neutral", sticker: "/stickers/neutral.jpg", color: "#d4c5a0" },
-  { label: "Sad", sticker: "/stickers/sad.jpg", color: "#818cf8" },
-  { label: "Anxious", sticker: "/stickers/anxious.jpg", color: "#fb923c" },
-  { label: "Angry", sticker: "/stickers/angry.jpg", color: "#f87171" },
-  { label: "Lonely", sticker: "/stickers/lonely.jpg", color: "#a78bfa" },
-  { label: "Overwhelmed", sticker: "/stickers/overwhelmed.jpg", color: "#f472b6" },
-  { label: "Don't Know What To Do", sticker: "/stickers/dont-know.jpg", color: "#fbbf24" },
-  { label: "Everything At Once", sticker: "/stickers/everything-at-once.jpg", color: "#f97316" },
+  { label: "Happy", sticker: "/stickers/happy.png", color: "#4ade80" },
+  { label: "Calm", sticker: "/stickers/calm.png", color: "#60a5fa" },
+  { label: "Neutral", sticker: "/stickers/neutral.png", color: "#d4c5a0" },
+  { label: "Sad", sticker: "/stickers/sad.png", color: "#818cf8" },
+  { label: "Anxious", sticker: "/stickers/anxious.png", color: "#fb923c" },
+  { label: "Angry", sticker: "/stickers/angry.png", color: "#f87171" },
+  { label: "Lonely", sticker: "/stickers/lonely.png", color: "#a78bfa" },
+  { label: "Overwhelmed", sticker: "/stickers/overwhelmed.png", color: "#f472b6" },
+  { label: "Don't Know What To Do", sticker: "/stickers/dont-know.png", color: "#fbbf24" },
+  { label: "Everything At Once", sticker: "/stickers/everything-at-once.png", color: "#f97316" },
 ];
 
 // "Sticker" style tap targets - now renders an actual image instead of an emoji glyph.

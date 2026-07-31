@@ -99,7 +99,9 @@ export default function Dashboard() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ fontSize: 40, width: 56, height: 56, borderRadius: "50%", background: "rgba(212,197,160,0.1)", border: "1px solid rgba(212,197,160,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              {data?.avatar || "🦋"}
+              {data?.avatarType === "custom" && data?.avatarImage
+                ? <img src={data.avatarImage} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                : (data?.avatar || "🦋")}
             </div>
             <div>
               <h1 style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 34, margin: 0 }}>
