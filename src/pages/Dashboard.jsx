@@ -1,5 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
+import Footer from "../components/Footer.jsx"; // NEW: was never rendered anywhere - added here so the Dashboard also has the crisis-resource disclaimer
 
 // NEW: everything that used to be extra tabs in MindGuardApp.jsx now lives
 // here instead, per your request - the main app keeps only the original
@@ -267,6 +268,7 @@ export default function Dashboard() {
         >
           Continue to Emovra →
         </button>
+        <Footer />
       </div>
     </div>
   );
