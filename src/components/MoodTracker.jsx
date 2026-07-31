@@ -13,21 +13,27 @@ function pingMoodCheckin() {
   fetch(`${API}/activity/mood-checkin`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
 }
 
-const MOOD_ORDER = ["Happy","Calm","Neutral","Sad","Anxious","Angry","Lonely","Overwhelmed"];
+const MOOD_ORDER = ["Happy","Calm","Neutral","Sad","Anxious","Angry","Lonely","Overwhelmed","Don't Know What To Do","Everything At Once"];
 
+// FIX: emoji replaced with the person's own uploaded stickers - "sticker"
+// key points at /public/stickers/*.jpg, served directly by Vite at that
+// path. Two new moods added per request ("Don't Know What To Do",
+// "Everything At Once") - label text is kept for all of them, only the
+// icon changed.
 const MOODS = [
-  { label: "Happy", emoji: "😊", color: "#4ade80" },
-  { label: "Calm", emoji: "😌", color: "#60a5fa" },
-  { label: "Neutral", emoji: "😐", color: "#d4c5a0" },
-  { label: "Sad", emoji: "😢", color: "#818cf8" },
-  { label: "Anxious", emoji: "😰", color: "#fb923c" },
-  { label: "Angry", emoji: "😠", color: "#f87171" },
-  { label: "Lonely", emoji: "🥺", color: "#a78bfa" },
-  { label: "Overwhelmed", emoji: "😞", color: "#f472b6" },
+  { label: "Happy", sticker: "/stickers/happy.jpg", color: "#4ade80" },
+  { label: "Calm", sticker: "/stickers/calm.jpg", color: "#60a5fa" },
+  { label: "Neutral", sticker: "/stickers/neutral.jpg", color: "#d4c5a0" },
+  { label: "Sad", sticker: "/stickers/sad.jpg", color: "#818cf8" },
+  { label: "Anxious", sticker: "/stickers/anxious.jpg", color: "#fb923c" },
+  { label: "Angry", sticker: "/stickers/angry.jpg", color: "#f87171" },
+  { label: "Lonely", sticker: "/stickers/lonely.jpg", color: "#a78bfa" },
+  { label: "Overwhelmed", sticker: "/stickers/overwhelmed.jpg", color: "#f472b6" },
+  { label: "Don't Know What To Do", sticker: "/stickers/dont-know.jpg", color: "#fbbf24" },
+  { label: "Everything At Once", sticker: "/stickers/everything-at-once.jpg", color: "#f97316" },
 ];
 
-// NEW: replaces the plain rectangular mood buttons - bigger, playful,
-// "sticker" style tap targets.
+// "Sticker" style tap targets - now renders an actual image instead of an emoji glyph.
 function MoodSticker({ mood, active, onClick }) {
   return (
     <button
@@ -35,37 +41,39 @@ function MoodSticker({ mood, active, onClick }) {
       aria-pressed={active}
       style={{
         display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-        padding: "12px 10px",
+        padding: "10px 10px",
         borderRadius: 18,
         cursor: "pointer",
         border: active ? `2px solid ${mood.color}` : "1px solid var(--border)",
         background: active ? `${mood.color}22` : "var(--card-bg)",
-        minWidth: 76,
+        minWidth: 84,
         transform: active ? "scale(1.06) rotate(-2deg)" : "scale(1)",
         transition: "transform 0.15s ease, border-color 0.15s ease",
       }}
     >
-      <span style={{ fontSize: 30, lineHeight: 1 }}>{mood.emoji}</span>
-      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{mood.label}</span>
+      <img src={mood.sticker} alt={mood.label} style={{ width: 44, height: 44, objectFit: "contain" }} />
+      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", textAlign: "center", lineHeight: 1.2 }}>{mood.label}</span>
     </button>
   );
 }
 
-// NEW: compact SVG bar graph replacing the old text list + growing card
+// Compact SVG bar graph replacing the old text list + growing card
 // history - same information (frequency per mood + a recent trend), far
-// less vertical space.
+// less vertical space. Note: SVG <text> can't embed the sticker images the
+// same way HTML can, so this view uses the label text + color-coded bar
+// only (no icon) - the sticker images show up in the picker above and the
+// recent-trend strip below instead.
 function MoodGraph({ moodStats, moodHistory }) {
   const width = 600;
   const barHeight = 22;
   const gap = 10;
-  const labelWidth = 90;
+  const labelWidth = 150;
   const maxCount = Math.max(1, ...Object.values(moodStats));
 
   const rows = MOOD_ORDER.filter((m) => moodStats[m]).map((m) => ({
     label: m,
     count: moodStats[m],
     color: MOODS.find((x) => x.label === m)?.color || "#d4c5a0",
-    emoji: MOODS.find((x) => x.label === m)?.emoji || "•",
   }));
 
   const height = Math.max(1, rows.length) * (barHeight + gap);
@@ -85,7 +93,7 @@ function MoodGraph({ moodStats, moodHistory }) {
             return (
               <g key={row.label}>
                 <text x={0} y={y + barHeight * 0.7} fontSize="13" fill="var(--text)">
-                  {row.emoji} {row.label}
+                  {row.label}
                 </text>
                 <rect x={labelWidth} y={y} width={barW} height={barHeight} rx={6} fill={row.color} opacity="0.85" />
                 <text x={labelWidth + barW + 8} y={y + barHeight * 0.7} fontSize="12" fill="var(--muted)">
@@ -100,11 +108,15 @@ function MoodGraph({ moodStats, moodHistory }) {
       {recent.length > 1 && (
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 6 }}>Recent trend</div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flexWrap: "wrap" }}>
             {recent.map((e, i) => (
-              <span key={e.id || i} title={new Date(e.timestamp).toLocaleString()} style={{ fontSize: 18 }}>
-                {MOODS.find((m) => m.label === e.mood)?.emoji || "•"}
-              </span>
+              <img
+                key={e.id || i}
+                title={new Date(e.timestamp).toLocaleString()}
+                src={MOODS.find((m) => m.label === e.mood)?.sticker}
+                alt={e.mood}
+                style={{ width: 26, height: 26, objectFit: "contain" }}
+              />
             ))}
           </div>
         </div>
