@@ -32,7 +32,9 @@ const userSchema = new mongoose.Schema({
     card: { type: String, default: "" },
     accent: { type: String, default: "" },
   }, // NEW: user-picked colors, used when themePreference === "custom"
-  avatar: { type: String, default: "🦋" }, // emoji avatar - no image upload complexity/moderation needed
+  avatar: { type: String, default: "🦋" }, // emoji avatar
+  avatarType: { type: String, enum: ["emoji", "custom"], default: "emoji" }, // NEW
+  avatarImage: { type: String, default: "" }, // NEW: base64 data URI, only used when avatarType === "custom"
 
   // NEW: birthday messages - deliberately storing ONLY month/day, not a
   // full date of birth, since a full DOB isn't needed for "happy birthday"

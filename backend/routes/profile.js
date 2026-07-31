@@ -8,6 +8,14 @@ const router = express.Router();
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
+// NEW: max size for an uploaded avatar image, as a base64 data URI string.
+// ~280,000 chars is roughly 200KB of actual image data after base64
+// overhead - plenty for a small square avatar, and keeps User documents
+// well clear of MongoDB's 16MB document limit even with everything else
+// on the User model. The frontend also resizes the image before sending
+// it, so this is a safety net, not the primary size control.
+const MAX_AVATAR_DATA_URI_LENGTH = 280000;
+
 // GET /api/profile/options - catalogs for the settings screen
 router.get("/options", (req, res) => {
   res.json({ success: true, themes: Object.values(THEMES), avatars: AVATARS, musicMoods: MUSIC_MOODS });
@@ -16,7 +24,7 @@ router.get("/options", (req, res) => {
 // GET /api/profile/me - current settings + birthday-today check
 router.get("/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("name themePreference customTheme avatar birthdayMonth birthdayDay personalityResult");
+    const user = await User.findById(req.user.id).select("name themePreference customTheme avatar avatarType avatarImage birthdayMonth birthdayDay personalityResult");
     if (!user) return res.status(404).json({ success: false, message: "Not found" });
 
     const today = new Date();
@@ -29,6 +37,8 @@ router.get("/me", auth, async (req, res) => {
       theme: resolveTheme(user),
       customTheme: user.customTheme,
       avatar: user.avatar,
+      avatarType: user.avatarType,
+      avatarImage: user.avatarType === "custom" ? user.avatarImage : "",
       birthdayMonth: user.birthdayMonth,
       birthdayDay: user.birthdayDay,
       isBirthdayToday,
@@ -44,10 +54,10 @@ router.get("/me", auth, async (req, res) => {
 // routes/auth.js)
 router.patch("/settings", auth, async (req, res) => {
   try {
-    const { themePreference, avatar, birthdayMonth, birthdayDay, customTheme } = req.body;
+    const { themePreference, avatar, avatarImage, birthdayMonth, birthdayDay, customTheme } = req.body;
     const update = {};
 
-    // NEW: custom color picker - validates each value is a real hex color
+    // custom color picker - validates each value is a real hex color
     // before ever saving it, so a bad value can't corrupt someone's theme.
     if (customTheme && typeof customTheme === "object") {
       const c = {};
@@ -63,12 +73,30 @@ router.patch("/settings", auth, async (req, res) => {
     if (themePreference && (THEMES[themePreference] || themePreference === "custom")) {
       update.themePreference = themePreference;
     }
-    if (avatar && AVATARS.includes(avatar)) update.avatar = avatar;
+
+    // NEW: uploaded avatar image - validated as a real image data URI and
+    // capped in size before ever being saved.
+    if (avatarImage && typeof avatarImage === "string") {
+      const isDataUri = /^data:image\/(png|jpe?g|webp);base64,/.test(avatarImage);
+      if (!isDataUri) {
+        return res.status(400).json({ success: false, message: "Invalid image format" });
+      }
+      if (avatarImage.length > MAX_AVATAR_DATA_URI_LENGTH) {
+        return res.status(400).json({ success: false, message: "Image too large - please use a smaller photo" });
+      }
+      update.avatarImage = avatarImage;
+      update.avatarType = "custom";
+    } else if (avatar && AVATARS.includes(avatar)) {
+      // picking an emoji avatar switches back away from a custom image
+      update.avatar = avatar;
+      update.avatarType = "emoji";
+    }
+
     if (birthdayMonth && birthdayMonth >= 1 && birthdayMonth <= 12) update.birthdayMonth = birthdayMonth;
     if (birthdayDay && birthdayDay >= 1 && birthdayDay <= 31) update.birthdayDay = birthdayDay;
 
     const user = await User.findByIdAndUpdate(req.user.id, update, { new: true })
-      .select("themePreference customTheme avatar birthdayMonth birthdayDay");
+      .select("themePreference customTheme avatar avatarType avatarImage birthdayMonth birthdayDay");
 
     res.json({
       success: true,
@@ -76,6 +104,8 @@ router.patch("/settings", auth, async (req, res) => {
       theme: resolveTheme(user),
       customTheme: user.customTheme,
       avatar: user.avatar,
+      avatarType: user.avatarType,
+      avatarImage: user.avatarType === "custom" ? user.avatarImage : "",
       birthdayMonth: user.birthdayMonth,
       birthdayDay: user.birthdayDay,
     });

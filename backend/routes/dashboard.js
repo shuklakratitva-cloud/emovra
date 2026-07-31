@@ -22,7 +22,7 @@ router.get("/", auth, async (req, res) => {
   try {
     const [profile, user, habits, sharedJournals, recentEntries] = await Promise.all([
       getGamificationProfile(req.user.id),
-      User.findById(req.user.id).select("claimedChallenges name themePreference customTheme avatar birthdayMonth birthdayDay"),
+      User.findById(req.user.id).select("claimedChallenges name themePreference customTheme avatar avatarType avatarImage birthdayMonth birthdayDay"),
       Habit.find({ userId: req.user.id, archived: false }),
       SharedJournal.find({
         $or: [{ ownerId: req.user.id }, { "collaborators.userId": req.user.id }],
@@ -60,6 +60,8 @@ router.get("/", auth, async (req, res) => {
       success: true,
       name: user?.name || "",
       avatar: user?.avatar || "🦋",
+      avatarType: user?.avatarType || "emoji",
+      avatarImage: user?.avatarType === "custom" ? user?.avatarImage : "",
       theme: resolveTheme(user),
       isBirthdayToday,
       gamification: profile,
