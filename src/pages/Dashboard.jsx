@@ -21,7 +21,7 @@ function authHeaders() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
-const Loader = () => <div style={{ padding: 12, textAlign: "center", color: "#d4c5a0", fontSize: 11 }}>Loading...</div>;
+const Loader = () => <div style={{ padding: 12, textAlign: "center", color: "var(--text-h)", fontSize: 11 }}>Loading...</div>;
 
 const SUB_TABS = [
   { id: "overview", label: "Overview" },
@@ -77,7 +77,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0c", color: "#e8dcc6", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif" }}>
         Loading your dashboard...
       </div>
     );
@@ -87,37 +87,42 @@ export default function Dashboard() {
   const progressPct = g ? Math.round((g.progress || 0) * 100) : 0;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0c", color: "#e8dcc6", fontFamily: "Inter, sans-serif", padding: "32px 20px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", fontFamily: "Inter, sans-serif", padding: "32px 20px" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {toast && (
-          <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#d4b07a", color: "#000", padding: "12px 24px", borderRadius: 999, fontWeight: 700, fontSize: 14, zIndex: 999, boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+          <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "var(--accent)", color: "#000", padding: "12px 24px", borderRadius: 999, fontWeight: 700, fontSize: 14, zIndex: 999, boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
             {toast}
           </div>
         )}
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
-          <div>
-            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 34, margin: 0 }}>
-              Welcome back{data?.name ? `, ${data.name.split(" ")[0]}` : ""} 👋
-            </h1>
-            <p style={{ color: "rgba(232,220,198,0.6)", fontSize: 13, marginTop: 6 }}>
-              Here's where you're at today.
-            </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ fontSize: 40, width: 56, height: 56, borderRadius: "50%", background: "rgba(212,197,160,0.1)", border: "1px solid rgba(212,197,160,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {data?.avatar || "🦋"}
+            </div>
+            <div>
+              <h1 style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 34, margin: 0 }}>
+                Welcome back{data?.name ? `, ${data.name.split(" ")[0]}` : ""} 👋
+              </h1>
+              <p style={{ color: "rgba(232,220,198,0.6)", fontSize: 13, marginTop: 6 }}>
+                Here's where you're at today.
+              </p>
+            </div>
           </div>
           <button
             onClick={() => navigate("/app")}
-            style={{ background: "#d4b07a", color: "#000", border: "none", padding: "10px 20px", borderRadius: 999, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+            style={{ background: "var(--accent)", color: "#000", border: "none", padding: "10px 20px", borderRadius: 999, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
           >
             Continue to Emovra →
           </button>
         </div>
 
         {/* Level / XP / Streak - always visible, this is the core of the dashboard */}
-        <div style={{ background: "rgba(18,18,20,0.95)", border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 16, padding: 20, marginTop: 20 }}>
+        <div style={{ background: "var(--card-bg)", border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 16, padding: 20, marginTop: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#d4c5a0" }}>Level {g?.level || 1}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text-h)" }}>Level {g?.level || 1}</div>
               <div style={{ fontSize: 12, color: "rgba(232,220,198,0.5)" }}>{g?.xp || 0} XP</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(251,146,60,0.12)", border: "1px solid rgba(251,146,60,0.3)", padding: "8px 16px", borderRadius: 999 }}>
@@ -127,15 +132,15 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ marginTop: 14, height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ width: `${progressPct}%`, height: "100%", background: "linear-gradient(90deg,#d4b07a,#e8dcc6)", transition: "width 0.4s ease" }} />
+            <div style={{ width: `${progressPct}%`, height: "100%", background: "linear-gradient(90deg,var(--accent),var(--text))", transition: "width 0.4s ease" }} />
           </div>
           <div style={{ fontSize: 10, color: "rgba(232,220,198,0.4)", marginTop: 6 }}>{progressPct}% to level {(g?.level || 1) + 1}</div>
         </div>
 
         {data?.isBirthdayToday && (
-          <div style={{ background: "linear-gradient(135deg, rgba(212,176,122,0.2), rgba(168,85,247,0.12))", border: "1px solid #d4b07a", borderRadius: 16, padding: 20, marginTop: 16, textAlign: "center" }}>
+          <div style={{ background: "linear-gradient(135deg, rgba(212,176,122,0.2), rgba(168,85,247,0.12))", border: "1px solid var(--accent)", borderRadius: 16, padding: 20, marginTop: 16, textAlign: "center" }}>
             <div style={{ fontSize: 28 }}>🎂🎉</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 6, color: "#d4c5a0" }}>Happy Birthday{data?.name ? `, ${data.name.split(" ")[0]}` : ""}!</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 6, color: "var(--text-h)" }}>Happy Birthday{data?.name ? `, ${data.name.split(" ")[0]}` : ""}!</div>
             <p style={{ fontSize: 12, marginTop: 4, color: "rgba(232,220,198,0.7)" }}>Hope today treats you gently. We're glad you're here.</p>
           </div>
         )}
@@ -144,7 +149,7 @@ export default function Dashboard() {
           <div style={{ background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.35)", borderRadius: 16, padding: 18, marginTop: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "#fb923c" }}>💛 A gentle check-in</div>
             <p style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>{data.earlyWarning.message}</p>
-            <a href="tel:14416" style={{ display: "inline-block", marginTop: 10, background: "#d4b07a", color: "#000", padding: "8px 16px", borderRadius: 999, fontWeight: 700, fontSize: 12, textDecoration: "none" }}>
+            <a href="tel:14416" style={{ display: "inline-block", marginTop: 10, background: "var(--accent)", color: "#000", padding: "8px 16px", borderRadius: 999, fontWeight: 700, fontSize: 12, textDecoration: "none" }}>
               📞 Tele-MANAS: 14416
             </a>
           </div>
@@ -166,7 +171,7 @@ export default function Dashboard() {
         <div style={{ marginTop: 20 }}>
           <h3 style={{ fontSize: 15, marginBottom: 10 }}>🎯 Today's Challenges</h3>
           {data?.challenges?.map((c) => (
-            <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(18,18,20,0.95)", border: "0.5px solid rgba(212,197,160,0.15)", borderRadius: 12, padding: "12px 16px", marginBottom: 8 }}>
+            <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--card-bg)", border: "0.5px solid rgba(212,197,160,0.15)", borderRadius: 12, padding: "12px 16px", marginBottom: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 18 }}>{c.emoji}</span>
                 <div>
@@ -177,7 +182,7 @@ export default function Dashboard() {
               {c.claimed ? (
                 <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ Done</span>
               ) : (
-                <button onClick={() => claim(c.id)} disabled={claiming === c.id} style={{ background: "#d4b07a", color: "#000", border: "none", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                <button onClick={() => claim(c.id)} disabled={claiming === c.id} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                   {claiming === c.id ? "..." : "Claim"}
                 </button>
               )}
@@ -205,9 +210,9 @@ export default function Dashboard() {
           {SUB_TABS.map((t) => (
             <button key={t.id} onClick={() => setSubTab(t.id)} style={{
               padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer",
-              border: subTab === t.id ? "1px solid #d4b07a" : "0.5px solid rgba(212,197,160,0.2)",
+              border: subTab === t.id ? "1px solid var(--accent)" : "0.5px solid rgba(212,197,160,0.2)",
               background: subTab === t.id ? "rgba(212,176,122,0.15)" : "transparent",
-              color: subTab === t.id ? "#d4c5a0" : "rgba(232,220,198,0.6)",
+              color: subTab === t.id ? "var(--text-h)" : "rgba(232,220,198,0.6)",
               fontWeight: subTab === t.id ? 700 : 500,
             }}>
               {t.label}
@@ -217,7 +222,7 @@ export default function Dashboard() {
 
         <div style={{ marginTop: 16 }}>
           {subTab === "overview" && data?.habits?.count > 0 && (
-            <div style={{ background: "rgba(18,18,20,0.95)", border: "0.5px solid rgba(212,197,160,0.15)", borderRadius: 12, padding: 16 }}>
+            <div style={{ background: "var(--card-bg)", border: "0.5px solid rgba(212,197,160,0.15)", borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 13 }}>
                 🌱 You have <b>{data.habits.count}</b> habit{data.habits.count !== 1 ? "s" : ""} tracked, <b>{data.habits.dueToday}</b> due today. See the Habits & Goals tab.
               </div>
@@ -256,7 +261,7 @@ export default function Dashboard() {
 
         <button
           onClick={() => navigate("/app")}
-          style={{ marginTop: 28, width: "100%", background: "#d4b07a", color: "#000", border: "none", padding: "16px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}
+          style={{ marginTop: 28, width: "100%", background: "var(--accent)", color: "#000", border: "none", padding: "16px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}
         >
           Continue to Emovra →
         </button>

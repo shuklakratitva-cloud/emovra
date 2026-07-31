@@ -33,7 +33,7 @@ function getAdvice(level, category) {
   return "You matter. You are not alone. Help is available if you need it.";
 }
 
-const Loader = () => <div style={{ padding: 12, textAlign: 'center', color: '#d4c5a0', fontSize: 11 }}>Loading...</div>;
+const Loader = () => <div style={{ padding: 12, textAlign: 'center', color: 'var(--text-h)', fontSize: 11 }}>Loading...</div>;
 
 // NEW: sections, organized instead of one endless stack of 20 components.
 // Nothing here was removed - everything that used to be on the page still
@@ -76,6 +76,15 @@ export default function MindGuardApp() {
 
   const token = localStorage.getItem('token');
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
+  const [avatar, setAvatar] = useState("🦋"); // NEW
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API}/profile/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success && d.avatar) setAvatar(d.avatar); })
+      .catch(() => {});
+  }, [token]);
 
 useEffect(() => {
   const timer = setTimeout(() => {
@@ -436,22 +445,22 @@ useEffect(() => {
   return (
     <>
       <style>{`
-        :root{ --bg:#0a0a0c!important; --card-bg:rgba(18,18,20,0.95)!important; --border:rgba(212,197,160,0.18)!important; --text:#e8dcc6!important; }
-        body{background:#0a0a0c!important; color:#e8dcc6!important}
-        div[style*="var(--card-bg)"], div[style*="var(--bg)"]{ background: rgba(18,18,20,0.95)!important; border: 0.5px solid rgba(212,197,160,0.18)!important; color:#e8dcc6!important; }
-        button[style*="linear-gradient"], button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{ background:#d4b07a!important; color:#000!important; border:none!important; }
+        body{background:var(--bg)!important; color:var(--text)!important}
+        div[style*="var(--card-bg)"], div[style*="var(--bg)"]{ background: var(--card-bg)!important; border: 0.5px solid rgba(212,197,160,0.18)!important; color:var(--text)!important; }
+        button[style*="linear-gradient"], button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{ background:var(--accent)!important; color:#000!important; border:none!important; }
         button{font-family:Inter,sans-serif}
       `}</style>
 
-      <div style={{ minHeight:'100vh', background:'#0a0a0c', color:'#e8dcc6' }}>
+      <div style={{ minHeight:'100vh', background:'var(--bg)', color:'var(--text)' }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,0.95)", backdropFilter:'blur(20px)', borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
-          <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "#d4c5a0", letterSpacing:'0.15em', cursor: "pointer" }}>EMOVRA</div>
+          <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "var(--text-h)", letterSpacing:'0.15em', cursor: "pointer" }}>EMOVRA</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* NEW: quick link back to the personalized dashboard */}
-            <button onClick={() => navigate("/dashboard")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "transparent", color: "#d4c5a0", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📊 Dashboard</button>
-            <span style={{ fontSize: 12, color:'#e8dcc6', opacity:0.7 }}>Hi, {user.name} {isAdmin && "👑"}</span>
-            {isAdmin && (<button onClick={() => navigate("/admin")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "rgba(212,197,160,0.12)", color: "#d4c5a0", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Admin</button>)}
-            <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "#141416", color: "#d4c5a0", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Logout</button>
+            <button onClick={() => navigate("/dashboard")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "transparent", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📊 Dashboard</button>
+            <span style={{ fontSize: 20 }}>{avatar}</span>
+            <span style={{ fontSize: 12, color:'var(--text)', opacity:0.7 }}>Hi, {user.name} {isAdmin && "👑"}</span>
+            {isAdmin && (<button onClick={() => navigate("/admin")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "rgba(212,197,160,0.12)", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Admin</button>)}
+            <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "#141416", color: "var(--text-h)", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Logout</button>
           </div>
         </div>
 
@@ -461,9 +470,9 @@ useEffect(() => {
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer",
-              border: tab === t.id ? "1px solid #d4b07a" : "0.5px solid rgba(212,197,160,0.2)",
+              border: tab === t.id ? "1px solid var(--accent)" : "0.5px solid rgba(212,197,160,0.2)",
               background: tab === t.id ? "rgba(212,176,122,0.15)" : "transparent",
-              color: tab === t.id ? "#d4c5a0" : "rgba(232,220,198,0.6)",
+              color: tab === t.id ? "var(--text-h)" : "rgba(232,220,198,0.6)",
               fontWeight: tab === t.id ? 700 : 500,
             }}>
               {t.label}
@@ -476,16 +485,16 @@ useEffect(() => {
           {tab === "checkin" && (
             <>
               {!phoneVerified && (
-                <div style={{ padding: 16, borderRadius: 12, border: "1px solid rgba(212,197,160,0.3)", background: "rgba(18,18,20,0.95)", marginBottom: 16 }}>
-                  <b style={{ color: "#d4c5a0", fontSize: 13 }}>📱 Verify Phone Number</b>
+                <div style={{ padding: 16, borderRadius: 12, border: "1px solid rgba(212,197,160,0.3)", background: "var(--card-bg)", marginBottom: 16 }}>
+                  <b style={{ color: "var(--text-h)", fontSize: 13 }}>📱 Verify Phone Number</b>
                   <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                     <input
                       value={phoneInput}
                       onChange={(e) => setPhoneInput(e.target.value)}
                       placeholder="10 digit phone number"
-                      style={{ flex: 1, minWidth: 160, padding: "10px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "#e8dcc6" }}
+                      style={{ flex: 1, minWidth: 160, padding: "10px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "var(--text)" }}
                     />
-                    <button onClick={sendOtp} disabled={otpLoading} style={{ padding: "10px 16px", borderRadius: 8, background: "#d4b07a", color: "#000", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>
+                    <button onClick={sendOtp} disabled={otpLoading} style={{ padding: "10px 16px", borderRadius: 8, background: "var(--accent)", color: "#000", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>
                       {otpLoading? "..." : otpSent? "Resend OTP (Random)" : "Send OTP"}
                     </button>
                   </div>
@@ -495,23 +504,23 @@ useEffect(() => {
                         value={otpInput}
                         onChange={(e) => setOtpInput(e.target.value)}
                         placeholder="Enter 6-digit OTP"
-                        style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "#e8dcc6" }}
+                        style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "var(--text)" }}
                       />
                       <button onClick={verifyOtp} disabled={otpLoading} style={{ padding: "10px 16px", borderRadius: 8, background: "#22c55e", color: "#000", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>
                         Verify
                       </button>
                     </div>
                   )}
-                  {otpMessage && <div style={{ marginTop: 8, fontSize: 11, color: phoneVerified? "#22c55e" : "#d4c5a0" }}>{otpMessage}</div>}
+                  {otpMessage && <div style={{ marginTop: 8, fontSize: 11, color: phoneVerified? "#22c55e" : "var(--text-h)" }}>{otpMessage}</div>}
                 </div>
               )}
 
-              <div style={{ padding: 20, borderRadius: 16, border: "0.5px solid rgba(212,197,160,0.18)", background: "rgba(18,18,20,0.95)" }}>
-                <h3 style={{ margin: "0 0 12px 0", color:'#e8dcc6' }}>How are you feeling today?</h3>
-                <textarea rows={5} value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" &&!e.shiftKey) { e.preventDefault(); handleAnalyze(); } }} placeholder="Type what's on your mind..." style={{ width: "100%", padding: 14, borderRadius: 12, border: "0.5px solid rgba(212,197,160,0.18)", background: "#0f0f11", color: "#e8dcc6", outline:'none' }} />
+              <div style={{ padding: 20, borderRadius: 16, border: "0.5px solid rgba(212,197,160,0.18)", background: "var(--card-bg)" }}>
+                <h3 style={{ margin: "0 0 12px 0", color:'var(--text)' }}>How are you feeling today?</h3>
+                <textarea rows={5} value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" &&!e.shiftKey) { e.preventDefault(); handleAnalyze(); } }} placeholder="Type what's on your mind..." style={{ width: "100%", padding: 14, borderRadius: 12, border: "0.5px solid rgba(212,197,160,0.18)", background: "#0f0f11", color: "var(--text)", outline:'none' }} />
                 <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap:'wrap' }}>
-                  <button onClick={handleAnalyze} disabled={loading} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "#d4b07a", color: "#000", fontWeight: 800, cursor:'pointer', fontSize:12 }}>{loading? "Analyzing..." : "✨ Analyze"}</button>
-                  <button onClick={() => (listening? stopListening() : startListening())} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background:'transparent', color:'#d4c5a0', cursor:'pointer', fontSize:12 }}>🎙 {listening? "Stop" : "Speak"}</button>
+                  <button onClick={handleAnalyze} disabled={loading} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 800, cursor:'pointer', fontSize:12 }}>{loading? "Analyzing..." : "✨ Analyze"}</button>
+                  <button onClick={() => (listening? stopListening() : startListening())} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background:'transparent', color:'var(--text-h)', cursor:'pointer', fontSize:12 }}>🎙 {listening? "Stop" : "Speak"}</button>
                   <button onClick={() => { setInputText(""); setAnalysis(null); }} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(255,255,255,0.12)", background:'transparent', color:'rgba(232,220,198,0.6)', cursor:'pointer', fontSize:12 }}>Clear</button>
                 </div>
               </div>
@@ -522,15 +531,15 @@ useEffect(() => {
                     <div style={{ padding: 20, background: "rgba(212,197,160,0.12)", border: "1px solid rgba(212,197,160,0.3)", borderRadius: 16, marginBottom: 16 }}>
                       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
                         <span style={{ fontSize: 24 }}>🫂</span>
-                        <b style={{ color: "#d4c5a0", fontSize: 16 }}>We are here for you</b>
+                        <b style={{ color: "var(--text-h)", fontSize: 16 }}>We are here for you</b>
                       </div>
                       <div style={{ fontSize: 13, color: 'rgba(232,220,198,0.85)', lineHeight: 1.5 }}>
                         We noticed you're going through a tough time. You are not alone. Talking to someone can help — it's confidential and free.
                       </div>
                       <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-                        <a href="tel:14416" style={{ padding: "12px 18px", background: "#d4c5a0", color: "#000", borderRadius: 10, textDecoration: "none", fontWeight: 800, fontSize: 13 }}>💛 Call Tele-MANAS 14416</a>
+                        <a href="tel:14416" style={{ padding: "12px 18px", background: "var(--text-h)", color: "#000", borderRadius: 10, textDecoration: "none", fontWeight: 800, fontSize: 13 }}>💛 Call Tele-MANAS 14416</a>
                         {user.emergencyPhone && (
-                          <a href={`tel:${user.emergencyPhone}`} style={{ padding: "12px 18px", background: "rgba(255,255,255,0.08)", color: "#e8dcc6", border: "0.5px solid rgba(212,197,160,0.2)", borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
+                          <a href={`tel:${user.emergencyPhone}`} style={{ padding: "12px 18px", background: "rgba(255,255,255,0.08)", color: "var(--text)", border: "0.5px solid rgba(212,197,160,0.2)", borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
                             📞 Call Your SOS: {user.emergencyPhone}
                           </a>
                         )}
@@ -549,8 +558,8 @@ useEffect(() => {
                     <RiskCard analysis={analysis} text={analysis.text} userName={user.name} />
                     <Suspense fallback={<Loader />}><MoodChart history={history.length? history : [analysis]} /></Suspense>
                   </div>
-                  <div style={{ marginTop: 12, padding: 14, border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 12, background: "rgba(18,18,20,0.9)", color: "#e8dcc6", fontSize:13 }}><b style={{ color:'#d4c5a0' }}>Advice:</b> {advice}</div>
-                  {counselingArray.length > 0 && (<div style={{ marginTop: 12 }}><h4 style={{ color:'#d4c5a0' }}>Solutions</h4>{counselingArray.map((c, i) => (<div key={i} style={{ padding: 12, border: "0.5px solid rgba(212,197,160,0.15)", background:'rgba(18,18,20,0.9)', borderRadius: 10, marginTop: 8, fontSize:13 }}><b style={{ color:'#d4c5a0' }}>{c.technique}</b><p style={{ margin:'6px 0 0 0', color:'rgba(232,220,198,0.7)' }}>{c.advice}</p></div>))}</div>)}
+                  <div style={{ marginTop: 12, padding: 14, border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 12, background: "rgba(18,18,20,0.9)", color: "var(--text)", fontSize:13 }}><b style={{ color:'var(--text-h)' }}>Advice:</b> {advice}</div>
+                  {counselingArray.length > 0 && (<div style={{ marginTop: 12 }}><h4 style={{ color:'var(--text-h)' }}>Solutions</h4>{counselingArray.map((c, i) => (<div key={i} style={{ padding: 12, border: "0.5px solid rgba(212,197,160,0.15)", background:'rgba(18,18,20,0.9)', borderRadius: 10, marginTop: 8, fontSize:13 }}><b style={{ color:'var(--text-h)' }}>{c.technique}</b><p style={{ margin:'6px 0 0 0', color:'rgba(232,220,198,0.7)' }}>{c.advice}</p></div>))}</div>)}
                 </div>
               )}
             </>
@@ -583,7 +592,7 @@ useEffect(() => {
           )}
 
           <div style={{ marginTop: 20, padding: '16px', textAlign: 'center', fontSize: '11px', color: 'rgba(232,220,198,0.4)', borderTop: '0.5px solid rgba(212,197,160,0.12)' }}>
-            <span style={{ color:'#d4c5a0', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span> - Wellness support only • Not a medical diagnosis. Call 14416 in crisis.
+            <span style={{ color:'var(--text-h)', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span> - Wellness support only • Not a medical diagnosis. Call 14416 in crisis.
           </div>
         </main>
         <LegalCookieBanner />

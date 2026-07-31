@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { applyThemeVars } from "../utils/applyTheme.js";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -21,6 +22,7 @@ export default function ThemeAvatarSettings() {
       const data = await res.json();
       if (data.success) {
         setCurrent((c) => ({ ...c, ...data }));
+        if (data.theme) applyThemeVars(data.theme); // NEW - instant visual feedback, not just saved silently
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const API = "https://emovra.onrender.com/api";
 
@@ -60,9 +60,9 @@ export default function MusicTherapy() {
   const [moods, setMoods] = useState(null);
   const ambient = useAmbientSound();
 
-  useState(() => {
+  useEffect(() => {
     fetch(`${API}/profile/options`).then((r) => r.json()).then((d) => { if (d.success) setMoods(d.musicMoods); }).catch(() => {});
-  });
+  }, []);
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>

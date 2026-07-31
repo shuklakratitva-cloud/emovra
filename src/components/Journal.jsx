@@ -1,22 +1,16 @@
-// src/components/Journal.jsx - Gemini AI for text + voice recording + shared journals
-import SupportResources from "./SupportResources";
+// src/components/Journal.jsx - private, encrypted, unanalyzed personal journal + voice notes + shared journal
 import React, { useState, useRef, useEffect } from "react";
-import useJournal from "../hooks/useJournal";
-import { analyzeWithGemini } from "../utils/geminiAnalyzer.js";
-import { checkCrisis } from "../utils/crisisDetection";
 
 const API = "https://emovra.onrender.com/api";
 
+function authHeaders() {
+  const token = localStorage.getItem("token");
+  return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+}
+
 // ============================================================
-// NEW: Voice note recorder for journal entries
-// NOTE: this attaches an in-browser audio clip to an entry for playback
-// during THIS session (an object URL). The journal itself is stored in
-// localStorage (see hooks/useJournal.js / utils/storage.js), which can't
-// hold audio data at any real size - so the recording will NOT survive a
-// page refresh. If you want voice notes to persist, that needs real file
-// storage on the backend (e.g. upload to the server like voice.js already
-// does for the Voice tab) - happy to wire that up as a follow-up if you
-// want it to actually persist.
+// Voice note recorder for journal entries (unchanged from before -
+// session-only playback, doesn't persist across a refresh yet)
 // ============================================================
 function VoiceNoteRecorder({ onRecorded }) {
   const [recording, setRecording] = useState(false);
@@ -83,7 +77,7 @@ function VoiceNoteRecorder({ onRecorded }) {
 }
 
 // ============================================================
-// NEW: Invite-a-friend shared journal
+// Invite-a-friend shared journal (unchanged from before)
 // ============================================================
 function SharedJournalPanel() {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -94,7 +88,7 @@ function SharedJournalPanel() {
   const [openJournal, setOpenJournal] = useState(null);
   const [threadText, setThreadText] = useState("");
 
-  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+  const headers = authHeaders();
 
   async function loadMine() {
     if (!token) return;
@@ -157,7 +151,7 @@ function SharedJournalPanel() {
       <p style={{ fontSize: 13, opacity: 0.7 }}>Invite a friend to write with you, or join theirs with a code.</p>
 
       <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
-        <button onClick={createJournal} disabled={loading} style={{ padding: "10px 18px", borderRadius: 20, border: "none", background: "#d4b07a", color: "#000", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+        <button onClick={createJournal} disabled={loading} style={{ padding: "10px 18px", borderRadius: 20, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
           + Start a shared journal
         </button>
         <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="Enter invite code" style={{ padding: "10px 14px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", fontSize: 13 }} />
@@ -166,7 +160,7 @@ function SharedJournalPanel() {
         </button>
       </div>
 
-      {msg && <p style={{ fontSize: 12, marginTop: 8, color: "#d4c5a0" }}>{msg}</p>}
+      {msg && <p style={{ fontSize: 12, marginTop: 8, color: "var(--text-h)" }}>{msg}</p>}
 
       {journals.length > 0 && !openJournal && (
         <div style={{ marginTop: 16 }}>
@@ -198,7 +192,7 @@ function SharedJournalPanel() {
           </div>
 
           <textarea rows={3} value={threadText} onChange={(e) => setThreadText(e.target.value)} placeholder="Write something for this journal..." style={{ width: "100%", marginTop: 10, padding: 10, borderRadius: 10 }} />
-          <button onClick={postEntry} disabled={loading} style={{ marginTop: 8, padding: "8px 18px", borderRadius: 20, border: "none", background: "#d4b07a", color: "#000", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+          <button onClick={postEntry} disabled={loading} style={{ marginTop: 8, padding: "8px 18px", borderRadius: 20, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
             {loading ? "Posting..." : "Post"}
           </button>
         </div>
@@ -207,112 +201,115 @@ function SharedJournalPanel() {
   );
 }
 
+// ============================================================
+// Personal Journal - genuinely private now: no AI analysis, no risk
+// detection, no crisis popups. Encrypted on the backend
+// (routes/privateJournal.js), never visible to admin, never touched by
+// Gemini/Claude/Groq/the keyword checker. If you're going through
+// something urgent, the "Check-in" tab is still the place that actively
+// looks out for you - this tab deliberately isn't, on purpose, so there's
+// one truly unmonitored space to just write.
+// ============================================================
 export default function Journal() {
-  const { journalText, setJournalText, entries, totalEntries, addEntry, editEntry, removeEntry, clearJournal } = useJournal();
+  const [journalText, setJournalText] = useState("");
+  const [entries, setEntries] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
-  const [crisisLevel, setCrisisLevel] = useState(null);
-  const [showHelp, setShowHelp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [lastResult, setLastResult] = useState(null);
-  const [voiceNoteUrl, setVoiceNoteUrl] = useState(null); // NEW
+  const [voiceNoteUrl, setVoiceNoteUrl] = useState(null);
 
-  function startEditing(entry) { setEditingId(entry.id); setEditText(entry.text); }
+  async function loadEntries() {
+    try {
+      const res = await fetch(`${API}/private-journal`, { headers: authHeaders() });
+      const data = await res.json();
+      if (data.success) setEntries(data.entries);
+    } catch {}
+  }
+
+  useEffect(() => { loadEntries(); }, []);
+
+  function startEditing(entry) { setEditingId(entry._id); setEditText(entry.text); }
 
   async function saveEdit(id) {
+    if (!editText.trim()) return;
     setLoading(true);
     try {
-      const result = await analyzeWithGemini(editText, null);
-      const level = result?.level?.toLowerCase() || 'low';
-      if (level === 'red' || level === 'orange' || result?.isCrisis) {
-        setCrisisLevel(result.level === 'RED' ? 'high' : 'medium');
-        setShowHelp(true);
-      }
-      setLastResult(result);
-    } catch {
-      const result = checkCrisis(editText);
-      if (result.level !== 'none') { setCrisisLevel(result.level); setShowHelp(true); }
-    }
-    editEntry(id, editText);
+      const res = await fetch(`${API}/private-journal/${id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ text: editText }) });
+      const data = await res.json();
+      if (data.success) setEntries((es) => es.map((e) => (e._id === id ? data.entry : e)));
+    } catch {}
     setEditingId(null); setEditText(""); setLoading(false);
   }
 
   async function handleSave() {
     if (!journalText.trim()) return;
     setLoading(true);
-    setShowHelp(false);
-
-    let result;
     try {
-      result = await analyzeWithGemini(journalText, null);
-      setLastResult(result);
-      const lvl = result?.level;
-      if (lvl === 'RED' || lvl === 'ORANGE') {
-        setCrisisLevel(lvl === 'RED' ? 'high' : 'medium');
-        setShowHelp(true);
-      }
-    } catch (e) {
-      result = checkCrisis(journalText);
-      if (result.level === 'high' || result.level === 'medium') {
-        setCrisisLevel(result.level);
-        setShowHelp(true);
-      }
-      setLastResult({...result, source: "keyword-fallback"});
+      const res = await fetch(`${API}/private-journal`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ text: journalText }) });
+      const data = await res.json();
+      if (data.success) setEntries((es) => [data.entry, ...es]);
+      setJournalText("");
+      setVoiceNoteUrl(null);
+    } catch {
+      alert("Could not save - check your connection and try again.");
     }
-
-    addEntry(journalText);
-    setVoiceNoteUrl(null); // NEW - clear the recorder after saving
     setLoading(false);
+  }
+
+  async function removeEntry(id) {
+    try {
+      await fetch(`${API}/private-journal/${id}`, { method: "DELETE", headers: authHeaders() });
+      setEntries((es) => es.filter((e) => e._id !== id));
+    } catch {}
+  }
+
+  async function clearJournal() {
+    if (!confirm("Delete all your journal entries? This can't be undone.")) return;
+    try {
+      await fetch(`${API}/private-journal`, { method: "DELETE", headers: authHeaders() });
+      setEntries([]);
+    } catch {}
   }
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
       <h2>📖 Personal Journal</h2>
-      <p style={{fontSize:13, opacity:0.7}}>Understands tone, not just keywords.</p>
-
-      {showHelp && <SupportResources level={crisisLevel} result={lastResult} onClose={() => setShowHelp(false)} />}
-
-      {lastResult && !showHelp && lastResult.level !== "GREEN" && (
-        <div style={{marginTop:12, padding:10, borderRadius:8, border:`2px solid ${lastResult.level==='RED'?'#dc2626':lastResult.level==='ORANGE'?'#ea580c':'#16a34a'}`, background:"#f9fafb", fontSize:13}}>
-          <b>Result:</b> {lastResult.level} | {lastResult.emotion}
-          <div style={{marginTop:4}}><b>Reason:</b> {lastResult.reasons?.join(", ") || lastResult.advice}</div>
-        </div>
-      )}
+      <p style={{fontSize:13, opacity:0.7}}>
+        🔒 Private and encrypted - nobody reads this, not even an admin, and nothing here is analyzed. Just yours.
+      </p>
 
       <textarea rows={6} value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder="Write your journal entry here..." style={{ width: "100%", padding: "12px", borderRadius: "10px", resize: "vertical", marginTop: 12, border: "1px solid #ddd" }} />
 
-      {/* NEW: voice note recorder */}
       <VoiceNoteRecorder onRecorded={setVoiceNoteUrl} />
 
-      <button onClick={handleSave} disabled={loading} style={{ marginTop: "12px", padding: "10px 20px", cursor: loading?"not-allowed":"pointer", background: loading?"#999":"#d4b07a", color: "#000", border: "none", borderRadius: 8, opacity: loading?0.6:1, fontWeight: 700 }}>
-        {loading ? "Analyzing..." : "Save & Analyze"}
+      <button onClick={handleSave} disabled={loading} style={{ marginTop: "12px", padding: "10px 20px", cursor: loading?"not-allowed":"pointer", background: loading?"#999":"var(--accent)", color: "#000", border: "none", borderRadius: 8, opacity: loading?0.6:1, fontWeight: 700 }}>
+        {loading ? "Saving..." : "Save Entry"}
       </button>
 
       <hr style={{ margin: "20px 0" }} />
-      <h3>Total Entries: {totalEntries}</h3>
+      <h3>Total Entries: {entries.length}</h3>
       {entries.length === 0 ? <p>No journal entries yet.</p> : entries.map((entry) => (
-        <div key={entry.id} style={{ border: "1px solid var(--border, #ddd)", borderRadius: "10px", padding: "15px", marginBottom: "15px" }}>
-          {editingId === entry.id ? (
+        <div key={entry._id} style={{ border: "1px solid var(--border, #ddd)", borderRadius: "10px", padding: "15px", marginBottom: "15px" }}>
+          {editingId === entry._id ? (
             <>
               <textarea rows={4} value={editText} onChange={(e) => setEditText(e.target.value)} style={{ width: "100%", marginBottom: "10px", padding: "10px", borderRadius: "8px" }} />
-              <button onClick={() => saveEdit(entry.id)} disabled={loading} style={{ padding: "6px 14px", background: "#d4b07a", color: "#000", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 700 }}>{loading?"Analyzing...":"Save"}</button>
+              <button onClick={() => saveEdit(entry._id)} disabled={loading} style={{ padding: "6px 14px", background: "var(--accent)", color: "#000", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 700 }}>{loading?"Saving...":"Save"}</button>
               <button onClick={() => { setEditingId(null); setEditText(""); }} style={{ marginLeft: "10px", padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
             </>
           ) : (
             <>
               <p style={{ whiteSpace: "pre-wrap" }}>{entry.text}</p>
-              <small>Created: {new Date(entry.timestamp).toLocaleString()}</small>
-              {entry.updatedAt && <><br /><small>Updated: {new Date(entry.updatedAt).toLocaleString()}</small></>}
+              <small>Created: {new Date(entry.createdAt).toLocaleString()}</small>
+              {entry.updatedAt !== entry.createdAt && <><br /><small>Updated: {new Date(entry.updatedAt).toLocaleString()}</small></>}
               <br /><br />
               <button onClick={() => startEditing(entry)} style={{ padding: "6px 12px", cursor: "pointer" }}>Edit</button>
-              <button onClick={() => removeEntry(entry.id)} style={{ marginLeft: "10px", padding: "6px 12px", cursor: "pointer" }}>Delete</button>
+              <button onClick={() => removeEntry(entry._id)} style={{ marginLeft: "10px", padding: "6px 12px", cursor: "pointer" }}>Delete</button>
             </>
           )}
         </div>
       ))}
       {entries.length > 0 && <button onClick={clearJournal} style={{ marginTop: "20px", background: "#dc2626", color: "#fff", padding: "10px 18px", border: "none", borderRadius: "10px", cursor: "pointer" }}>Clear Journal</button>}
 
-      {/* NEW: shared journal / invite a friend */}
       <SharedJournalPanel />
     </div>
   );

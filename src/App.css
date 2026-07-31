@@ -37,7 +37,12 @@ textarea{
 }
 textarea:focus{border-color:#d4b07a;box-shadow:0 0 0 3px rgba(212,176,122,0.15)}
 
-/* === THEME VARIABLES - BLACK & GOLD FOR BOTH MODES === */
+/* === THEME VARIABLES - BLACK & GOLD BY DEFAULT === */
+/* NEW: --accent added. This is the variable src/utils/applyTheme.js
+   overrides at runtime when someone picks a different theme in Settings -
+   previously nothing consumed a variable for the gold accent color at all,
+   it was hardcoded as #d4b07a directly everywhere, so switching themes had
+   nowhere to actually take effect. */
 :root {
   --bg: #0a0a0c;
   --card-bg: rgba(18,18,20,0.95);
@@ -45,6 +50,7 @@ textarea:focus{border-color:#d4b07a;box-shadow:0 0 0 3px rgba(212,176,122,0.15)}
   --text-h: #d4c5a0;
   --border: rgba(212,197,160,0.18);
   --muted: rgba(232,220,198,0.5);
+  --accent: #d4b07a;
 }
 [data-theme="dark"] {
   --bg: #0a0a0c;
@@ -53,6 +59,7 @@ textarea:focus{border-color:#d4b07a;box-shadow:0 0 0 3px rgba(212,176,122,0.15)}
   --text-h: #d4c5a0;
   --border: rgba(212,197,160,0.18);
   --muted: rgba(232,220,198,0.5);
+  --accent: #d4b07a;
 }
 [data-theme="light"] {
   --bg: #0a0a0c;
@@ -61,6 +68,7 @@ textarea:focus{border-color:#d4b07a;box-shadow:0 0 0 3px rgba(212,176,122,0.15)}
   --text-h: #d4c5a0;
   --border: rgba(212,197,160,0.18);
   --muted: rgba(232,220,198,0.5);
+  --accent: #d4b07a;
 }
 
 body, #root { background: var(--bg) !important; color: var(--text) !important; min-height:100vh; margin:0; transition: background 0.2s, color 0.2s; }
@@ -141,7 +149,7 @@ button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
   color:#000 !important;
 }
 
-/* === NEW: RISK COLORS - GREEN ORANGE RED - BLACK GOLD THEME === */
+/* === RISK COLORS - GREEN ORANGE RED - BLACK GOLD THEME === */
 .risk-badge{
   display:inline-flex;
   align-items:center;
