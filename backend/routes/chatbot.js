@@ -4,6 +4,9 @@ import optionalAuth from "../middleware/optionalAuth.js";
 import { localRiskFallback } from "../utils/localRiskFallback.js";
 import { saveAnalysis } from "../utils/saveAnalysis.js";
 import { awardXP } from "../utils/gamification.js";
+import { callGeminiResilient } from "../utils/geminiThrottle.js";
+import { chatWithGroq } from "../utils/groqFallback.js";
+import User from "../models/User.js";
 
 const router = express.Router();
 const GEMINI_MODEL = "gemini-1.5-flash";
@@ -58,22 +61,42 @@ router.post("/", optionalAuth, async (req, res) => {
       }
     }
 
-    // 2. Conversational reply
+    // 2. Conversational reply - Gemini first, Groq (free) if Gemini fails,
+    // generic supportive line only if both are unavailable.
     let reply = "I'm here. Tell me a bit more about what's going on?";
+    const transcript = messages
+      .slice(-10) // keep prompt small
+      .map((m) => `${m.role === "user" ? "Person" : "Emovra"}: ${m.text}`)
+      .join("\n");
+
+    let gotReply = false;
+
     if (process.env.GEMINI_API_KEY) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-        const transcript = messages
-          .slice(-10) // keep prompt small
-          .map((m) => `${m.role === "user" ? "Person" : "Emovra"}: ${m.text}`)
-          .join("\n");
-        const result = await model.generateContent(`${SYSTEM_PROMPT}\n\nConversation so far:\n${transcript}\n\nEmovra:`);
+        const result = await callGeminiResilient(() => model.generateContent(`${SYSTEM_PROMPT}\n\nConversation so far:\n${transcript}\n\nEmovra:`));
         reply = result.response.text().trim() || reply;
+        gotReply = true;
       } catch (e) {
         console.error("Chatbot Gemini error:", e.message?.slice(0, 200));
-        reply = "I'm having a little trouble thinking right now, but I'm still here - go on, I'm listening.";
       }
+    }
+
+    // NEW: Groq fallback - free, only tried when Gemini failed or wasn't
+    // configured at all. Doesn't touch the safety-net check above, which
+    // already ran on the person's message regardless of which AI (if any)
+    // ends up generating this reply.
+    if (!gotReply) {
+      const groqReply = await chatWithGroq(SYSTEM_PROMPT, `Conversation so far:\n${transcript}\n\nEmovra:`);
+      if (groqReply) {
+        reply = groqReply;
+        gotReply = true;
+      }
+    }
+
+    if (!gotReply) {
+      reply = "I'm having a little trouble thinking right now, but I'm still here - go on, I'm listening.";
     }
 
     // 3. XP for a real conversation (awarded once, right as it crosses the
@@ -81,7 +104,12 @@ router.post("/", optionalAuth, async (req, res) => {
     const userTurns = messages.filter((m) => m.role === "user").length;
     let gam = null;
     if (req.user?.id && userTurns === 3) {
-      gam = await awardXP(req.user.id, 10, { chatbotUsed: true });
+      const today = new Date().toISOString().slice(0, 10);
+      const user = await User.findById(req.user.id).select("lastChatbotXPDate");
+      if (user && user.lastChatbotXPDate !== today) {
+        gam = await awardXP(req.user.id, 10, { chatbotUsed: true });
+        await User.findByIdAndUpdate(req.user.id, { lastChatbotXPDate: today });
+      }
     }
 
     res.json({ success: true, reply, gamification: gam });

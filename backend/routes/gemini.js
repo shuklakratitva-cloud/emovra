@@ -4,6 +4,7 @@ import optionalAuth from "../middleware/optionalAuth.js";
 import { saveAnalysis } from "../utils/saveAnalysis.js";
 import { localRiskFallback } from "../utils/localRiskFallback.js";
 import { alertGeminiDown } from "../utils/alertEmail.js";
+import { callGeminiResilient } from "../utils/geminiThrottle.js";
 
 const router = express.Router();
 
@@ -73,7 +74,7 @@ IMPORTANT: reply must be warm, supportive, wellness only, not medical diagnosis.
 
     let aiData;
     try {
-      const result = await model.generateContent(prompt);
+      const result = await callGeminiResilient(() => model.generateContent(prompt));
       let text = result.response.text().replace(/```json|```/g, '').trim();
       aiData = JSON.parse(text);
     } catch (aiErr) {

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet"; // NEW: baseline security headers (was entirely missing)
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ import challengesRoutes from "./routes/challenges.js"; // NEW: daily challenges
 import habitsRoutes from "./routes/habits.js"; // NEW: habit tracker
 import chatbotRoutes from "./routes/chatbot.js"; // NEW: AI chatbot with follow-up questions
 import dashboardRoutes from "./routes/dashboard.js"; // NEW: personalized dashboard aggregation
+import privateJournalRoutes from "./routes/privateJournal.js"; // NEW: unanalyzed, encrypted, admin-invisible journal
 import insightsRoutes from "./routes/insights.js"; // NEW: mental health insights + early warning + monthly calendar
 import sleepRoutes from "./routes/sleep.js"; // NEW: sleep assistant log
 import goalsRoutes from "./routes/goals.js"; // NEW: goal planner
@@ -30,6 +32,12 @@ import profileRoutes from "./routes/profile.js"; // NEW: theme/avatar/birthday s
 const app = express();
 
 app.set('trust proxy', 1);
+
+// NEW: baseline security headers - was entirely missing before. Disabled
+// CSP here since this is a JSON API (no HTML pages served), and a default
+// CSP can sometimes interfere with API responses/CORS in ways that aren't
+// worth the tradeoff for a pure API server.
+app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(
   cors({
@@ -106,8 +114,15 @@ if (!process.env.GEMINI_API_KEY) {
 } else {
   console.log("✅ GEMINI_API_KEY found");
 }
+// FIX (real risk): this used to just warn and silently fall through to a
+// hardcoded, PUBLICLY KNOWN fallback key in utils/crypto.js if this env
+// var was ever unset - meaning "encrypted" journal/alert data wouldn't
+// actually be secret at all. Refusing to start is the right posture here
+// for a mental-health app handling encrypted crisis data - same as an
+// unset MONGO_URI already stops the server rather than degrading silently.
 if (!process.env.ENCRYPT_KEY && !process.env.ENCRYPTION_SECRET) {
-  console.warn("⚠ ENCRYPT_KEY / ENCRYPTION_SECRET missing - using fallback, set in Render env");
+  console.error("❌ ENCRYPT_KEY / ENCRYPTION_SECRET missing - refusing to start with weak fallback encryption. Set one of these in your Render env vars.");
+  process.exit(1);
 } else {
   console.log("✅ ENCRYPT_KEY found - privacy encryption enabled");
 }
@@ -150,6 +165,7 @@ app.use("/api/challenges", challengesRoutes); // NEW
 app.use("/api/habits", habitsRoutes); // NEW
 app.use("/api/chatbot", chatbotRoutes); // NEW
 app.use("/api/dashboard", dashboardRoutes); // NEW
+app.use("/api/private-journal", privateJournalRoutes); // NEW: unanalyzed, encrypted journal
 app.use("/api/insights", insightsRoutes); // NEW
 app.use("/api/sleep", sleepRoutes); // NEW
 app.use("/api/goals", goalsRoutes); // NEW

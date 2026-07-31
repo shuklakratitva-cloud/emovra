@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
   lastActiveDate: { type: String, default: "" },
   badges: [{ id: String, earnedAt: { type: Date, default: Date.now } }],
   claimedChallenges: [{ date: String, challengeId: String, claimedAt: { type: Date, default: Date.now } }],
+  lastChatbotXPDate: { type: String, default: "" }, // NEW: caps chatbot XP to once/day - see routes/chatbot.js
 
   // NEW: personalization - theme stays black/gold by default (see
   // data/themes.js), this is purely opt-in.

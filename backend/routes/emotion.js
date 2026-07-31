@@ -1,5 +1,6 @@
 import express from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { callGeminiResilient } from "../utils/geminiThrottle.js";
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ router.post("/analyze", async (req, res) => {
         - If mixed, take highest risk
         `;
 
-        const result = await model.generateContent(prompt);
+        const result = await callGeminiResilient(() => model.generateContent(prompt));
         let jsonText = result.response.text().replace(/```json|```/g, "").replace(/```/g, "").trim();
         const ai = JSON.parse(jsonText);
 

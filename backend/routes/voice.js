@@ -3,6 +3,7 @@ import multer from "multer";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Entry from "../models/Entry.js";
 import { protect as auth } from "../middleware/auth.js";
+import { callGeminiResilient } from "../utils/geminiThrottle.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -39,10 +40,10 @@ router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
     - happy, fine, okay = GREEN <40
     `;
 
-    const result = await model.generateContent([
+    const result = await callGeminiResilient(() => model.generateContent([
       { text: prompt },
       { inlineData: { mimeType: req.file.mimetype, data: audioBase64 } }
-    ]);
+    ]));
 
     let jsonText = result.response.text().replace(/```json|```/g, "").trim();
     const analysis = JSON.parse(jsonText);

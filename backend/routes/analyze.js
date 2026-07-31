@@ -6,6 +6,8 @@ import optionalAuth from '../middleware/optionalAuth.js';
 import { saveAnalysis } from '../utils/saveAnalysis.js';
 import { localRiskFallback } from '../utils/localRiskFallback.js';
 import { alertGeminiDown } from '../utils/alertEmail.js';
+import { callGeminiResilient, isSelfThrottled } from '../utils/geminiThrottle.js';
+import { classifyWithClaude } from '../utils/claudeFallback.js';
 
 const router = express.Router();
 
@@ -85,7 +87,14 @@ router.post('/otp/send', async (req, res) => {
 router.post('/otp/verify', async (req, res) => {
   try {
     const { phone, otp } = req.body;
-    if (!phone ||!otp) return res.status(400).json({ msg: "Phone and OTP required" });
+    // FIX (NoSQL injection): phone/otp previously went directly into
+    // Otp.findOne({ phone, otp }) with no type check. Sending
+    // {"otp": {"$ne": null}} instead of a string would make MongoDB treat
+    // it as a query operator - matching ANY existing OTP for that phone,
+    // completely bypassing verification. Reject non-strings outright.
+    if (typeof phone !== "string" || typeof otp !== "string" || !phone || !otp) {
+      return res.status(400).json({ msg: "Phone and OTP required" });
+    }
 
     const found = await Otp.findOne({ phone, otp });
     if (!found) {
@@ -162,7 +171,12 @@ router.post('/', optionalAuth, async (req, res) => {
     try {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-      const result = await model.generateContent(SYSTEM_PROMPT + "\n\nText: \"" + text + "\"");
+      // NEW: self-throttles if near GEMINI_MAX_RPM, retries once for
+      // transient (non-quota) errors before giving up - reduces how often
+      // we fall back without ever removing the fallback itself.
+      const result = await callGeminiResilient(() =>
+        model.generateContent(SYSTEM_PROMPT + "\n\nText: \"" + text + "\"")
+      );
       const txt = result.response.text() || "";
       const match = txt.match(/\{[\s\S]*\}/);
 
@@ -188,11 +202,12 @@ router.post('/', optionalAuth, async (req, res) => {
 
     } catch (e) {
       console.error("Gemini error:", e.message.slice(0,300));
+      const wasSelfThrottled = e.message?.includes("Self-throttled");
       geminiFailStreak += 1;
       if (e.message?.includes("429") || e.message?.toLowerCase().includes("quota")) {
         geminiCooldownUntil = Date.now() + 2 * 60 * 1000; // 2 min cooldown on quota errors
         alertGeminiDown(e.message?.slice(0, 200)); // NEW: page the admin instead of taking the site down
-      } else if (geminiFailStreak >= 3) {
+      } else if (geminiFailStreak >= 3 && !wasSelfThrottled) {
         geminiCooldownUntil = Date.now() + 60 * 1000;
         alertGeminiDown(e.message?.slice(0, 200));
       }

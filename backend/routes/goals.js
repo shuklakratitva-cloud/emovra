@@ -45,10 +45,15 @@ router.post("/:id/milestone/:index/toggle", auth, async (req, res) => {
     if (allDone && !goal.completed) {
       goal.completed = true;
       goal.completedAt = new Date();
-      gam = await awardXP(req.user.id, 20, {});
+      if (!goal.xpAwarded) {
+        gam = await awardXP(req.user.id, 20, {});
+        goal.xpAwarded = true;
+      }
     } else if (!allDone && goal.completed) {
       goal.completed = false;
       goal.completedAt = null;
+      // NOTE: xpAwarded is deliberately NOT reset here - the XP was earned
+      // and stays earned even if milestones get unchecked later.
     }
     await goal.save();
 

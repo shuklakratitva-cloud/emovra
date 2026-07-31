@@ -20,11 +20,19 @@ router.post("/strength/submit", auth, async (req, res) => {
     const resultKey = scoreQuiz(answers);
     const result = STRENGTH_QUIZ.results[resultKey];
 
+    // FIX (vulnerability): check BEFORE updating, so repeated submits in
+    // the same day don't farm XP - previously this awarded 10 XP on every
+    // single submit with no limit.
+    const existing = await User.findById(req.user.id).select("personalityResult");
+    const today = new Date().toISOString().slice(0, 10);
+    const alreadyToday = existing?.personalityResult?.takenAt &&
+      new Date(existing.personalityResult.takenAt).toISOString().slice(0, 10) === today;
+
     await User.findByIdAndUpdate(req.user.id, {
       personalityResult: { quizId: STRENGTH_QUIZ.id, resultKey, resultLabel: result.label, takenAt: new Date() },
     });
 
-    const gam = await awardXP(req.user.id, 10, {});
+    const gam = alreadyToday ? null : await awardXP(req.user.id, 10, {});
 
     res.json({ success: true, result: { key: resultKey, ...result }, gamification: gam });
   } catch (err) {

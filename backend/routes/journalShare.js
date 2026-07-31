@@ -56,7 +56,16 @@ router.post("/create", auth, async (req, res) => {
       entries: [],
     });
 
-    await awardXP(req.user.id, 8, { sharedJournal: true });
+    // FIX (vulnerability): previously awarded XP on every single call to
+    // this endpoint with no limit - a script could loop this and farm
+    // unlimited XP. Now only pays out for the person's first-ever shared
+    // journal (whether owned or joined).
+    const priorCount = await SharedJournal.countDocuments({
+      $or: [{ ownerId: req.user.id }, { "collaborators.userId": req.user.id }],
+    });
+    if (priorCount <= 1) {
+      await awardXP(req.user.id, 8, { sharedJournal: true });
+    }
 
     res.status(201).json({ success: true, journal: serialize(journal) });
   } catch (err) {
@@ -82,9 +91,8 @@ router.post("/join", auth, async (req, res) => {
     if (!already) {
       journal.collaborators.push({ userId: req.user.id, name: name || "" });
       await journal.save();
+      await awardXP(req.user.id, 8, { sharedJournal: true }); // FIX: moved inside this block - was previously outside, awarding on every call regardless of whether this was a real new join
     }
-
-    await awardXP(req.user.id, 8, { sharedJournal: true });
 
     res.json({ success: true, journal: serialize(journal) });
   } catch (err) {

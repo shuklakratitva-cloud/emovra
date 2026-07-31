@@ -89,7 +89,13 @@ router.post("/register", handleSignup);
 router.post("/login", async (req, res) => {
   try {
     let { email, password } = req.body;
-    email = email?.trim().toLowerCase();
+    // FIX (defense-in-depth): explicit type check instead of relying on
+    // .trim() incidentally throwing on a non-string (e.g. an injection
+    // payload like {"$gt":""}) - fails clean with a 400 instead of a 500.
+    if (typeof email !== "string" || typeof password !== "string") {
+      return res.status(400).json({ msg: "Email and password required" });
+    }
+    email = email.trim().toLowerCase();
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ msg: "User not found" });
@@ -189,7 +195,15 @@ router.post('/forgot-password/send', async (req, res) => {
 router.post('/forgot-password/reset', async (req, res) => {
   try {
     const { phone, otp, newPassword } = req.body;
-    if (!phone ||!otp ||!newPassword) return res.status(400).json({ msg: "All fields required" });
+    // FIX (NoSQL injection -> account takeover): otp previously went
+    // straight into Otp.findOne({..., otp, ...}) with no type check, on a
+    // PASSWORD RESET endpoint. {"otp": {"$ne": null}} would match any
+    // existing reset-purpose OTP for that phone number, letting an
+    // attacker reset someone else's password without ever knowing the
+    // real OTP. Reject non-strings outright.
+    if (typeof phone !== "string" || typeof otp !== "string" || typeof newPassword !== "string" || !phone || !otp || !newPassword) {
+      return res.status(400).json({ msg: "All fields required" });
+    }
     const cleanPhone = phone.replace(/\D/g, "");
     const found = await Otp.findOne({ phone: cleanPhone, otp, purpose: 'reset' });
     if (!found) return res.status(400).json({ msg: "Invalid or expired OTP" });
