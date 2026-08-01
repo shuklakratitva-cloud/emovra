@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import MindGuardApp from "./pages/MindGuardApp";
 import Dashboard from "./pages/Dashboard"; // NEW: personalized dashboard, shown right after login
+import PrivacyPolicy from "./pages/PrivacyPolicy"; // NEW: real, hosted privacy policy - needed for Google OAuth publishing
 // FIX: was importing AdminPanel, which calls a backend route
 // (/api/alerts/all) that never existed - the working Admin.jsx (with
 // working /api/admin/reds calls, filter tabs, WhatsApp/call buttons) was
@@ -42,6 +43,10 @@ export default function App() {
           <Dashboard />
         </ProtectedRoute>
       } />
+
+      {/* NEW: public, real privacy policy page - no login required, since
+          Google (and anyone else) needs to be able to reach it directly */}
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
       <Route path="/admin" element={
         <AdminRoute>
