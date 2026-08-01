@@ -128,6 +128,19 @@ if (!process.env.ENCRYPT_KEY && !process.env.ENCRYPTION_SECRET) {
   console.log("✅ ENCRYPT_KEY found - privacy encryption enabled");
 }
 
+// EMAIL_USER/EMAIL_APP_PASSWORD (Gmail SMTP) had no startup visibility at
+// all before, AND turned out to be fundamentally broken on Render's free
+// tier anyway - outbound SMTP (ports 25/465/587) is blocked at the
+// network level there, no code fix possible. Switched to Resend (HTTPS
+// API, not blocked). This check now looks for RESEND_API_KEY instead.
+// Email is optional (Gemini-down alerts + email OTP degrade gracefully
+// without it), so this doesn't block startup - just visibility.
+if (!process.env.RESEND_API_KEY) {
+  console.warn("⚠ RESEND_API_KEY missing - Gemini-down alerts and password-reset emails will show codes on-screen instead of emailing them");
+} else {
+  console.log("✅ RESEND_API_KEY found - email sending enabled");
+}
+
 app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled + Privacy RED/ORANGE only"));
 
 app.get("/health", (req, res) => res.status(200).send("OK"));

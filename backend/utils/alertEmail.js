@@ -7,13 +7,13 @@
 // utils/localRiskFallback.js) and just pages you instead.
 //
 // REQUIRED ENV VARS (set these in Render):
-//   EMAIL_USER            - a Gmail address to send FROM
-//   EMAIL_APP_PASSWORD    - a Gmail "app password" (not your normal password -
-//                            generate one at https://myaccount.google.com/apppasswords)
+//   RESEND_API_KEY         - free at https://resend.com (3,000 emails/month
+//                             free, no card required)
 //   ADMIN_ALERT_EMAIL      - optional, defaults to shukla.kratitva@gmail.com
 //
-// Uses the shared mailer in utils/mailer.js - same EMAIL_USER/EMAIL_APP_PASSWORD
-// now also powers the email OTP flow in routes/auth.js.
+// Uses the shared mailer in utils/mailer.js (Resend, HTTPS-based - not
+// blocked SMTP) - same setup also powers the email OTP flow in
+// routes/auth.js.
 
 import { sendEmail } from "./mailer.js";
 
