@@ -28,7 +28,7 @@ const AlertSchema = new mongoose.Schema(
 
     riskLevel: {
       type: String,
-      enum: ["GREEN", "ORANGE", "RED"],
+      enum: ["GREEN", "YELLOW", "ORANGE", "RED"],
       default: "GREEN",
     },
 

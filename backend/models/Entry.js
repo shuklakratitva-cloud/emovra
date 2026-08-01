@@ -14,7 +14,7 @@ const entrySchema = new mongoose.Schema({
   text_encrypted: { type: String, default: "" },
   text: { type: String, select: false }, // legacy field, kept for backward compat with old docs
 
-  riskLevel: { type: String, enum: ['GREEN','ORANGE','RED'], default: 'GREEN' },
+  riskLevel: { type: String, enum: ['GREEN','YELLOW','ORANGE','RED'], default: 'GREEN' },
   score: { type: Number, default: 0 },
   emotion: String,
   reasons: [String],

@@ -28,6 +28,16 @@ const ORANGE_WORDS = [
   "tension", "bechain", "low", "upset", "sad", "breakup", "kharab hai",
 ];
 
+// NEW: this classifier never had a YELLOW band at all - only GREEN/ORANGE/
+// RED - meaning even when Gemini and Groq were both down, the local
+// fallback could never produce YELLOW either. Mild, vague words that
+// don't rise to the ORANGE_WORDS level above.
+const YELLOW_WORDS = [
+  "tired", "thak gaya", "thak gayi", "off today", "not myself", "meh",
+  "bored", "boring day", "kinda down", "little down", "so-so", "okay-ish",
+  "bas aisa hi", "thoda low", "not sure why",
+];
+
 export function localRiskFallback(rawText) {
   const text = String(rawText || "");
   const lower = text.toLowerCase();
@@ -75,6 +85,17 @@ export function localRiskFallback(rawText) {
       risk: "ORANGE", score: 60 + Math.min(hits.length * 5, 20),
       reason: "Local fallback - distress keywords (AI unavailable)",
       triggers: ["anxiety", "distress"],
+      category: "general", abuseType: "none", abuseSource: "none",
+      isAI: false, isFallback: true,
+    };
+  }
+
+  const yellowHits = YELLOW_WORDS.filter((w) => lower.includes(w));
+  if (yellowHits.length > 0) {
+    return {
+      risk: "YELLOW", score: 30 + Math.min(yellowHits.length * 5, 15),
+      reason: "Local fallback - mild/vague unease (AI unavailable)",
+      triggers: ["mild_unease"],
       category: "general", abuseType: "none", abuseSource: "none",
       isAI: false, isFallback: true,
     };

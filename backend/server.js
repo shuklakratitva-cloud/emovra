@@ -29,6 +29,10 @@ import sleepRoutes from "./routes/sleep.js"; // NEW: sleep assistant log
 import goalsRoutes from "./routes/goals.js"; // NEW: goal planner
 import quizRoutes from "./routes/quiz.js"; // NEW: personality/strength quiz
 import profileRoutes from "./routes/profile.js"; // NEW: theme/avatar/birthday settings
+import accountRoutes from "./routes/account.js"; // NEW: self-serve data export + account deletion
+import weeklyDigestRoutes from "./routes/weeklyDigest.js"; // NEW: weekly reflection email, triggered by external cron
+import pushRoutes from "./routes/push.js"; // NEW: push notifications
+import lettersRoutes from "./routes/letters.js"; // NEW: scheduled letters to future self
 
 const app = express();
 
@@ -186,6 +190,10 @@ app.use("/api/sleep", sleepRoutes); // NEW
 app.use("/api/goals", goalsRoutes); // NEW
 app.use("/api/quiz", quizRoutes); // NEW
 app.use("/api/profile", profileRoutes); // NEW
+app.use("/api/account", accountRoutes); // NEW: data export + deletion
+app.use("/api/weekly-digest", weeklyDigestRoutes); // NEW: weekly reflection email
+app.use("/api/push", pushRoutes); // NEW: push notifications
+app.use("/api/letters", lettersRoutes); // NEW: scheduled letters to future self
 app.use("/api", geminiRoutes); // exposes POST /api/chat
 
 app.use((req, res) => {

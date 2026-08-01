@@ -8,6 +8,16 @@ const router = express.Router();
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
+// NEW: avatar accessories - unlockable emoji badges based on existing
+// level data, no new progression system needed
+const ACCESSORIES = [
+  { emoji: "🎩", minLevel: 3, name: "Top Hat" },
+  { emoji: "🕶️", minLevel: 5, name: "Sunglasses" },
+  { emoji: "👑", minLevel: 8, name: "Crown" },
+  { emoji: "🎀", minLevel: 12, name: "Bow" },
+  { emoji: "✨", minLevel: 16, name: "Sparkle" },
+];
+
 // NEW: max size for an uploaded avatar image, as a base64 data URI string.
 // ~280,000 chars is roughly 200KB of actual image data after base64
 // overhead - plenty for a small square avatar, and keeps User documents
@@ -18,13 +28,13 @@ const MAX_AVATAR_DATA_URI_LENGTH = 280000;
 
 // GET /api/profile/options - catalogs for the settings screen
 router.get("/options", (req, res) => {
-  res.json({ success: true, themes: Object.values(THEMES), avatars: AVATARS, musicMoods: MUSIC_MOODS });
+  res.json({ success: true, themes: Object.values(THEMES), avatars: AVATARS, musicMoods: MUSIC_MOODS, accessories: ACCESSORIES });
 });
 
 // GET /api/profile/me - current settings + birthday-today check
 router.get("/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("name themePreference customTheme avatar avatarType avatarImage birthdayMonth birthdayDay personalityResult");
+    const user = await User.findById(req.user.id).select("name themePreference customTheme avatar avatarType avatarImage avatarAccessory level birthdayMonth birthdayDay personalityResult");
     if (!user) return res.status(404).json({ success: false, message: "Not found" });
 
     const today = new Date();
@@ -39,6 +49,8 @@ router.get("/me", auth, async (req, res) => {
       avatar: user.avatar,
       avatarType: user.avatarType,
       avatarImage: user.avatarType === "custom" ? user.avatarImage : "",
+      avatarAccessory: user.avatarAccessory || "",
+      level: user.level || 1,
       birthdayMonth: user.birthdayMonth,
       birthdayDay: user.birthdayDay,
       isBirthdayToday,
@@ -54,7 +66,7 @@ router.get("/me", auth, async (req, res) => {
 // routes/auth.js)
 router.patch("/settings", auth, async (req, res) => {
   try {
-    const { themePreference, avatar, avatarImage, birthdayMonth, birthdayDay, customTheme } = req.body;
+    const { themePreference, avatar, avatarImage, avatarAccessory, birthdayMonth, birthdayDay, customTheme } = req.body;
     const update = {};
 
     // custom color picker - validates each value is a real hex color
@@ -92,11 +104,27 @@ router.patch("/settings", auth, async (req, res) => {
       update.avatarType = "emoji";
     }
 
+    // NEW: avatar accessory - level-gated, checked server-side (not just
+    // hidden in the UI) so someone can't unlock one early by just calling
+    // the API directly.
+    if (typeof avatarAccessory === "string") {
+      if (avatarAccessory === "") {
+        update.avatarAccessory = ""; // allow removing it
+      } else {
+        const currentUser = await User.findById(req.user.id).select("level");
+        const unlocked = ACCESSORIES.find((a) => a.emoji === avatarAccessory && (currentUser?.level || 1) >= a.minLevel);
+        if (!unlocked) {
+          return res.status(403).json({ success: false, message: "That accessory isn't unlocked yet." });
+        }
+        update.avatarAccessory = avatarAccessory;
+      }
+    }
+
     if (birthdayMonth && birthdayMonth >= 1 && birthdayMonth <= 12) update.birthdayMonth = birthdayMonth;
     if (birthdayDay && birthdayDay >= 1 && birthdayDay <= 31) update.birthdayDay = birthdayDay;
 
     const user = await User.findByIdAndUpdate(req.user.id, update, { new: true })
-      .select("themePreference customTheme avatar avatarType avatarImage birthdayMonth birthdayDay");
+      .select("themePreference customTheme avatar avatarType avatarImage avatarAccessory level birthdayMonth birthdayDay");
 
     res.json({
       success: true,
@@ -106,6 +134,8 @@ router.patch("/settings", auth, async (req, res) => {
       avatar: user.avatar,
       avatarType: user.avatarType,
       avatarImage: user.avatarType === "custom" ? user.avatarImage : "",
+      avatarAccessory: user.avatarAccessory || "",
+      level: user.level || 1,
       birthdayMonth: user.birthdayMonth,
       birthdayDay: user.birthdayDay,
     });

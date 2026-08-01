@@ -13,7 +13,8 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, default: "" },
   phoneVerified: { type: Boolean, default: false },
   googleId: { type: String, default: "", index: true },
-  emailVerified: { type: Boolean, default: false }, // NEW: soft verification - doesn't block login/signup, just tracked // NEW: links this account to a Google Sign-In identity
+  emailVerified: { type: Boolean, default: false },
+  lastWeeklyDigestSent: { type: String, default: "" }, // NEW: ISO date, prevents duplicate weekly emails // NEW: soft verification - doesn't block login/signup, just tracked // NEW: links this account to a Google Sign-In identity
 
   // Gamification (server-authoritative only)
   xp: { type: Number, default: 0 },
@@ -37,6 +38,7 @@ const userSchema = new mongoose.Schema({
   avatar: { type: String, default: "🦋" }, // emoji avatar
   avatarType: { type: String, enum: ["emoji", "custom"], default: "emoji" }, // NEW
   avatarImage: { type: String, default: "" }, // NEW: base64 data URI, only used when avatarType === "custom"
+  avatarAccessory: { type: String, default: "" }, // NEW: small emoji badge overlaid on avatar, unlocked by level
 
   // NEW: birthday messages - deliberately storing ONLY month/day, not a
   // full date of birth, since a full DOB isn't needed for "happy birthday"

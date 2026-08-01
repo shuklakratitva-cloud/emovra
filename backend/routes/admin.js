@@ -50,6 +50,17 @@ router.get("/reds", auth, isAdmin, async (req, res) => {
 // (all RED/ORANGE messages, not just school abuse - matches your requirement
 // that RED/ORANGE always shows user info here, while the separate `alerts`
 // collection stays classroom-abuse-only per the privacy rule)
+//
+// FIX (privacy, per request): message TEXT is now only decrypted and shown
+// for abuse cases (school_emotional_abuse or emoAbuseDetected) - these are
+// the ones that actually need a trusted admin to read the specifics and
+// potentially act. Regular RED/ORANGE entries (someone just going through
+// a hard time, no abuse involved) show user info + risk level + timestamp
+// so you can still see who might need a check-in, but the message content
+// itself stays marked as encrypted/hidden rather than casually readable -
+// there's a real difference between "someone may need support" and "here's
+// exactly what they wrote," and only the abuse case clearly warrants the
+// second one.
 router.get("/alerts", auth, isAdmin, async (req, res) => {
   try {
     const alerts = await Entry.find({
@@ -64,6 +75,7 @@ router.get("/alerts", auth, isAdmin, async (req, res) => {
 
     const result = alerts.map(a => {
       const obj = a.toObject();
+      const isAbuseCase = obj.category === "school_emotional_abuse" || obj.emoAbuseDetected === true || obj.abuseType === "home_abuse" || obj.abuseType === "school_emotional_abuse";
       return {
         _id: obj._id,
         user: obj.userId,
@@ -73,9 +85,11 @@ router.get("/alerts", auth, isAdmin, async (req, res) => {
         abuseType: obj.abuseType,
         abuseSource: obj.abuseSource,
         emoAbuseDetected: obj.emoAbuseDetected,
+        isAbuseCase,
         reasons: obj.reasons,
         triggers: obj.triggers,
-        text: obj.text_encrypted ? decrypt(obj.text_encrypted) : obj.text || "",
+        text: isAbuseCase ? (obj.text_encrypted ? decrypt(obj.text_encrypted) : obj.text || "") : null,
+        textHidden: !isAbuseCase,
         timestamp: obj.timestamp || obj.createdAt
       };
     });

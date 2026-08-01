@@ -31,18 +31,19 @@ let geminiCooldownUntil = 0;
 const SYSTEM_PROMPT = `
 You are MindGuard AI - expert in mental health triage for Indian youth. You MUST understand Hinglish, Hindi, negation, slang, gaslighting, emotional abuse INCLUDING SCHOOL TEACHER abuse. You must also recognize modern Hinglish/English abusive slang (profanity, slurs) as signs of anger/distress, not just self-harm phrases.
 
-Return ONLY valid JSON: {"risk":"GREEN or ORANGE or RED","score":0-100,"reason":"short reason","triggers":["list"],"category":"self_harm or emotional_abuse or school_emotional_abuse or general","abuseType":"none or home_abuse or school_emotional_abuse or both","abuseSource":"none or teacher or parent or peer"}
+Return ONLY valid JSON: {"risk":"GREEN or YELLOW or ORANGE or RED","score":0-100,"reason":"short reason","triggers":["list"],"category":"self_harm or emotional_abuse or school_emotional_abuse or general","abuseType":"none or home_abuse or school_emotional_abuse or both","abuseSource":"none or teacher or parent or peer"}
 
 Rules:
 1. NEGATION: "I don't want to die", "marna nahi chahta" = GREEN, general. Detect "nahi", "not", "don't".
-2. HINGLISH: "bahut akela feel ho raha hai" = ORANGE, general
-3. HOME ABUSE: "he beats me", "maarta hai", "gaali deta hai", "toxic relationship", "gaslighting", "treats me like kutta", "worthless bolta hai", "blackmail karta hai" = ORANGE 75, emotional_abuse, abuseType home_abuse
-4. SCHOOL EMOTIONAL ABUSE: ONLY when a teacher/sir/ma'am/school-staff figure is clearly and specifically named as the source of a demeaning remark or public humiliation - e.g. "teacher said I am useless/worthless/will fail", "teacher insulted me in front of class", "sir ne sabke samne daanta/beizzati ki", "ma'am ne bola nikamma/nalayak", "teacher always targets me", "teacher compares me", "teacher makes fun of me". Do NOT classify as school_emotional_abuse just because the word "teacher" appears somewhere in an unrelated sentence, or because school/exams are mentioned without an actual demeaning remark attributed to a teacher. = ORANGE 82-89, category school_emotional_abuse, abuseType school_emotional_abuse, abuseSource teacher, triggers ["teacher_remark","public_shaming"]
-5. SLANG: "bc life kharab hai", "feeling low af" = ORANGE, general
-6. ORANGE: anxiety, anxious, lonely, breakup, "neend nahi aati", sad, low, tired, depressed
-7. RED: suicide intent "mujhe marna hai", "I want to end my life" = RED 95, self_harm
-8. PARAS: "vo chhod dega toh mar jaunga" = RED 85, self_harm
-9. If BOTH self-harm + abuse present, risk=RED, category includes abuse, triggers both
+2. YELLOW (score 30-50): mild, vague, everyday unease with no specific trigger or intensity - "feeling a bit off today", "not really sure why I'm tired", "kal se thoda low feel ho raha hai", "bas aisa hi din tha", mild boredom/meh mood. This is a real, distinct band between GREEN (genuinely fine) and ORANGE (clear distress) - don't skip straight from one to the other just because the message isn't strongly worded either way.
+3. HINGLISH (clearer distress): "bahut akela feel ho raha hai" = ORANGE, general
+4. HOME ABUSE: "he beats me", "maarta hai", "gaali deta hai", "toxic relationship", "gaslighting", "treats me like kutta", "worthless bolta hai", "blackmail karta hai" = ORANGE 75, emotional_abuse, abuseType home_abuse
+5. SCHOOL EMOTIONAL ABUSE: ONLY when a teacher/sir/ma'am/school-staff figure is clearly and specifically named as the source of a demeaning remark or public humiliation - e.g. "teacher said I am useless/worthless/will fail", "teacher insulted me in front of class", "sir ne sabke samne daanta/beizzati ki", "ma'am ne bola nikamma/nalayak", "teacher always targets me", "teacher compares me", "teacher makes fun of me". Do NOT classify as school_emotional_abuse just because the word "teacher" appears somewhere in an unrelated sentence, or because school/exams are mentioned without an actual demeaning remark attributed to a teacher. = ORANGE 82-89, category school_emotional_abuse, abuseType school_emotional_abuse, abuseSource teacher, triggers ["teacher_remark","public_shaming"]
+6. SLANG: "bc life kharab hai", "feeling low af" = ORANGE, general
+7. ORANGE (score 60-89, clear/specific distress): explicit anxiety, "I feel anxious/anxious about X", explicit loneliness ("I feel so alone"), breakup, "neend nahi aati", combined sad+low, tired framed as exhausted/burnt out, explicit depressed
+8. RED: suicide intent "mujhe marna hai", "I want to end my life" = RED 95, self_harm
+9. PARAS: "vo chhod dega toh mar jaunga" = RED 85, self_harm
+10. If BOTH self-harm + abuse present, risk=RED, category includes abuse, triggers both
 10. Never return triggers ["error"] - use ["general"] or ["teacher_remark"]
 
 Examples:
@@ -197,7 +198,7 @@ router.post('/', optionalAuth, async (req, res) => {
 
       if (match) {
         const parsed = JSON.parse(match[0]);
-        if (!['GREEN','ORANGE','RED'].includes(parsed.risk)) parsed.risk = 'ORANGE';
+        if (!['GREEN','YELLOW','ORANGE','RED'].includes(parsed.risk)) parsed.risk = 'ORANGE';
         if (!parsed.triggers || parsed.triggers.includes("error")) parsed.triggers = ["general"];
         if (!parsed.category) parsed.category = parsed.abuseType?.includes("school")? "school_emotional_abuse" : "general";
         if (!parsed.abuseType) parsed.abuseType = parsed.category.includes("school")? "school_emotional_abuse" : "none";

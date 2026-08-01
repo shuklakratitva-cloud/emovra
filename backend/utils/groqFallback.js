@@ -60,7 +60,7 @@ export async function classifyWithGroq(systemPrompt, text) {
     if (!match) return null;
 
     const parsed = JSON.parse(match[0]);
-    if (!["GREEN", "ORANGE", "RED"].includes(parsed.risk)) parsed.risk = "ORANGE";
+    if (!["GREEN", "YELLOW", "ORANGE", "RED"].includes(parsed.risk)) parsed.risk = "ORANGE";
     if (!parsed.triggers || parsed.triggers.includes("error")) parsed.triggers = ["general"];
     if (!parsed.category) parsed.category = parsed.abuseType?.includes("school") ? "school_emotional_abuse" : "general";
     if (!parsed.abuseType) parsed.abuseType = parsed.category.includes("school") ? "school_emotional_abuse" : "none";
