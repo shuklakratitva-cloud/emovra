@@ -25,6 +25,8 @@ const SelfCareTools = lazy(() => import("../components/SelfCareTools")); // NEW
 const ScheduledLetters = lazy(() => import("../components/ScheduledLetters")); // NEW
 const LifeTimeline = lazy(() => import("../components/LifeTimeline")); // NEW
 const DigitalTimeMachine = lazy(() => import("../components/DigitalTimeMachine")); // NEW
+const DailyAffirmation = lazy(() => import("../components/DailyAffirmation")); // NEW
+const ComplimentGenerator = lazy(() => import("../components/ComplimentGenerator")); // NEW
 import VirtualPet from "../components/VirtualPet.jsx"; // NEW: tiny, no need to lazy-load
 import VirtualGarden from "../components/VirtualGarden.jsx"; // NEW: tiny, no need to lazy-load
 import GoalReminders from "../components/GoalReminders.jsx"; // NEW: tiny, no need to lazy-load
@@ -42,7 +44,10 @@ const SUB_TABS = [
   { id: "overview", label: "Overview" },
   { id: "habits-goals", label: "Habits & Goals" },
   { id: "insights", label: "Insights" },
-  { id: "wellness", label: "Wellness Tools" },
+  { id: "relax", label: "Relax" },
+  { id: "mind", label: "Mind & Games" },
+  { id: "creative", label: "Creative" },
+  { id: "reflect", label: "Reflect" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -266,22 +271,39 @@ export default function Dashboard() {
             </Suspense>
           )}
 
-          {subTab === "wellness" && (
+          {subTab === "relax" && (
+            <Suspense fallback={<Loader />}>
+              <RelaxationGames />
+              <ZenGarden />
+              <MusicTherapy />
+              <SelfCareTools />
+            </Suspense>
+          )}
+
+          {subTab === "mind" && (
+            <Suspense fallback={<Loader />}>
+              <CBTTools />
+              <MindGames />
+              <DigitalTimeMachine />
+            </Suspense>
+          )}
+
+          {subTab === "creative" && (
+            <Suspense fallback={<Loader />}>
+              <CreativeCorner />
+              <CreativeExpression />
+              <FortuneCookie />
+              <ComplimentGenerator />
+            </Suspense>
+          )}
+
+          {subTab === "reflect" && (
             <Suspense fallback={<Loader />}>
               <SleepAssistant />
-              <CreativeCorner />
-              <MusicTherapy />
-              <RelaxationGames />
               <SocialSkills />
-              <FortuneCookie />
-              <CBTTools />
-              <CreativeExpression />
-              <MindGames />
-              <ZenGarden />
-              <SelfCareTools />
-              <ScheduledLetters />
               <LifeTimeline />
-              <DigitalTimeMachine />
+              <ScheduledLetters />
+              <DailyAffirmation />
             </Suspense>
           )}
 

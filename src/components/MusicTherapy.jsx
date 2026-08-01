@@ -65,6 +65,24 @@ function useAmbientSound() {
     osc.stop(now + 0.2);
   }
 
+  // A single short percussive "clink" - used for café cup/spoon sounds,
+  // deliberately a noise burst (not a tone like the forest chirp) so the
+  // two ambiences are audibly distinct, not just differently-filtered noise
+  function clink(ctx, master) {
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 3);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 3500 + Math.random() * 2000;
+    const g = ctx.createGain();
+    g.gain.value = 0.35;
+    src.connect(filter).connect(g).connect(master);
+    src.start();
+  }
+
   function start(soundKind) {
     stop();
     const ctx = ctxRef.current || new (window.AudioContext || window.webkitAudioContext)();
@@ -80,14 +98,37 @@ function useAmbientSound() {
       const filter = ctx.createBiquadFilter();
       if (soundKind === "rain") { filter.type = "highpass"; filter.frequency.value = 800; }
       else if (soundKind === "white-noise") { filter.type = "lowpass"; filter.frequency.value = 2000; }
-      else if (soundKind === "forest") { filter.type = "bandpass"; filter.frequency.value = 500; filter.Q.value = 0.6; }
-      else { filter.type = "bandpass"; filter.frequency.value = 350; filter.Q.value = 0.4; } // cafe - low murmur band
-      noise.connect(filter).connect(master);
+      else if (soundKind === "forest") { filter.type = "bandpass"; filter.frequency.value = 900; filter.Q.value = 0.5; } // higher, airier - wind through leaves
+      else { filter.type = "bandpass"; filter.frequency.value = 220; filter.Q.value = 1.1; } // cafe - much lower, muffled murmur band, distinct from forest
+      noise.connect(filter);
+
+      if (soundKind === "cafe") {
+        // slow amplitude wobble (LFO) so the murmur ebbs and flows like
+        // background conversation, instead of a flat noise bed - this,
+        // combined with the much lower filter band and clink sounds
+        // instead of chirps, is what makes café audibly different from
+        // forest now, not just a different filter frequency
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.type = "sine"; lfo.frequency.value = 0.15;
+        lfoGain.gain.value = 0.08;
+        const wobble = ctx.createGain();
+        wobble.gain.value = 0.85;
+        lfo.connect(lfoGain).connect(wobble.gain);
+        lfo.start();
+        filter.connect(wobble).connect(master);
+        nodesRef.current = [noise, filter, master, lfo, lfoGain, wobble];
+      } else {
+        filter.connect(master);
+        nodesRef.current = [noise, filter, master];
+      }
       noise.start();
-      nodesRef.current = [noise, filter, master];
 
       if (soundKind === "forest") {
-        const id = setInterval(() => { if (Math.random() > 0.5) chirp(ctx, master); }, 1400);
+        const id = setInterval(() => { if (Math.random() > 0.3) chirp(ctx, master); }, 1100);
+        intervalsRef.current = [id];
+      } else if (soundKind === "cafe") {
+        const id = setInterval(() => { if (Math.random() > 0.4) clink(ctx, master); }, 2600);
         intervalsRef.current = [id];
       }
     } else if (soundKind === "fireplace") {
@@ -205,17 +246,31 @@ export default function MusicTherapy() {
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Find music for your mood</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {(moods || []).map((m) => (
-            <a
-              key={m.mood}
-              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.query)}`}
-              target="_blank" rel="noreferrer"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999, border: "1px solid var(--border)", color: "var(--text)", textDecoration: "none", fontSize: 12 }}
-            >
-              {m.emoji} {m.label}
-            </a>
+            <div key={m.mood} style={{ display: "flex", alignItems: "center", border: "1px solid var(--border)", borderRadius: 999, overflow: "hidden" }}>
+              <a
+                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.query)}`}
+                target="_blank" rel="noreferrer"
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", color: "var(--text)", textDecoration: "none", fontSize: 12 }}
+              >
+                {m.emoji} {m.label}
+              </a>
+              {/* NEW: Spotify search link - no account linking/OAuth (Spotify
+                  caps new developer apps at 5 total users as of 2026 unless
+                  you qualify for extended quota, which needs 250k+ MAU to
+                  even apply - not viable here. This is just a search URL,
+                  works for anyone, no limits, no Premium requirement). */}
+              <a
+                href={`https://open.spotify.com/search/${encodeURIComponent(m.query)}`}
+                target="_blank" rel="noreferrer"
+                title={`Search "${m.query}" on Spotify`}
+                style={{ display: "flex", alignItems: "center", padding: "8px 10px", borderLeft: "1px solid var(--border)", color: "#1DB954", textDecoration: "none", fontSize: 13 }}
+              >
+                ♫
+              </a>
+            </div>
           ))}
         </div>
-        <p style={{ fontSize: 10, opacity: 0.4, marginTop: 10 }}>Opens a search on YouTube in a new tab - not affiliated, just a starting point.</p>
+        <p style={{ fontSize: 10, opacity: 0.4, marginTop: 10 }}>Opens a search on YouTube or Spotify in a new tab - not affiliated, just a starting point.</p>
       </div>
     </div>
   );
