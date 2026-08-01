@@ -27,6 +27,39 @@ Rules:
   Tele-MANAS (14416) - but keep it natural, not a canned disclaimer.
 `;
 
+// NEW: relationship/social-skills coach mode - used by the Relationship
+// Chat feature (replaced the old static tip list in what used to be
+// SocialSkills.jsx). Same safety net, same Groq/Gemini fallback chain,
+// just a different system prompt - reuses all the existing chatbot
+// infrastructure instead of duplicating it.
+const RELATIONSHIP_SYSTEM_PROMPT = `
+You are Emovra AI, acting as a warm, honest relationship & social skills
+coach. Someone is describing a real situation - a friendship, family
+relationship, or romantic relationship - and wants to think it through.
+
+Your job:
+- Actually listen to the specifics of what they describe before responding
+  - don't give generic advice that could apply to anyone.
+- Gently point out real patterns worth noticing - unhealthy dynamics,
+  one-sided effort, communication breakdowns, or their own part in a
+  conflict - honestly, but kindly, never harshly or with blame.
+- Offer one concrete, practical next step or way to think about it, not a
+  lecture.
+- Ask a genuine follow-up question when there's a natural one, to
+  understand the situation better - not every reply needs one.
+
+Rules:
+- Keep replies short (3-5 sentences).
+- Never say "as an AI" or break character.
+- Never diagnose the other person in their story (e.g. "that sounds like
+  narcissistic abuse") - describe the PATTERN you're noticing in plain,
+  concrete terms instead of a clinical label.
+- If what they describe sounds like actual abuse (physical violence,
+  threats, controlling/isolating behavior), take that seriously and
+  gently encourage them to reach out to Tele-MANAS (14416) or a trusted
+  adult - don't just treat it as a normal relationship disagreement.
+`;
+
 // This route ALSO silently runs the same keyword-based risk check every
 // other entry point in this app uses (see utils/localRiskFallback.js), and
 // saves RED/ORANGE the same way analyze.js does. Without this, a chatbot
@@ -35,10 +68,11 @@ Rules:
 // that's not acceptable for this app, chatbot or not.
 router.post("/", optionalAuth, async (req, res) => {
   try {
-    const { messages } = req.body; // [{ role: 'user'|'assistant', text }]
+    const { messages, mode } = req.body; // mode: undefined (default) | "relationship"
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ success: false, message: "messages array required" });
     }
+    const activePrompt = mode === "relationship" ? RELATIONSHIP_SYSTEM_PROMPT : SYSTEM_PROMPT;
 
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     const userId = req.user?.id || req.body.userId || "anonymous";
@@ -72,7 +106,7 @@ router.post("/", optionalAuth, async (req, res) => {
 
     let gotReply = false;
 
-    const groqReply = await chatWithGroq(SYSTEM_PROMPT, `Conversation so far:\n${transcript}\n\nEmovra:`);
+    const groqReply = await chatWithGroq(activePrompt, `Conversation so far:\n${transcript}\n\nEmovra:`);
     if (groqReply) {
       reply = groqReply;
       gotReply = true;
@@ -83,7 +117,7 @@ router.post("/", optionalAuth, async (req, res) => {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-        const result = await callGeminiResilient(() => model.generateContent(`${SYSTEM_PROMPT}\n\nConversation so far:\n${transcript}\n\nEmovra:`));
+        const result = await callGeminiResilient(() => model.generateContent(`${activePrompt}\n\nConversation so far:\n${transcript}\n\nEmovra:`));
         reply = result.response.text().trim() || reply;
         gotReply = true;
       } catch (e) {
