@@ -25,6 +25,160 @@ export default function ThemeAvatarSettings() {
   // anything was wrong. This is what "Settings tab disappeared" actually
   // was. Now shows a real error state with a retry button instead.
   const [loadError, setLoadError] = useState("");
+  // NEW: data export + account deletion state
+  const [exporting, setExporting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [moodWallpaperMsg, setMoodWallpaperMsg] = useState("");
+
+  const MOOD_COLORS = {
+    Happy: "#4ade80", Calm: "#60a5fa", Neutral: "#d4c5a0", Sad: "#818cf8",
+    Anxious: "#fb923c", Angry: "#f87171", Lonely: "#a78bfa", Overwhelmed: "#f472b6",
+    "Don't Know What To Do": "#fbbf24", "Everything Fell On You At Once": "#f97316",
+  };
+
+  // NEW: mood-themed avatar - the avatar's ring color reflects your most
+  // recently logged mood, reusing the same MOOD_COLORS map as the mood
+  // wallpaper feature above
+  function moodRingColor() {
+    try {
+      const history = JSON.parse(localStorage.getItem("mental_health_mood_history") || "[]");
+      if (!history.length) return null;
+      return MOOD_COLORS[history[0].mood] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function useMoodAsWallpaper() {
+    try {
+      const history = JSON.parse(localStorage.getItem("mental_health_mood_history") || "[]");
+      if (!history.length) {
+        setMoodWallpaperMsg("Log a mood in the Mood Tracker first, then come back here.");
+        return;
+      }
+      const latestMood = history[0].mood;
+      const color = MOOD_COLORS[latestMood];
+      if (!color) {
+        setMoodWallpaperMsg("Couldn't match that mood to a color - try again.");
+        return;
+      }
+      setCustomBg(color);
+      previewCustom({ bg: color });
+      setMoodWallpaperMsg(`Background set to your "${latestMood}" mood color - click "Save custom theme" to keep it.`);
+    } catch {
+      setMoodWallpaperMsg("Something went wrong reading your mood history.");
+    }
+  }
+  // NEW: push notifications
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushMsg, setPushMsg] = useState("");
+  const pushSupported = typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+
+  useEffect(() => {
+    if (!pushSupported) return;
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      reg?.pushManager.getSubscription().then((sub) => setPushSubscribed(!!sub));
+    });
+  }, [pushSupported]);
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+  }
+
+  async function enablePush() {
+    setPushLoading(true);
+    setPushMsg("");
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setPushMsg("Notifications were blocked - you can re-enable them in your browser's site settings.");
+        setPushLoading(false);
+        return;
+      }
+      const keyRes = await fetch(`${API}/push/vapid-public-key`);
+      const keyData = await keyRes.json();
+      if (!keyData.success) {
+        setPushMsg("Push notifications aren't set up on the server yet.");
+        setPushLoading(false);
+        return;
+      }
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(keyData.key),
+      });
+      await fetch(`${API}/push/subscribe`, { method: "POST", headers: authHeaders(), body: JSON.stringify(sub.toJSON()) });
+      setPushSubscribed(true);
+      setPushMsg("Notifications enabled.");
+    } catch (e) {
+      setPushMsg("Couldn't enable notifications - try again.");
+    }
+    setPushLoading(false);
+  }
+
+  async function disablePush() {
+    setPushLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = await reg?.pushManager.getSubscription();
+      if (sub) {
+        await fetch(`${API}/push/unsubscribe`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ endpoint: sub.endpoint }) });
+        await sub.unsubscribe();
+      }
+      setPushSubscribed(false);
+      setPushMsg("Notifications turned off.");
+    } catch {
+      setPushMsg("Something went wrong - try again.");
+    }
+    setPushLoading(false);
+  }
+
+  async function exportData() {
+    setExporting(true);
+    try {
+      const res = await fetch(`${API}/account/export`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("export failed");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `emovra-my-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Couldn't export your data - try again in a moment.");
+    }
+    setExporting(false);
+  }
+
+  async function deleteAccount() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`${API}/account`, { method: "DELETE", headers: authHeaders() });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/";
+      } else {
+        alert(data.message || "Could not delete account.");
+        setDeleting(false);
+      }
+    } catch {
+      alert("Something went wrong - try again.");
+      setDeleting(false);
+    }
+  }
 
   function loadProfile() {
     setLoadError("");
@@ -186,6 +340,14 @@ export default function ThemeAvatarSettings() {
         {!isCustomActive && (
           <p style={{ fontSize: 10, opacity: 0.5, marginTop: 8 }}>Saving will switch your active theme to this custom one.</p>
         )}
+
+        {/* NEW: mood wallpaper - reuses the custom theme system, just
+            auto-fills the background color from your most recent logged
+            mood instead of you picking manually */}
+        <button onClick={useMoodAsWallpaper} style={{ marginTop: 10, marginLeft: 10, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 18px", borderRadius: 999, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+          🎨 Use my mood as background
+        </button>
+        {moodWallpaperMsg && <p style={{ fontSize: 11, opacity: 0.6, marginTop: 6 }}>{moodWallpaperMsg}</p>}
       </div>
 
       <div style={{ marginTop: 20 }}>
@@ -193,10 +355,15 @@ export default function ThemeAvatarSettings() {
 
         {/* NEW: current avatar preview, shows either the uploaded image or the emoji */}
         <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 60, height: 60, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "var(--card-bg)" }}>
-            {current.avatarType === "custom" && current.avatarImage
-              ? <img src={current.avatarImage} alt="Your avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : (current.avatar || "🦋")}
+          <div style={{ position: "relative", width: 60, height: 60 }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", overflow: "hidden", border: `2px solid ${moodRingColor() || "var(--accent)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "var(--card-bg)" }}>
+              {current.avatarType === "custom" && current.avatarImage
+                ? <img src={current.avatarImage} alt="Your avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : (current.avatar || "🦋")}
+            </div>
+            {current.avatarAccessory && (
+              <span style={{ position: "absolute", bottom: -2, right: -2, fontSize: 18, background: "var(--card-bg)", borderRadius: "50%", padding: 2 }}>{current.avatarAccessory}</span>
+            )}
           </div>
           <label style={{ fontSize: 12, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 14px", borderRadius: 999, cursor: uploading ? "wait" : "pointer", opacity: uploading ? 0.6 : 1 }}>
             {uploading ? "Uploading..." : "Upload your own photo"}
@@ -212,6 +379,32 @@ export default function ThemeAvatarSettings() {
             </button>
           ))}
         </div>
+
+        {/* NEW: avatar accessories - unlockable by level */}
+        {options.accessories?.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8 }}>Accessories (unlock by leveling up)</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button onClick={() => save({ avatarAccessory: "" })} style={{ fontSize: 11, padding: "8px 12px", borderRadius: 999, border: !current.avatarAccessory ? "2px solid #d4b07a" : "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer" }}>
+                None
+              </button>
+              {options.accessories.map((acc) => {
+                const unlocked = (current.level || 1) >= acc.minLevel;
+                return (
+                  <button
+                    key={acc.emoji}
+                    onClick={() => unlocked && save({ avatarAccessory: acc.emoji })}
+                    disabled={!unlocked}
+                    title={unlocked ? acc.name : `Unlocks at level ${acc.minLevel}`}
+                    style={{ fontSize: 18, padding: "8px 12px", borderRadius: 999, border: current.avatarAccessory === acc.emoji ? "2px solid #d4b07a" : "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: unlocked ? "pointer" : "not-allowed", opacity: unlocked ? 1 : 0.35 }}
+                  >
+                    {acc.emoji} {!unlocked && <span style={{ fontSize: 9 }}>🔒Lv{acc.minLevel}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop: 20 }}>
@@ -229,6 +422,58 @@ export default function ThemeAvatarSettings() {
       </div>
 
       {saved && <p style={{ fontSize: 12, color: "#4ade80", marginTop: 12 }}>Saved ✓</p>}
+
+      {/* NEW: push notifications toggle */}
+      {pushSupported && (
+        <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Notifications</div>
+          <p style={{ fontSize: 11, opacity: 0.6, marginBottom: 10 }}>A gentle daily nudge to check in, only if you haven't already that day.</p>
+          <button
+            onClick={pushSubscribed ? disablePush : enablePush}
+            disabled={pushLoading}
+            style={{ padding: "8px 18px", borderRadius: 999, border: pushSubscribed ? "1px solid var(--border)" : "none", background: pushSubscribed ? "transparent" : "var(--accent)", color: pushSubscribed ? "var(--text)" : "#000", fontWeight: 700, cursor: "pointer", fontSize: 12 }}
+          >
+            {pushLoading ? "Working..." : pushSubscribed ? "Turn off notifications" : "Enable daily reminder"}
+          </button>
+          {pushMsg && <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>{pushMsg}</p>}
+        </div>
+      )}
+
+      {/* NEW: self-serve data export + account deletion - actually
+          delivers on what the Privacy Policy promises, instead of leaving
+          it as a manual email-me process */}
+      <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Your Data</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={exportData} disabled={exporting} style={{ padding: "8px 16px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12 }}>
+            {exporting ? "Preparing..." : "⬇ Export my data"}
+          </button>
+          <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: "8px 16px", borderRadius: 999, border: "1px solid #f87171", background: "transparent", color: "#f87171", cursor: "pointer", fontSize: 12 }}>
+            Delete my account
+          </button>
+        </div>
+
+        {showDeleteConfirm && (
+          <div style={{ marginTop: 14, padding: 16, borderRadius: 12, border: "1px solid #f87171", background: "rgba(248,113,113,0.06)" }}>
+            <p style={{ fontSize: 13, margin: "0 0 10px" }}>
+              This permanently deletes your account, journal, check-in history, habits, goals, and everything else. <b>This can't be undone.</b> Type <b>DELETE</b> to confirm.
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="Type DELETE" style={{ flex: 1, minWidth: 140, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
+              <button
+                onClick={deleteAccount}
+                disabled={deleteConfirmText !== "DELETE" || deleting}
+                style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: deleteConfirmText === "DELETE" ? "#dc2626" : "#555", color: "#fff", fontWeight: 700, cursor: deleteConfirmText === "DELETE" ? "pointer" : "not-allowed", fontSize: 12 }}
+              >
+                {deleting ? "Deleting..." : "Permanently delete"}
+              </button>
+              <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 12 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

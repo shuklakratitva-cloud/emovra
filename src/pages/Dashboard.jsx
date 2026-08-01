@@ -14,6 +14,20 @@ const CreativeCorner = lazy(() => import("../components/CreativeCorner"));
 const MusicTherapy = lazy(() => import("../components/MusicTherapy"));
 const PersonalityQuiz = lazy(() => import("../components/PersonalityQuiz"));
 const ThemeAvatarSettings = lazy(() => import("../components/ThemeAvatarSettings"));
+const RelaxationGames = lazy(() => import("../components/RelaxationGames")); // NEW
+const SocialSkills = lazy(() => import("../components/SocialSkills")); // NEW
+const FortuneCookie = lazy(() => import("../components/FortuneCookie")); // NEW
+const CBTTools = lazy(() => import("../components/CBTTools")); // NEW
+const CreativeExpression = lazy(() => import("../components/CreativeExpression")); // NEW
+const MindGames = lazy(() => import("../components/MindGames")); // NEW
+const ZenGarden = lazy(() => import("../components/ZenGarden")); // NEW
+const SelfCareTools = lazy(() => import("../components/SelfCareTools")); // NEW
+const ScheduledLetters = lazy(() => import("../components/ScheduledLetters")); // NEW
+const LifeTimeline = lazy(() => import("../components/LifeTimeline")); // NEW
+const DigitalTimeMachine = lazy(() => import("../components/DigitalTimeMachine")); // NEW
+import VirtualPet from "../components/VirtualPet.jsx"; // NEW: tiny, no need to lazy-load
+import VirtualGarden from "../components/VirtualGarden.jsx"; // NEW: tiny, no need to lazy-load
+import GoalReminders from "../components/GoalReminders.jsx"; // NEW: tiny, no need to lazy-load
 
 const API = "https://emovra.onrender.com/api";
 
@@ -140,6 +154,10 @@ export default function Dashboard() {
           <div style={{ fontSize: 10, color: "rgba(232,220,198,0.4)", marginTop: 6 }}>{progressPct}% to level {(g?.level || 1) + 1}</div>
         </div>
 
+        {/* NEW: virtual pet - grows with existing level/XP, no new backend state */}
+        <VirtualPet level={g?.level || 1} xp={g?.xp || 0} />
+        <VirtualGarden />
+
         {data?.isBirthdayToday && (
           <div style={{ background: "linear-gradient(135deg, rgba(212,176,122,0.2), rgba(168,85,247,0.12))", border: "1px solid var(--accent)", borderRadius: 16, padding: 20, marginTop: 16, textAlign: "center" }}>
             <div style={{ fontSize: 28 }}>🎂🎉</div>
@@ -236,6 +254,7 @@ export default function Dashboard() {
             <Suspense fallback={<Loader />}>
               <HabitTracker />
               <GoalPlanner />
+              <GoalReminders />
             </Suspense>
           )}
 
@@ -252,6 +271,17 @@ export default function Dashboard() {
               <SleepAssistant />
               <CreativeCorner />
               <MusicTherapy />
+              <RelaxationGames />
+              <SocialSkills />
+              <FortuneCookie />
+              <CBTTools />
+              <CreativeExpression />
+              <MindGames />
+              <ZenGarden />
+              <SelfCareTools />
+              <ScheduledLetters />
+              <LifeTimeline />
+              <DigitalTimeMachine />
             </Suspense>
           )}
 

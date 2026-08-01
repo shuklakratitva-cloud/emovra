@@ -15,7 +15,7 @@ import { getGreenMessage, getYellowMessage, getOrangeMessage, getRedMessage } fr
 // YELLOW previously had no branch at all here and silently fell into the
 // RED styling - fixed below.
 
-export default function RiskCard({ analysis, userName }) {
+export default function RiskCard({ analysis, userName, emergencyPhone }) {
   if (!analysis) return null;
   const level = String(analysis.riskLevel || analysis.risk || analysis.level || "GREEN").toUpperCase();
   const isRed = level === "RED";
@@ -97,17 +97,22 @@ export default function RiskCard({ analysis, userName }) {
               📞 Kiran: 1800-599-0019
             </a>
           )}
+          {isRed && emergencyPhone && (
+            <a href={`tel:${emergencyPhone}`} style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: "transparent", color: "var(--text)", padding: "10px 18px",
+              borderRadius: 20, textDecoration: "none", fontWeight: 600, fontSize: 13,
+              border: "1px solid var(--border)"
+            }}>
+              📞 Call Your SOS: {emergencyPhone}
+            </a>
+          )}
         </div>
       )}
 
-      {/* YELLOW: softer, optional support link - present but not pushed as hard as ORANGE/RED */}
-      {isYellow && (
-        <div style={{ marginTop: 12 }}>
-          <a href="tel:14416" style={{ fontSize: 12, color: "#d4c5a0", textDecoration: "underline" }}>
-            Want to talk to someone? Tele-MANAS: 14416
-          </a>
-        </div>
-      )}
+      {/* FIX: per request, GREEN and YELLOW no longer show any helpline
+          link at all - only RED/ORANGE do. The warm "Just checking in"
+          message above still applies to YELLOW, just without the link. */}
 
       {analysis.emotion && (
         <div style={{ marginTop: 12 }}>

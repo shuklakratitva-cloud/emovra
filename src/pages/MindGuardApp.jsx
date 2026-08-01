@@ -517,35 +517,17 @@ useEffect(() => {
 
               {analysis && (
                 <div style={{ marginTop: 16 }}>
-                  {analysis.riskLevel === "RED" && (
-                    <div style={{ padding: 20, background: "rgba(212,197,160,0.12)", border: "1px solid rgba(212,197,160,0.3)", borderRadius: 16, marginBottom: 16 }}>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: 24 }}>🫂</span>
-                        <b style={{ color: "var(--text-h)", fontSize: 16 }}>We are here for you</b>
-                      </div>
-                      <div style={{ fontSize: 13, color: 'rgba(232,220,198,0.85)', lineHeight: 1.5 }}>
-                        We noticed you're going through a tough time. You are not alone. Talking to someone can help — it's confidential and free.
-                      </div>
-                      <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-                        <a href="tel:14416" style={{ padding: "12px 18px", background: "var(--text-h)", color: "#000", borderRadius: 10, textDecoration: "none", fontWeight: 800, fontSize: 13 }}>💛 Call Tele-MANAS 14416</a>
-                        {user.emergencyPhone && (
-                          <a href={`tel:${user.emergencyPhone}`} style={{ padding: "12px 18px", background: "rgba(255,255,255,0.08)", color: "var(--text)", border: "0.5px solid rgba(212,197,160,0.2)", borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
-                            📞 Call Your SOS: {user.emergencyPhone}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {analysis.riskLevel === "ORANGE" && (
-                    <div style={{ padding: 16, background: analysis.category === "school_emotional_abuse"? "rgba(251,146,60,0.15)" : "rgba(234,88,12,0.08)", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 12, color: "#fb923c", marginBottom: 12 }}>
-                      <b>{analysis.category === "school_emotional_abuse"? "🏫 School Emotional Abuse Detected - ORANGE" : "⚠ ORANGE - Moderate Stress"}</b>
-                      <div style={{ fontSize: 13, marginTop: 6, color:'rgba(255,255,255,0.7)' }}>
-                        {analysis.category === "school_emotional_abuse"? `Teacher remark: ${analysis.reasons?.join(", ")} | AbuseType: ${analysis.abuseType}` : "Stress/anxiety detected. Take a break, try grounding exercises below."}
-                      </div>
-                    </div>
-                  )}
+                  {/* FIX: this used to have two entire legacy risk-display
+                      blocks here (one for RED, one for ORANGE) from before
+                      RiskCard.jsx was redesigned - they were never removed,
+                      so they rendered ABOVE the new RiskCard, duplicating
+                      it and leaking raw badge text like "ORANGE - Moderate
+                      Stress" that the redesign was specifically meant to
+                      eliminate. The RED block's SOS-call-your-own-contact
+                      button was real, useful functionality though - moved
+                      into RiskCard.jsx itself instead of deleted. */}
                   <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:8 }}>
-                    <RiskCard analysis={analysis} text={analysis.text} userName={user.name} />
+                    <RiskCard analysis={analysis} text={analysis.text} userName={user.name} emergencyPhone={user.emergencyPhone} />
                     <Suspense fallback={<Loader />}><MoodChart history={history.length? history : [analysis]} /></Suspense>
                   </div>
                   <div style={{ marginTop: 12, padding: 14, border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 12, background: "rgba(18,18,20,0.9)", color: "var(--text)", fontSize:13 }}><b style={{ color:'var(--text-h)' }}>Advice:</b> {advice}</div>

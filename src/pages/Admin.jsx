@@ -62,7 +62,7 @@ export default function Admin() {
   return (
     <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto", minHeight: "100vh", background: "#0a0a0c", color: "#e8dcc6" }}>
       <h1 style={{ color: "#d4c5a0" }}>Admin Panel - {filter === "emotional_abuse" ? "EMOTIONAL ABUSE" : filter === "self_harm" ? "SELF-HARM" : "ALL ALERTS"} ({filteredReds.length})</h1>
-      <p style={{ color: "#666" }}>Encrypted journal stays private. Only RED/ORANGE with user consent shown here.</p>
+      <p style={{ color: "#666" }}>Abuse cases show full message content for review. Regular RED/ORANGE alerts show user info only - message content stays private. Sorted by most recent first.</p>
 
       {/* === NEW: TABS FOR SEPARATE SECTIONS === */}
       <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
@@ -82,13 +82,18 @@ export default function Admin() {
         const emergencyName = userData.emergencyName || entry.emergencyName || "Emergency Contact";
         const countryCode = userData.countryCode || "";
         const text = entry.text || entry.message || "";
+        const textHidden = entry.textHidden === true;
         const triggers = entry.triggers ? entry.triggers.join(", ") : entry.emotion || "self-harm";
         const level = entry.score || entry.level || 98;
-        const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "";
+        const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : (entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "");
         const age = userData.age || entry.age || "";
         const category = entry.category || (triggers.includes("emotional_abuse") ? "emotional_abuse" : "self_harm");
         const riskLevel = (entry.riskLevel || entry.risk || "RED").toUpperCase();
-        const isAbuse = category === "emotional_abuse";
+        // FIX: use the backend's isAbuseCase flag (school_emotional_abuse OR
+        // emoAbuseDetected OR home_abuse) instead of re-deriving it loosely
+        // from category text - matches which entries actually have their
+        // message text decrypted server-side.
+        const isAbuse = entry.isAbuseCase === true || category === "emotional_abuse";
         const cleanPhoneWA = getCleanPhoneForWhatsApp(phone);
 
         return (
@@ -106,7 +111,11 @@ export default function Admin() {
             </div>
 
             <div style={{ marginTop: 10, fontSize: 14, background: "#141416", padding: 10, borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.12)" }}>
-              <div><b>Message:</b> "{text}"</div>
+              {textHidden ? (
+                <div style={{ color: "#888", fontStyle: "italic" }}>🔒 Message content stays private for non-abuse alerts - user info shown so you can check in if needed, but the actual message isn't casually readable here.</div>
+              ) : (
+                <div><b>Message:</b> "{text}"</div>
+              )}
               <div style={{ marginTop: 4 }}><b>Triggers:</b> {triggers}</div>
               <div style={{ marginTop: 4 }}><b>Emergency Contact:</b> {emergencyName} - <b>{phone}</b></div>
             </div>
@@ -128,7 +137,7 @@ export default function Admin() {
               ) : (
                 <span style={{ background: "#fef2f2", color: "#dc2626", padding: "10px", borderRadius: 8, fontSize: 13 }}>⚠ No emergency phone - user registered before fix</span>
               )}
-              <button onClick={() => navigator.clipboard.writeText(`User: ${name} (${email})\nMessage: ${text}\nPhone: ${phone}`)} style={{ background: "#1f2937", color: "white", padding: "10px 12px", border: "none", borderRadius: 8, cursor: "pointer" }}>📋 Copy</button>
+              <button onClick={() => navigator.clipboard.writeText(textHidden ? `User: ${name} (${email})\nPhone: ${phone}` : `User: ${name} (${email})\nMessage: ${text}\nPhone: ${phone}`)} style={{ background: "#1f2937", color: "white", padding: "10px 12px", border: "none", borderRadius: 8, cursor: "pointer" }}>📋 Copy</button>
             </div>
           </div>
         );
