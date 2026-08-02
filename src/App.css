@@ -187,3 +187,21 @@ button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
   border: 0.5px solid rgba(212,197,160,0.18) !important;
   color: #e8dcc6 !important;
 }
+
+/* NEW: high-contrast accessibility mode - boosts text/border contrast
+   against the dark background without needing to touch every component's
+   individual styling. Toggled via Settings, saved to localStorage. */
+body.emovra-high-contrast {
+  --text: #ffffff !important;
+  --text-h: #ffe9b3 !important;
+  --border: rgba(255,255,255,0.45) !important;
+  --muted: #e5e5e5 !important;
+}
+body.emovra-high-contrast * {
+  text-shadow: none !important;
+}
+body.emovra-high-contrast button,
+body.emovra-high-contrast input,
+body.emovra-high-contrast textarea {
+  border-width: 2px !important;
+}

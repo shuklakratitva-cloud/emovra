@@ -11,6 +11,7 @@ export default function ScheduledLetters() {
   const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [search, setSearch] = useState(""); // NEW - only filters delivered (readable) letters; locked ones always show since there's no text to search yet
 
   function load() {
     fetch(`${API}/letters`, { headers: authHeaders() })
@@ -63,7 +64,17 @@ export default function ScheduledLetters() {
       {letters.length > 0 && (
         <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
           <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.7 }}>Your letters</p>
-          {letters.map((l) => (
+          {letters.filter((l) => l.delivered).length > 1 && (
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search delivered letters..."
+              style={{ width: "100%", padding: "8px 14px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", marginBottom: 10 }}
+            />
+          )}
+          {letters
+            .filter((l) => !l.delivered || !search.trim() || l.text.toLowerCase().includes(search.trim().toLowerCase()))
+            .map((l) => (
             <div key={l._id} style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border)", marginTop: 8 }}>
               {l.delivered ? (
                 <>

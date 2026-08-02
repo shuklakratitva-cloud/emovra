@@ -26,6 +26,7 @@ const ScheduledLetters = lazy(() => import("../components/ScheduledLetters")); /
 const LifeTimeline = lazy(() => import("../components/LifeTimeline")); // NEW
 const DigitalTimeMachine = lazy(() => import("../components/DigitalTimeMachine")); // NEW
 const DailyAffirmation = lazy(() => import("../components/DailyAffirmation")); // NEW
+const SafetyPlan = lazy(() => import("../components/SafetyPlan")); // NEW
 const ComplimentGenerator = lazy(() => import("../components/ComplimentGenerator")); // NEW
 import VirtualPet from "../components/VirtualPet.jsx"; // NEW: tiny, no need to lazy-load
 import VirtualGarden from "../components/VirtualGarden.jsx"; // NEW: tiny, no need to lazy-load
@@ -304,6 +305,7 @@ export default function Dashboard() {
               <LifeTimeline />
               <ScheduledLetters />
               <DailyAffirmation />
+              <SafetyPlan />
             </Suspense>
           )}
 

@@ -9,6 +9,7 @@ export default function LifeTimeline() {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
+  const [search, setSearch] = useState(""); // NEW
 
   useEffect(() => { setEvents(load()); }, []);
 
@@ -41,19 +42,34 @@ export default function LifeTimeline() {
       </div>
 
       {events.length > 0 && (
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search your timeline..."
+          style={{ width: "100%", marginTop: 16, padding: "8px 14px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }}
+        />
+      )}
+
+      {events.length > 0 && (() => {
+        const filtered = search.trim()
+          ? events.filter((e) => e.title.toLowerCase().includes(search.trim().toLowerCase()) || e.note.toLowerCase().includes(search.trim().toLowerCase()))
+          : events;
+        if (filtered.length === 0) return <p style={{ opacity: 0.6, fontSize: 13, marginTop: 12 }}>No moments match "{search}".</p>;
+        return (
         <div style={{ marginTop: 20, position: "relative", paddingLeft: 20 }}>
           <div style={{ position: "absolute", left: 4, top: 4, bottom: 4, width: 2, background: "var(--border)" }} />
-          {events.map((e, i) => (
+          {filtered.map((e, i) => (
             <div key={i} style={{ position: "relative", marginBottom: 16 }}>
               <div style={{ position: "absolute", left: -20, top: 4, width: 10, height: 10, borderRadius: "50%", background: "var(--accent)" }} />
               <div style={{ fontSize: 11, opacity: 0.5 }}>{e.date}</div>
               <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>{e.title}</div>
               {e.note && <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>{e.note}</div>}
-              <button onClick={() => remove(i)} style={{ fontSize: 10, background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", textDecoration: "underline", marginTop: 4, padding: 0 }}>remove</button>
+              <button onClick={() => remove(events.indexOf(e))} style={{ fontSize: 10, background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", textDecoration: "underline", marginTop: 4, padding: 0 }}>remove</button>
             </div>
           ))}
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

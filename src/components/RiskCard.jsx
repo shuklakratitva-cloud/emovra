@@ -15,7 +15,7 @@ import { getGreenMessage, getYellowMessage, getOrangeMessage, getRedMessage } fr
 // YELLOW previously had no branch at all here and silently fell into the
 // RED styling - fixed below.
 
-export default function RiskCard({ analysis, userName, emergencyPhone }) {
+export default function RiskCard({ analysis, userName, emergencyPhone, safetyPlan }) {
   if (!analysis) return null;
   const level = String(analysis.riskLevel || analysis.risk || analysis.level || "GREEN").toUpperCase();
   const isRed = level === "RED";
@@ -106,6 +106,18 @@ export default function RiskCard({ analysis, userName, emergencyPhone }) {
               📞 Call Your SOS: {emergencyPhone}
             </a>
           )}
+        </div>
+      )}
+
+      {/* NEW: if the person has filled out a Safety Plan while calm, remind
+          them of it during a RED moment - their own words, not generic
+          advice. Only shows what they actually wrote, and only the
+          grounding parts (reasons + coping strategies), not the full plan. */}
+      {isRed && safetyPlan && (safetyPlan.reasonsToLive || safetyPlan.copingStrategies) && (
+        <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.2)" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-h)", margin: "0 0 8px" }}>From your own Safety Plan:</p>
+          {safetyPlan.reasonsToLive && <p style={{ fontSize: 13, margin: "0 0 6px", lineHeight: 1.5 }}>{safetyPlan.reasonsToLive}</p>}
+          {safetyPlan.copingStrategies && <p style={{ fontSize: 12, opacity: 0.75, margin: 0, lineHeight: 1.5 }}>{safetyPlan.copingStrategies}</p>}
         </div>
       )}
 

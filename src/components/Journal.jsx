@@ -217,6 +217,7 @@ export default function Journal() {
   const [editText, setEditText] = useState("");
   const [loading, setLoading] = useState(false);
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null);
+  const [search, setSearch] = useState(""); // NEW: client-side search - entries are already decrypted for the owner once loaded, no new backend endpoint needed
 
   async function loadEntries() {
     try {
@@ -288,7 +289,19 @@ export default function Journal() {
 
       <hr style={{ margin: "20px 0" }} />
       <h3>Total Entries: {entries.length}</h3>
-      {entries.length === 0 ? <p>No journal entries yet.</p> : entries.map((entry) => (
+      {entries.length > 0 && (
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search your entries..."
+          style={{ width: "100%", padding: "8px 14px", borderRadius: 999, border: "1px solid var(--border, #ddd)", background: "transparent", color: "var(--text)", marginBottom: 14 }}
+        />
+      )}
+      {(() => {
+        const filtered = search.trim() ? entries.filter((e) => e.text.toLowerCase().includes(search.trim().toLowerCase())) : entries;
+        if (entries.length === 0) return <p>No journal entries yet.</p>;
+        if (filtered.length === 0) return <p style={{ opacity: 0.6, fontSize: 13 }}>No entries match "{search}".</p>;
+        return filtered.map((entry) => (
         <div key={entry._id} style={{ border: "1px solid var(--border, #ddd)", borderRadius: "10px", padding: "15px", marginBottom: "15px" }}>
           {editingId === entry._id ? (
             <>
@@ -307,7 +320,8 @@ export default function Journal() {
             </>
           )}
         </div>
-      ))}
+        ));
+      })()}
       {entries.length > 0 && <button onClick={clearJournal} style={{ marginTop: "20px", background: "#dc2626", color: "#fff", padding: "10px 18px", border: "none", borderRadius: "10px", cursor: "pointer" }}>Clear Journal</button>}
 
       <SharedJournalPanel />

@@ -8,6 +8,7 @@ import useSpeechRecognition from "../hooks/useSpeechRecognition";
 import { analyzeWithGemini } from "../utils/geminiAnalyzer.js";
 import { analyzeRisk } from "../utils/analyzeRisk.js";
 import Auth from "../components/Auth.jsx";
+import OnboardingWalkthrough from "../components/OnboardingWalkthrough.jsx"; // NEW
 import LegalCookieBanner from "../components/LegalCookieBanner.jsx";
 import '../App.css';
 
@@ -75,6 +76,16 @@ export default function MindGuardApp() {
   const token = localStorage.getItem('token');
   const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
   const [avatarProfile, setAvatarProfile] = useState({ avatar: "🦋", avatarType: "emoji", avatarImage: "" }); // NEW
+  // NEW: safety plan - fetched once, passed to RiskCard so it can show a
+  // reminder of the person's own reasons/coping strategies during RED
+  const [safetyPlan, setSafetyPlan] = useState(null);
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API}/safety-plan`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => { if (d.success && d.plan) setSafetyPlan(d.plan); })
+      .catch(() => {});
+  }, [token]);
   // NEW: soft email verification banner state
   const [emailVerified, setEmailVerified] = useState(() => !!user?.emailVerified);
   const [verifyOpen, setVerifyOpen] = useState(false);
@@ -433,6 +444,7 @@ useEffect(() => {
 
   return (
     <>
+      <OnboardingWalkthrough />
       <style>{`
         body{background:var(--bg)!important; color:var(--text)!important}
         div[style*="var(--card-bg)"], div[style*="var(--bg)"]{ background: var(--card-bg)!important; border: 0.5px solid rgba(212,197,160,0.18)!important; color:var(--text)!important; }
@@ -527,7 +539,7 @@ useEffect(() => {
                       button was real, useful functionality though - moved
                       into RiskCard.jsx itself instead of deleted. */}
                   <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:8 }}>
-                    <RiskCard analysis={analysis} text={analysis.text} userName={user.name} emergencyPhone={user.emergencyPhone} />
+                    <RiskCard analysis={analysis} text={analysis.text} userName={user.name} emergencyPhone={user.emergencyPhone} safetyPlan={safetyPlan} />
                     <Suspense fallback={<Loader />}><MoodChart history={history.length? history : [analysis]} /></Suspense>
                   </div>
                   <div style={{ marginTop: 12, padding: 14, border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 12, background: "rgba(18,18,20,0.9)", color: "var(--text)", fontSize:13 }}><b style={{ color:'var(--text-h)' }}>Advice:</b> {advice}</div>

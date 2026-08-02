@@ -30,6 +30,31 @@ export default function ThemeAvatarSettings() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  // NEW: accessibility settings - font size + high contrast, applied
+  // immediately via CSS custom property + a body class, saved locally
+  // (device preference, doesn't need backend sync)
+  const [fontScale, setFontScale] = useState(() => localStorage.getItem("emovra_font_scale") || "100");
+  const [highContrast, setHighContrast] = useState(() => localStorage.getItem("emovra_high_contrast") === "true");
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--emovra-font-scale", `${fontScale}%`);
+    document.body.style.fontSize = `${fontScale}%`;
+  }, [fontScale]);
+
+  useEffect(() => {
+    document.body.classList.toggle("emovra-high-contrast", highContrast);
+  }, [highContrast]);
+
+  function changeFontScale(v) {
+    setFontScale(v);
+    localStorage.setItem("emovra_font_scale", v);
+  }
+  function toggleHighContrast() {
+    setHighContrast((h) => {
+      localStorage.setItem("emovra_high_contrast", String(!h));
+      return !h;
+    });
+  }
   const [moodWallpaperMsg, setMoodWallpaperMsg] = useState("");
 
   const MOOD_COLORS = {
@@ -438,6 +463,31 @@ export default function ThemeAvatarSettings() {
           {pushMsg && <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>{pushMsg}</p>}
         </div>
       )}
+
+      {/* NEW: accessibility - font size + high contrast */}
+      <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Accessibility</div>
+        <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8 }}>Text size</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[{ v: "90", l: "Small" }, { v: "100", l: "Default" }, { v: "115", l: "Large" }, { v: "130", l: "Extra Large" }].map((opt) => (
+            <button
+              key={opt.v}
+              onClick={() => changeFontScale(opt.v)}
+              style={{ padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer", border: fontScale === opt.v ? "2px solid var(--accent)" : "1px solid var(--border)", background: fontScale === opt.v ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}
+            >
+              {opt.l}
+            </button>
+          ))}
+        </div>
+        <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            onClick={toggleHighContrast}
+            style={{ padding: "8px 16px", borderRadius: 999, fontSize: 12, cursor: "pointer", border: highContrast ? "2px solid var(--accent)" : "1px solid var(--border)", background: highContrast ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}
+          >
+            {highContrast ? "✓ High contrast on" : "High contrast mode"}
+          </button>
+        </div>
+      </div>
 
       {/* NEW: self-serve data export + account deletion - actually
           delivers on what the Privacy Policy promises, instead of leaving
