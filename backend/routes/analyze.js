@@ -149,7 +149,17 @@ router.post('/', optionalAuth, async (req, res) => {
   const isSchoolAbuse = schoolAbusePatterns.test(lower);
   const abusePatterns = /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|toxic relationship|gaslighting|worthless bolta|kutta jaise|blackmail karta|slaps me)/i;
   const isAbuse = abusePatterns.test(lower);
-  const isAnxious = /(anxious|anxiety|panic|lonely|alone|akela|depressed|depression|stress|overwhelm|neend nahi|nervous|scared|worried|tension|bechain|low|upset|sad)/i.test(lower);
+  // FIX: this used to also match "low", "sad", "upset", and "alone" -
+  // words that show up constantly in completely mundane sentences
+  // ("battery is low", "I was alone at home", "a bit sad about the
+  // movie ending"). Any match here short-circuits straight to a
+  // hardcoded ORANGE 68 WITHOUT ever calling the AI - meaning YELLOW
+  // could never be reached for any message containing these common
+  // words, no matter how mild. Narrowed to genuinely concerning terms
+  // only; milder/ambiguous language now correctly falls through to the
+  // AI, where the YELLOW band actually exists and can be judged with
+  // real context instead of a blunt keyword match.
+  const isAnxious = /(anxious|anxiety|panic|lonely|akela|depressed|depression|\bstress\b|overwhelm|neend nahi|nervous|scared|worried|tension|bechain)/i.test(lower);
 
   if (isDirectRed &&!hasNegation) {
     const cat = isSchoolAbuse? "school_emotional_abuse" : isAbuse? "emotional_abuse" : "self_harm";

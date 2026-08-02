@@ -25,7 +25,7 @@ const HOME_ABUSE = /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta
 const ORANGE_WORDS = [
   "anxious", "anxiety", "panic", "lonely", "akela", "depressed", "depression",
   "stress", "overwhelm", "neend nahi", "nervous", "scared", "worried",
-  "tension", "bechain", "low", "upset", "sad", "breakup", "kharab hai",
+  "tension", "bechain", "breakup", "kharab hai",
 ];
 
 // NEW: this classifier never had a YELLOW band at all - only GREEN/ORANGE/
@@ -35,7 +35,7 @@ const ORANGE_WORDS = [
 const YELLOW_WORDS = [
   "tired", "thak gaya", "thak gayi", "off today", "not myself", "meh",
   "bored", "boring day", "kinda down", "little down", "so-so", "okay-ish",
-  "bas aisa hi", "thoda low", "not sure why",
+  "bas aisa hi", "thoda low", "not sure why", "low", "upset", "sad",
 ];
 
 export function localRiskFallback(rawText) {
