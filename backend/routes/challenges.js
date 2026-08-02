@@ -101,6 +101,14 @@ router.post("/:id/claim", auth, async (req, res) => {
     if (!challenge) return res.status(400).json({ success: false, message: "Not one of today's challenges" });
 
     const user = await User.findById(req.user.id);
+    // FIX: crashed with "Cannot read properties of null" if the account
+    // was deleted but the browser still had an old, not-yet-expired login
+    // token (deleting an account doesn't invalidate existing JWTs - they
+    // just expire naturally on their own schedule). Now fails clean
+    // instead of crashing the request.
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Your account no longer exists - please log in again." });
+    }
     const already = user.claimedChallenges.some((c) => c.date === date && c.challengeId === challenge.id);
     if (already) return res.status(400).json({ success: false, message: "Already claimed today" });
 
