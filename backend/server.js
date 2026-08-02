@@ -33,6 +33,7 @@ import accountRoutes from "./routes/account.js"; // NEW: self-serve data export 
 import weeklyDigestRoutes from "./routes/weeklyDigest.js"; // NEW: weekly reflection email, triggered by external cron
 import pushRoutes from "./routes/push.js"; // NEW: push notifications
 import lettersRoutes from "./routes/letters.js"; // NEW: scheduled letters to future self
+import safetyPlanRoutes from "./routes/safetyPlan.js"; // NEW: personal crisis safety plan
 
 const app = express();
 
@@ -194,6 +195,7 @@ app.use("/api/account", accountRoutes); // NEW: data export + deletion
 app.use("/api/weekly-digest", weeklyDigestRoutes); // NEW: weekly reflection email
 app.use("/api/push", pushRoutes); // NEW: push notifications
 app.use("/api/letters", lettersRoutes); // NEW: scheduled letters to future self
+app.use("/api/safety-plan", safetyPlanRoutes); // NEW: personal crisis safety plan
 app.use("/api", geminiRoutes); // exposes POST /api/chat
 
 app.use((req, res) => {
