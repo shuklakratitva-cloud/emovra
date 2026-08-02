@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { getGreenMessage, getYellowMessage, getOrangeMessage, getRedMessage } from "../utils/motivationalMessages";
 
 // No more GREEN/YELLOW/ORANGE/RED badges or raw scores anywhere in this
@@ -28,32 +28,31 @@ export default function RiskCard({ analysis, userName, emergencyPhone }) {
   const isHomeAbuse = category === "emotional_abuse" || analysis.abuseType === "home_abuse";
   const triggers = analysis.reasons || analysis.triggers || [];
 
-  let message;
-  let icon;
-  let accent;
-  let heading;
-
-  if (isRed) {
-    message = getRedMessage({ name: userName });
-    icon = "🫂";
-    accent = "#f87171";
-    heading = "You're not alone in this";
-  } else if (isOrange) {
-    message = getOrangeMessage({ name: userName, category, abuseType: analysis.abuseType, triggers });
-    icon = isSchoolAbuse ? "🏫" : isHomeAbuse ? "⚠" : "💛";
-    accent = "#fb923c";
-    heading = "We hear you";
-  } else if (isYellow) {
-    message = getYellowMessage({ name: userName, triggers });
-    icon = "🌤";
-    accent = "#eab308";
-    heading = "Just checking in";
-  } else {
-    message = getGreenMessage(analysis.emotion, userName);
-    icon = "🌿";
-    accent = "#4ade80";
-    heading = "You're on the right path";
-  }
+  const { message, icon, accent, heading } = useMemo(() => {
+    if (isRed) {
+      return {
+        message: getRedMessage({ name: userName }),
+        icon: "🫂", accent: "#f87171", heading: "You're not alone in this",
+      };
+    } else if (isOrange) {
+      return {
+        message: getOrangeMessage({ name: userName, category, abuseType: analysis.abuseType, triggers }),
+        icon: isSchoolAbuse ? "🏫" : isHomeAbuse ? "⚠" : "💛",
+        accent: "#fb923c", heading: "We hear you",
+      };
+    } else if (isYellow) {
+      return {
+        message: getYellowMessage({ name: userName, triggers }),
+        icon: "🌤", accent: "#eab308", heading: "Just checking in",
+      };
+    } else {
+      return {
+        message: getGreenMessage(analysis.emotion, userName),
+        icon: "🌿", accent: "#4ade80", heading: "You're on the right path",
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysis]);
 
   const isCalm = isGreen; // only GREEN gets the fully neutral border treatment
 
