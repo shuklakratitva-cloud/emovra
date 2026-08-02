@@ -5,14 +5,6 @@ function authHeaders() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` };
 }
 
-const WIND_DOWN_STEPS = [
-  "Dim the lights or switch to warm lighting",
-  "Put your phone on Do Not Disturb, out of arm's reach",
-  "Do a few minutes of slow breathing (try the timer below)",
-  "Write down anything on your mind - it can wait until tomorrow",
-  "Keep the room cool and dark",
-];
-
 function BreathingTimer() {
   const [phase, setPhase] = useState("idle"); // idle | inhale | hold | exhale
   const [running, setRunning] = useState(false);
@@ -67,7 +59,6 @@ function BreathingTimer() {
 }
 
 export default function SleepAssistant() {
-  const [checked, setChecked] = useState({});
   const [bedtime, setBedtime] = useState("");
   const [wakeTime, setWakeTime] = useState("");
   const [quality, setQuality] = useState(3);
@@ -85,16 +76,6 @@ export default function SleepAssistant() {
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
       <h2 style={{ margin: 0 }}>🌙 Sleep Assistant</h2>
       <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Wind down, breathe, and log how you slept.</p>
-
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Wind-down checklist</div>
-        {WIND_DOWN_STEPS.map((step, i) => (
-          <label key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 6, cursor: "pointer" }}>
-            <input type="checkbox" checked={!!checked[i]} onChange={() => setChecked((c) => ({ ...c, [i]: !c[i] }))} />
-            <span style={{ textDecoration: checked[i] ? "line-through" : "none", opacity: checked[i] ? 0.6 : 1 }}>{step}</span>
-          </label>
-        ))}
-      </div>
 
       <BreathingTimer />
 

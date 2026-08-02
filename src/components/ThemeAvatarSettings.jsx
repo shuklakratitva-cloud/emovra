@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { applyThemeVars } from "../utils/applyTheme.js";
+import HSLColorPicker from "./HSLColorPicker.jsx"; // NEW
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -208,8 +209,8 @@ export default function ThemeAvatarSettings() {
   function loadProfile() {
     setLoadError("");
     Promise.all([
-      fetch(`${API}/profile/options`).then((r) => { if (!r.ok) throw new Error("options"); return r.json(); }),
-      fetch(`${API}/profile/me`, { headers: authHeaders() }).then((r) => { if (!r.ok) throw new Error("profile"); return r.json(); }),
+      fetch(`${API}/profile/options`).then((r) => { if (!r.ok) throw { status: r.status, source: "options" }; return r.json(); }),
+      fetch(`${API}/profile/me`, { headers: authHeaders() }).then((r) => { if (!r.ok) throw { status: r.status, source: "profile" }; return r.json(); }),
     ])
       .then(([optionsData, profileData]) => {
         if (optionsData.success) setOptions(optionsData);
@@ -223,7 +224,15 @@ export default function ThemeAvatarSettings() {
           setLoadError("Couldn't load your settings - try again.");
         }
       })
-      .catch(() => setLoadError("Couldn't reach the server - check your connection and try again."));
+      .catch((err) => {
+        if (err?.status === 401 || err?.status === 403) {
+          setLoadError("Your session has expired - please log out and log back in.");
+        } else if (err?.status) {
+          setLoadError(`Server error (${err.status}) - try again in a moment.`);
+        } else {
+          setLoadError("Couldn't reach the server - check your connection and try again.");
+        }
+      });
   }
 
   useEffect(() => { loadProfile(); }, []);
@@ -344,19 +353,10 @@ export default function ThemeAvatarSettings() {
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖌 Or make your own</div>
         <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>Pick your own background and box colors. Preview updates live - click Save to keep it.</p>
 
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11 }}>
-            Background
-            <input type="color" value={customBg} onChange={(e) => { setCustomBg(e.target.value); previewCustom({ bg: e.target.value }); }} style={{ width: 50, height: 34, border: "none", borderRadius: 8, cursor: "pointer", background: "transparent" }} />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11 }}>
-            Box / Card color
-            <input type="color" value={customCard} onChange={(e) => { setCustomCard(e.target.value); previewCustom({ card: e.target.value }); }} style={{ width: 50, height: 34, border: "none", borderRadius: 8, cursor: "pointer", background: "transparent" }} />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11 }}>
-            Accent color
-            <input type="color" value={customAccent} onChange={(e) => { setCustomAccent(e.target.value); previewCustom({ accent: e.target.value }); }} style={{ width: 50, height: 34, border: "none", borderRadius: 8, cursor: "pointer", background: "transparent" }} />
-          </label>
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          <HSLColorPicker label="Background" value={customBg} onChange={(hex) => { setCustomBg(hex); previewCustom({ bg: hex }); }} />
+          <HSLColorPicker label="Box / Card color" value={customCard} onChange={(hex) => { setCustomCard(hex); previewCustom({ card: hex }); }} />
+          <HSLColorPicker label="Accent color" value={customAccent} onChange={(hex) => { setCustomAccent(hex); previewCustom({ accent: hex }); }} />
         </div>
 
         <button onClick={saveCustomTheme} style={{ marginTop: 14, background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
