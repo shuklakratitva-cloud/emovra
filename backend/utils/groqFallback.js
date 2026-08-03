@@ -20,6 +20,41 @@
 // Defaults to a Llama 3.3 70B variant, a solid general-purpose free choice
 // as of when this was written.
 
+// NEW: Groq Whisper transcription - used by voice.js as a fallback when
+// Gemini's own audio analysis fails. Groq's free tier includes real
+// Whisper transcription (2,000 requests/day, no card required) - this is
+// what gives voice check-ins genuine redundancy for the first time; up
+// until now, voice analysis was Gemini-only with no fallback at all.
+// After transcribing here, the resulting text is classified using the
+// SAME text-classification pipeline Check-in already uses (classifyWithGroq
+// below, then localRiskFallback as final resort) - no separate voice-specific
+// classification logic needed.
+export async function transcribeWithGroqWhisper(audioBuffer, mimetype) {
+  if (!process.env.GROQ_API_KEY) return null;
+  try {
+    const form = new FormData();
+    const ext = mimetype?.includes("webm") ? "audio.webm" : mimetype?.includes("mp3") ? "audio.mp3" : "audio.wav";
+    form.append("file", new Blob([audioBuffer], { type: mimetype || "audio/webm" }), ext);
+    form.append("model", "whisper-large-v3");
+    form.append("response_format", "json");
+
+    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+      body: form,
+    });
+    if (!res.ok) {
+      console.error("Groq Whisper transcription failed:", res.status, await res.text().catch(() => ""));
+      return null;
+    }
+    const data = await res.json();
+    return data.text || null;
+  } catch (e) {
+    console.error("Groq Whisper error:", e.message);
+    return null;
+  }
+}
+
 const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 
 // NEW: classification-mode call for the text/voice analysis pipeline -

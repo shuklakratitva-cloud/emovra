@@ -67,4 +67,10 @@ entrySchema.methods.getDecryptedText = function() {
   return decrypt(this.text_encrypted);
 };
 
+// NEW: auto-delete after 30 days. MongoDB's TTL index checks this in the
+// background and removes documents once createdAt is older than the given
+// number of seconds - no cron job, no manual cleanup script, this just
+// happens on its own once the index exists.
+entrySchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
 export default mongoose.model("Entry", entrySchema);

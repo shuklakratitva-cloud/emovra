@@ -74,4 +74,8 @@ const AlertSchema = new mongoose.Schema(
   }
 );
 
+// NEW: same 30-day auto-deletion as Entry.js - kept identical on purpose,
+// so nothing lingers in one collection longer than the other.
+AlertSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
 export default mongoose.model("Alert", AlertSchema);
