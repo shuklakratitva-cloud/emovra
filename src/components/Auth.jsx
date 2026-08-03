@@ -27,7 +27,7 @@ const BASE_URL = "https://emovra.onrender.com/api/auth";
 // (e.g. https://emovra.pages.dev) under "Authorized JavaScript origins".
 // No billing/payment step involved - this is a different, free part of
 // Google Cloud Console from the Gemini API billing screen.
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "992525447470-niu0jm6nnqoqdam751qe2pa6ge6slpsq.apps.googleusercontent.com";
 
 export default function Auth({ onAuth }) {
   const navigate = useNavigate();
