@@ -81,6 +81,12 @@ export default function Dashboard() {
       const res = await fetch(`${API}/challenges/${id}/claim`, { method: "POST", headers: authHeaders() });
       const json = await res.json();
       if (json.success) {
+        // NEW: show "claimed" immediately instead of waiting on a full
+        // reload - the reload below still happens right after (to sync
+        // XP/level/badges for real), but the person doesn't have to wait
+        // for it just to see their claim register.
+        setData((d) => d ? { ...d, challenges: d.challenges.map((c) => c.id === id ? { ...c, claimed: true } : c) } : d);
+
         if (json.newBadges?.length) {
           setToast(`🎉 New badge: ${json.newBadges.map((b) => b.name).join(", ")}!`);
           setTimeout(() => setToast(null), 4000);
@@ -88,12 +94,23 @@ export default function Dashboard() {
           setToast(`🎉 Level up! You're now level ${json.level}`);
           setTimeout(() => setToast(null), 4000);
         }
-        await load();
+        await loadQuiet();
       } else {
         alert(json.message || "Could not claim");
       }
     } catch {}
     setClaiming(null);
+  }
+
+  // Same as load(), minus the loading-spinner flash - used after a claim,
+  // where the person is already looking at the page and shouldn't see it
+  // blank out just to sync XP/level in the background.
+  async function loadQuiet() {
+    try {
+      const res = await fetch(`${API}/dashboard`, { headers: authHeaders() });
+      const json = await res.json();
+      if (json.success) setData(json);
+    } catch {}
   }
 
   if (loading) {
