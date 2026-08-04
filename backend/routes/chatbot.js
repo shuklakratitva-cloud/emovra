@@ -7,6 +7,7 @@ import { awardXP } from "../utils/gamification.js";
 import { callGeminiResilient } from "../utils/geminiThrottle.js";
 import { chatWithGroq } from "../utils/groqFallback.js";
 import User from "../models/User.js";
+import { todayIST } from "../utils/istDate.js";
 
 const router = express.Router();
 const GEMINI_MODEL = "gemini-3.5-flash-lite";
@@ -134,7 +135,7 @@ router.post("/", optionalAuth, async (req, res) => {
     const userTurns = messages.filter((m) => m.role === "user").length;
     let gam = null;
     if (req.user?.id && userTurns === 3) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayIST();
       const user = await User.findById(req.user.id).select("lastChatbotXPDate");
       if (user && user.lastChatbotXPDate !== today) {
         gam = await awardXP(req.user.id, 10, { chatbotUsed: true });

@@ -3,6 +3,7 @@ import { protect as auth } from "../middleware/auth.js";
 import User from "../models/User.js";
 import { STRENGTH_QUIZ, scoreQuiz } from "../data/quizzes.js";
 import { awardXP } from "../utils/gamification.js";
+import { todayIST, toISTDateStr } from "../utils/istDate.js";
 
 const router = express.Router();
 
@@ -24,9 +25,9 @@ router.post("/strength/submit", auth, async (req, res) => {
     // the same day don't farm XP - previously this awarded 10 XP on every
     // single submit with no limit.
     const existing = await User.findById(req.user.id).select("personalityResult");
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIST();
     const alreadyToday = existing?.personalityResult?.takenAt &&
-      new Date(existing.personalityResult.takenAt).toISOString().slice(0, 10) === today;
+      toISTDateStr(existing.personalityResult.takenAt) === today;
 
     await User.findByIdAndUpdate(req.user.id, {
       personalityResult: { quizId: STRENGTH_QUIZ.id, resultKey, resultLabel: result.label, takenAt: new Date() },

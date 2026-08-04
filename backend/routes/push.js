@@ -3,6 +3,7 @@ import webpush from "web-push";
 import { protect as auth } from "../middleware/auth.js";
 import PushSubscription from "../models/PushSubscription.js";
 import User from "../models/User.js";
+import { todayIST } from "../utils/istDate.js";
 
 const router = express.Router();
 
@@ -88,7 +89,7 @@ router.post("/send-daily-reminder", async (req, res) => {
       return res.status(503).json({ success: false, message: "Push notifications aren't configured (missing VAPID keys)" });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIST();
     const subs = await PushSubscription.find().populate("userId", "lastMoodCheckinDate");
 
     let sent = 0, cleaned = 0;

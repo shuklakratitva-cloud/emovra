@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import PrivateJournal from "../models/PrivateJournal.js";
 import Habit from "../models/Habit.js";
 import { sendEmail } from "../utils/mailer.js";
+import { todayIST } from "../utils/istDate.js";
 
 const router = express.Router();
 
@@ -35,8 +36,7 @@ router.post("/send-weekly", async (req, res) => {
     }
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    const todayStr = todayIST();
 
     // Only users who haven't gotten one in the last 7 days
     const users = await User.find({

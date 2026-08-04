@@ -8,6 +8,7 @@ import SleepLog from "../models/SleepLog.js";
 import Goal from "../models/Goal.js";
 import { getTodayChallenges } from "../data/challenges.js";
 import { awardXP, todayStr } from "../utils/gamification.js";
+import { istDayBounds, toISTDateStr } from "../utils/istDate.js";
 
 const router = express.Router();
 
@@ -40,8 +41,7 @@ router.get("/today", auth, async (req, res) => {
 // meaning every challenge was claimable the moment the page loaded. Each
 // challenge type now checks real data for today before allowing the claim.
 async function didComplete(challengeId, userId, date) {
-  const startOfDay = new Date(`${date}T00:00:00.000Z`);
-  const endOfDay = new Date(`${date}T23:59:59.999Z`);
+  const { start: startOfDay, end: endOfDay } = istDayBounds(date);
 
   switch (challengeId) {
     case "journal_entry":
@@ -73,7 +73,7 @@ async function didComplete(challengeId, userId, date) {
     case "quiz": {
       const u = await User.findById(userId).select("personalityResult");
       const takenAt = u?.personalityResult?.takenAt;
-      return !!(takenAt && new Date(takenAt).toISOString().slice(0, 10) === date);
+      return !!(takenAt && toISTDateStr(takenAt) === date);
     }
 
     case "mood_checkin": {

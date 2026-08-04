@@ -2,6 +2,7 @@ import express from "express";
 import { protect as auth } from "../middleware/auth.js";
 import Entry from "../models/Entry.js";
 import { detectEarlyWarning } from "../utils/earlyWarning.js";
+import { toISTDateStr } from "../utils/istDate.js";
 
 const router = express.Router();
 
@@ -58,7 +59,7 @@ router.get("/calendar", auth, async (req, res) => {
 
     const byDay = {};
     entries.forEach((e) => {
-      const day = new Date(e.createdAt).toISOString().slice(0, 10);
+      const day = toISTDateStr(e.createdAt);
       if (!byDay[day]) byDay[day] = { count: 0, highestRisk: "ORANGE", emotions: [] };
       byDay[day].count += 1;
       if (e.riskLevel === "RED") byDay[day].highestRisk = "RED";

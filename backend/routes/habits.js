@@ -2,6 +2,7 @@ import express from "express";
 import { protect as auth } from "../middleware/auth.js";
 import Habit from "../models/Habit.js";
 import { awardXP, todayStr } from "../utils/gamification.js";
+import { toISTDateStr } from "../utils/istDate.js";
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ router.post("/:id/complete", auth, async (req, res) => {
     habit.completions.push(today);
 
     // streak logic for this specific habit
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const yesterday = toISTDateStr(Date.now() - 86400000);
     if (habit.lastCompletedDate === yesterday) habit.streak += 1;
     else habit.streak = 1;
     habit.lastCompletedDate = today;

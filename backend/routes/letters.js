@@ -4,6 +4,7 @@ import ScheduledLetter from "../models/ScheduledLetter.js";
 import User from "../models/User.js";
 import { encrypt, decrypt } from "../utils/crypto.js";
 import { sendEmail } from "../utils/mailer.js";
+import { todayIST } from "../utils/istDate.js";
 
 const router = express.Router();
 
@@ -35,7 +36,7 @@ router.post("/", auth, async (req, res) => {
     if (!text?.trim() || !deliverOn) {
       return res.status(400).json({ success: false, message: "Text and a delivery date are required" });
     }
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIST();
     if (deliverOn <= today) {
       return res.status(400).json({ success: false, message: "Pick a date in the future" });
     }
@@ -69,7 +70,7 @@ router.post("/deliver-due", async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIST();
     const due = await ScheduledLetter.find({ delivered: false, deliverOn: { $lte: today } }).populate("userId", "email name");
 
     let sent = 0;

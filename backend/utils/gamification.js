@@ -7,8 +7,13 @@
 import User from "../models/User.js";
 import { BADGES } from "../data/badges.js";
 
+import { todayIST } from "./istDate.js";
+
+// FIX: this used to be new Date().toISOString().slice(0,10) - UTC, not
+// IST. See istDate.js for the full explanation of the ~5.5 hour nightly
+// bug window this caused. Now delegates to the shared IST-aware helper.
 export function todayStr() {
-  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  return todayIST();
 }
 
 export function levelForXP(xp) {
