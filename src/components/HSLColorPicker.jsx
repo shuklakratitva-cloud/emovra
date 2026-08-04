@@ -1,55 +1,90 @@
 import React, { useState, useEffect } from "react";
 
-// Explicit Hue/Saturation/Lightness sliders, replacing the native
-// <input type="color"> picker - the native one uses a single gradient
-// square where brightness and saturation are mixed together (standard
-// HSV picker behavior in every browser), which makes it hard to just dial
-// in "bright red" directly. This gives Lightness its own dedicated slider.
+// FIX: rebuilt on the HWB (Hue/Whiteness/Blackness) model instead of HSL,
+// per request - HSL's single "Brightness" slider conflates two different
+// things (moving toward black AND moving toward white) into one axis,
+// which made it hard to just see "pure vivid red" and then separately
+// decide how much white or black to mix in. HWB is a real, standard CSS
+// color model (the hwb() function) built exactly for this: Hue picks the
+// pure color, Whiteness and Blackness are two independent sliders that
+// each start at 0 - moving the Hue slider alone always shows the fully
+// vivid version of that hue.
 
-function hexToHsl(hex) {
-  let r = parseInt(hex.slice(1, 3), 16) / 255;
-  let g = parseInt(hex.slice(3, 5), 16) / 255;
-  let b = parseInt(hex.slice(5, 7), 16) / 255;
+function hexToRgb(hex) {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
+
+function rgbToHex(r, g, b) {
+  const toHex = (x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function hueToRgb(h) {
+  // pure, fully-saturated color for a given hue (0-360) - this is what
+  // shows up at Whiteness=0, Blackness=0
+  const c = 1, x = 1 - Math.abs(((h / 60) % 2) - 1);
+  let r, g, b;
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  return [r * 255, g * 255, b * 255];
+}
+
+function rgbToHwb(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
-  if (max === min) { h = s = 0; }
+  const w = min, blk = 1 - max;
+  let h;
+  if (max === min) h = 0;
   else {
     const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)); break;
       case g: h = (b - r) / d + 2; break;
       default: h = (r - g) / d + 4;
     }
     h *= 60;
   }
-  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+  return { h: Math.round(h), w: Math.round(w * 100), b: Math.round(blk * 100) };
 }
 
-function hslToHex(h, s, l) {
-  s /= 100; l /= 100;
-  const k = (n) => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  const toHex = (x) => Math.round(x * 255).toString(16).padStart(2, "0");
-  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+function hwbToHex(h, w, b) {
+  w /= 100; b /= 100;
+  if (w + b >= 1) {
+    const gray = Math.round((w / (w + b)) * 255);
+    return rgbToHex(gray, gray, gray);
+  }
+  const [pr, pg, pb] = hueToRgb(h);
+  const mix = (c) => c * (1 - w - b) + w * 255;
+  return rgbToHex(mix(pr), mix(pg), mix(pb));
 }
 
 export default function HSLColorPicker({ value, onChange, label }) {
-  const [hsl, setHsl] = useState(() => hexToHsl(value));
+  const [hwb, setHwb] = useState(() => { const [r, g, b] = hexToRgb(value); return rgbToHwb(r, g, b); });
 
-  // keep in sync if the value changes from outside (e.g. "use my mood as background")
-  useEffect(() => { setHsl(hexToHsl(value)); }, [value]);
+  useEffect(() => {
+    const [r, g, b] = hexToRgb(value);
+    setHwb(rgbToHwb(r, g, b));
+  }, [value]);
 
   function update(next) {
-    const merged = { ...hsl, ...next };
-    setHsl(merged);
-    onChange(hslToHex(merged.h, merged.s, merged.l));
+    const merged = { ...hwb, ...next };
+    // keep whiteness + blackness from exceeding 100% combined
+    if (merged.w + merged.b > 100) {
+      if (next.w !== undefined) merged.b = 100 - merged.w;
+      else merged.w = 100 - merged.b;
+    }
+    setHwb(merged);
+    onChange(hwbToHex(merged.h, merged.w, merged.b));
   }
 
   const hueGradient = "linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red)";
-  const satGradient = `linear-gradient(to right, hsl(${hsl.h},0%,${hsl.l}%), hsl(${hsl.h},100%,${hsl.l}%))`;
-  const lightGradient = `linear-gradient(to right, #000, hsl(${hsl.h},${hsl.s}%,50%), #fff)`;
+  const pureHex = rgbToHex(...hueToRgb(hwb.h));
+  const whiteGradient = `linear-gradient(to right, ${pureHex}, #fff)`;
+  const blackGradient = `linear-gradient(to right, ${pureHex}, #000)`;
 
   return (
     <div style={{ minWidth: 180 }}>
@@ -60,19 +95,19 @@ export default function HSLColorPicker({ value, onChange, label }) {
       </div>
 
       <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: 10, opacity: 0.5 }}>Hue</div>
-        <input type="range" min="0" max="360" value={hsl.h} onChange={(e) => update({ h: Number(e.target.value) })}
+        <div style={{ fontSize: 10, opacity: 0.5 }}>Hue (pure color)</div>
+        <input type="range" min="0" max="360" value={hwb.h} onChange={(e) => update({ h: Number(e.target.value) })}
           style={{ width: "100%", height: 10, borderRadius: 999, background: hueGradient, appearance: "none", cursor: "pointer" }} />
       </div>
       <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: 10, opacity: 0.5 }}>Saturation</div>
-        <input type="range" min="0" max="100" value={hsl.s} onChange={(e) => update({ s: Number(e.target.value) })}
-          style={{ width: "100%", height: 10, borderRadius: 999, background: satGradient, appearance: "none", cursor: "pointer" }} />
+        <div style={{ fontSize: 10, opacity: 0.5 }}>Whiteness</div>
+        <input type="range" min="0" max="100" value={hwb.w} onChange={(e) => update({ w: Number(e.target.value) })}
+          style={{ width: "100%", height: 10, borderRadius: 999, background: whiteGradient, appearance: "none", cursor: "pointer" }} />
       </div>
       <div>
-        <div style={{ fontSize: 10, opacity: 0.5 }}>Brightness</div>
-        <input type="range" min="0" max="100" value={hsl.l} onChange={(e) => update({ l: Number(e.target.value) })}
-          style={{ width: "100%", height: 10, borderRadius: 999, background: lightGradient, appearance: "none", cursor: "pointer" }} />
+        <div style={{ fontSize: 10, opacity: 0.5 }}>Blackness</div>
+        <input type="range" min="0" max="100" value={hwb.b} onChange={(e) => update({ b: Number(e.target.value) })}
+          style={{ width: "100%", height: 10, borderRadius: 999, background: blackGradient, appearance: "none", cursor: "pointer" }} />
       </div>
     </div>
   );

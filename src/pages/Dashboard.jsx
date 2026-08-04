@@ -29,7 +29,6 @@ const DailyAffirmation = lazy(() => import("../components/DailyAffirmation")); /
 const SafetyPlan = lazy(() => import("../components/SafetyPlan")); // NEW
 const ComplimentGenerator = lazy(() => import("../components/ComplimentGenerator")); // NEW
 import VirtualPet from "../components/VirtualPet.jsx"; // NEW: tiny, no need to lazy-load
-import VirtualGarden from "../components/VirtualGarden.jsx"; // NEW: tiny, no need to lazy-load
 import GoalReminders from "../components/GoalReminders.jsx"; // NEW: tiny, no need to lazy-load
 
 const API = "https://emovra.onrender.com/api";
@@ -179,7 +178,6 @@ export default function Dashboard() {
 
         {/* NEW: virtual pet - grows with existing level/XP, no new backend state */}
         <VirtualPet level={g?.level || 1} xp={g?.xp || 0} />
-        <VirtualGarden />
 
         {data?.isBirthdayToday && (
           <div style={{ background: "linear-gradient(135deg, rgba(212,176,122,0.2), rgba(168,85,247,0.12))", border: "1px solid var(--accent)", borderRadius: 16, padding: 20, marginTop: 16, textAlign: "center" }}>
