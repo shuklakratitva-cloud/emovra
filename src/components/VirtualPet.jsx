@@ -28,18 +28,18 @@ const PET_STAGES = {
   dog: [
     { minLevel: 1, emoji: "🐶", name: "Puppy" },
     { minLevel: 2, emoji: "🐕", name: "Young Pup" },
-    { minLevel: 4, emoji: "🐕", name: "Dog" },
-    { minLevel: 7, emoji: "🦮", name: "Loyal Dog" },
-    { minLevel: 10, emoji: "🐕‍🦺", name: "Working Dog" },
+    { minLevel: 4, emoji: "🦮", name: "Loyal Dog" },
+    { minLevel: 7, emoji: "🐕‍🦺", name: "Working Dog" },
+    { minLevel: 10, emoji: "🐩", name: "Distinguished Dog" },
     { minLevel: 15, emoji: "🐕", name: "Best Friend" },
   ],
   cat: [
     { minLevel: 1, emoji: "🐱", name: "Kitten" },
     { minLevel: 2, emoji: "🐈", name: "Young Cat" },
-    { minLevel: 4, emoji: "🐈", name: "Cat" },
+    { minLevel: 4, emoji: "😼", name: "Independent Cat" },
     { minLevel: 7, emoji: "🐈‍⬛", name: "Sleek Cat" },
-    { minLevel: 10, emoji: "🐈", name: "Wise Cat" },
-    { minLevel: 15, emoji: "🐈", name: "Legendary Cat" },
+    { minLevel: 10, emoji: "🐆", name: "Wise Cat" },
+    { minLevel: 15, emoji: "🦁", name: "Legendary Cat" },
   ],
 };
 

@@ -11,8 +11,7 @@ function authHeaders() {
 // its own data from the existing /api/goals endpoint rather than needing
 // Dashboard.jsx to be restructured to pass goal data down.
 const GROWTH_STAGES = [
-  { min: 0, emoji: "🟫", name: "Bare soil" },
-  { min: 1, emoji: "🌱", name: "Sprouting" },
+  { min: 0, emoji: "🌱", name: "Sprouting" },
   { min: 2, emoji: "🌿", name: "Growing" },
   { min: 4, emoji: "🌷", name: "Budding" },
   { min: 6, emoji: "🌸", name: "Blooming" },

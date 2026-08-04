@@ -55,7 +55,7 @@ export default function HSLColorPicker({ value, onChange, label }) {
     <div style={{ minWidth: 180 }}>
       {label && <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 6 }}>{label}</div>}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 8, background: value, border: "1px solid var(--border)", flexShrink: 0 }} />
+        <div style={{ width: 34, height: 34, borderRadius: 8, background: value, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)", flexShrink: 0 }} />
         <div style={{ fontSize: 11, opacity: 0.6, fontFamily: "monospace" }}>{value}</div>
       </div>
 
