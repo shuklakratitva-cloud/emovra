@@ -6,6 +6,14 @@ export const THEMES = {
   "midnight-violet":    { id: "midnight-violet",    name: "Midnight Violet",      bg: "#0d0a14", card: "rgba(24,18,32,0.95)", accent: "#a78bfa", text: "#e8dcf0" },
   "forest-calm":        { id: "forest-calm",        name: "Forest Calm",          bg: "#0a120e", card: "rgba(16,28,20,0.95)", accent: "#86efac", text: "#dcf5e0" },
   "rose-quartz":        { id: "rose-quartz",        name: "Rose Quartz",          bg: "#140a0e", card: "rgba(30,16,22,0.95)", accent: "#f9a8d4", text: "#f5dce8" },
+  // NEW: 4 more presets, added to replace the custom color picker (removed
+  // after it caused persistent, hard-to-pin-down rendering bugs) - these
+  // are fixed, pre-tested hex values, so there's no live color math and no
+  // possible slider/state bug, just genuine extra variety.
+  "ocean-teal":         { id: "ocean-teal",         name: "Ocean Teal",           bg: "#081414", card: "rgba(14,28,28,0.95)", accent: "#5eead4", text: "#dcf5f2" },
+  "sunset-amber":       { id: "sunset-amber",        name: "Sunset Amber",        bg: "#160e08", card: "rgba(32,20,14,0.95)", accent: "#fb923c", text: "#f5e4d8" },
+  "slate-blue":         { id: "slate-blue",         name: "Slate Blue",           bg: "#0a0e16", card: "rgba(18,24,34,0.95)", accent: "#60a5fa", text: "#dce6f5" },
+  "cherry-blossom":     { id: "cherry-blossom",     name: "Cherry Blossom",       bg: "#140a10", card: "rgba(30,16,24,0.95)", accent: "#fb7185", text: "#f5dce4" },
 };
 
 export const AVATARS = ["🦋","🌸","🌊","🌙","⭐","🌻","🦊","🐢","🐝","🍃","🔥","🌈"];
