@@ -21,7 +21,13 @@ export function applyThemeVars(theme) {
   root.style.setProperty("--accent", t.accent);
   root.style.setProperty("--text", t.text);
   root.style.setProperty("--text-h", t.accent); // NEW: heading/label accent color follows the theme's accent too
-  document.body.style.background = t.bg;
+  // FIX: was `document.body.style.background = t.bg` - a plain inline
+  // style, which can still lose to a stylesheet rule using !important
+  // (inline styles only automatically win when there's no !important
+  // competing with them). Forced with maximum priority instead, so this
+  // can never be silently overridden by anything else in the cascade.
+  document.body.style.setProperty("background", t.bg, "important");
+  document.documentElement.style.setProperty("background", t.bg, "important");
 }
 
 // Call once on app load. Applies the default (Classic Black & Gold)
