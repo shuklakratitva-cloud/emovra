@@ -3,17 +3,22 @@
 // a person can switch TO, never a replacement for the default.
 export const THEMES = {
   "classic-black-gold": { id: "classic-black-gold", name: "Classic Black & Gold", bg: "#0a0a0c", card: "rgba(18,18,20,0.95)", accent: "#d4b07a", text: "#e8dcc6" },
-  "midnight-violet":    { id: "midnight-violet",    name: "Midnight Violet",      bg: "#0d0a14", card: "rgba(24,18,32,0.95)", accent: "#a78bfa", text: "#e8dcf0" },
-  "forest-calm":        { id: "forest-calm",        name: "Forest Calm",          bg: "#0a120e", card: "rgba(16,28,20,0.95)", accent: "#86efac", text: "#dcf5e0" },
-  "rose-quartz":        { id: "rose-quartz",        name: "Rose Quartz",          bg: "#140a0e", card: "rgba(30,16,22,0.95)", accent: "#f9a8d4", text: "#f5dce8" },
+  // FIX: the 7 alternate dark presets below used near-black backgrounds
+  // (barely distinguishable from Classic Black & Gold except by hue) -
+  // brightened them to genuinely visible, more saturated colors per
+  // request, while keeping Classic Black & Gold itself unchanged as the
+  // intentional near-black signature default.
+  "midnight-violet":    { id: "midnight-violet",    name: "Midnight Violet",      bg: "#1d1430", card: "rgba(38,26,58,0.95)", accent: "#a78bfa", text: "#e8dcf0" },
+  "forest-calm":        { id: "forest-calm",        name: "Forest Calm",          bg: "#132a1c", card: "rgba(22,46,30,0.95)", accent: "#86efac", text: "#dcf5e0" },
+  "rose-quartz":        { id: "rose-quartz",        name: "Rose Quartz",          bg: "#2a1420", card: "rgba(46,22,36,0.95)", accent: "#f9a8d4", text: "#f5dce8" },
   // NEW: 4 more presets, added to replace the custom color picker (removed
   // after it caused persistent, hard-to-pin-down rendering bugs) - these
   // are fixed, pre-tested hex values, so there's no live color math and no
   // possible slider/state bug, just genuine extra variety.
-  "ocean-teal":         { id: "ocean-teal",         name: "Ocean Teal",           bg: "#081414", card: "rgba(14,28,28,0.95)", accent: "#5eead4", text: "#dcf5f2" },
-  "sunset-amber":       { id: "sunset-amber",        name: "Sunset Amber",        bg: "#160e08", card: "rgba(32,20,14,0.95)", accent: "#fb923c", text: "#f5e4d8" },
-  "slate-blue":         { id: "slate-blue",         name: "Slate Blue",           bg: "#0a0e16", card: "rgba(18,24,34,0.95)", accent: "#60a5fa", text: "#dce6f5" },
-  "cherry-blossom":     { id: "cherry-blossom",     name: "Cherry Blossom",       bg: "#140a10", card: "rgba(30,16,24,0.95)", accent: "#fb7185", text: "#f5dce4" },
+  "ocean-teal":         { id: "ocean-teal",         name: "Ocean Teal",           bg: "#0f2c2c", card: "rgba(20,46,46,0.95)", accent: "#5eead4", text: "#dcf5f2" },
+  "sunset-amber":       { id: "sunset-amber",        name: "Sunset Amber",        bg: "#2e1c10", card: "rgba(48,32,20,0.95)", accent: "#fb923c", text: "#f5e4d8" },
+  "slate-blue":         { id: "slate-blue",         name: "Slate Blue",           bg: "#152036", card: "rgba(26,38,58,0.95)", accent: "#60a5fa", text: "#dce6f5" },
+  "cherry-blossom":     { id: "cherry-blossom",     name: "Cherry Blossom",       bg: "#2a1622", card: "rgba(46,24,38,0.95)", accent: "#fb7185", text: "#f5dce4" },
   // NEW: light themes - every preset up to this point was dark. Text
   // color is flipped to a dark tone for readability against the light
   // backgrounds. Honest note: some individual UI elements elsewhere in
