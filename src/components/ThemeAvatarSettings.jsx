@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { applyThemeVars } from "../utils/applyTheme.js";
-import HSLColorPicker from "./HSLColorPicker.jsx";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -11,40 +10,6 @@ export default function ThemeAvatarSettings() {
   const [options, setOptions] = useState(null);
   const [current, setCurrent] = useState(null);
   const [saved, setSaved] = useState(false);
-  // Custom color picker state - redesigned to avoid the live full-page
-  // preview that caused the earlier, hard-to-pin-down bug. The swatches
-  // within the picker itself update correctly (that specific bug was
-  // found and fixed - an old global CSS rule was colliding with the
-  // swatch's border style by pure text coincidence). What's removed is
-  // the live application of the color to the WHOLE PAGE while dragging -
-  // that relied on real-time CSS variable propagation with too many edge
-  // cases. Saving now does a real reload instead, so the theme is always
-  // derived fresh through the same proven-correct path every normal page
-  // load already uses.
-  const [customBg, setCustomBg] = useState("#0a0a0c");
-  const [customCard, setCustomCard] = useState("#121214");
-  const [customAccent, setCustomAccent] = useState("#d4b07a");
-  const [savingCustom, setSavingCustom] = useState(false);
-  // NEW: live preview brought back per explicit request, despite the
-  // known risk - throttled to fire at most once every 120ms (using a
-  // trailing-edge timer, so the LAST value in a rapid burst always wins)
-  // instead of on every single slider event, which could otherwise fire
-  // dozens of times per second while dragging.
-  const previewTimer = useRef(null);
-  useEffect(() => {
-    return () => { if (previewTimer.current) clearTimeout(previewTimer.current); };
-  }, []);
-  function previewCustomThrottled(next) {
-    if (previewTimer.current) clearTimeout(previewTimer.current);
-    previewTimer.current = setTimeout(() => {
-      applyThemeVars({
-        bg: next.bg ?? customBg,
-        card: next.card ?? customCard,
-        accent: next.accent ?? customAccent,
-        text: "#e8dcc6",
-      });
-    }, 120);
-  }
   // NEW: avatar upload state
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -257,16 +222,6 @@ export default function ThemeAvatarSettings() {
     } catch {}
   }
 
-  // Only called once, on Save - not on every slider drag. Matches the
-  // exact same pattern preset themes already use reliably (save, then a
-  // single applyThemeVars call), rather than the rapid-fire live-preview
-  // approach that caused the earlier bug.
-  async function saveCustomTheme() {
-    setSavingCustom(true);
-    await save({ customTheme: { bg: customBg, card: customCard, accent: customAccent } });
-    setSavingCustom(false);
-  }
-
   // NEW: resizes the uploaded image client-side (max 160x160, JPEG) before
   // sending it, so we're never uploading a multi-megabyte photo just to
   // display it at 60px - keeps the request fast and the database small.
@@ -347,24 +302,6 @@ export default function ThemeAvatarSettings() {
             </button>
           ))}
         </div>
-      </div>
-
-      <div style={{ marginTop: 20, padding: 16, borderRadius: 12, border: isCustomActive ? "2px solid #d4b07a" : "1px solid var(--border)" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖌 Or make your own</div>
-        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>Pick your own colors below - the swatches update as you go. Click Save to actually apply it to the app.</p>
-
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-          <HSLColorPicker label="Background" value={customBg} onChange={(hex) => { setCustomBg(hex); previewCustomThrottled({ bg: hex }); }} />
-          <HSLColorPicker label="Box / Card color" value={customCard} onChange={(hex) => { setCustomCard(hex); previewCustomThrottled({ card: hex }); }} />
-          <HSLColorPicker label="Accent color" value={customAccent} onChange={(hex) => { setCustomAccent(hex); previewCustomThrottled({ accent: hex }); }} />
-        </div>
-
-        <button onClick={saveCustomTheme} disabled={savingCustom} style={{ marginTop: 14, background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-          {savingCustom ? "Saving..." : "Save custom theme"}
-        </button>
-        {!isCustomActive && (
-          <p style={{ fontSize: 10, opacity: 0.5, marginTop: 8 }}>Saving will switch your active theme to this custom one.</p>
-        )}
       </div>
 
       <div style={{ marginTop: 20 }}>
