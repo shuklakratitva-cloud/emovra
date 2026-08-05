@@ -294,11 +294,11 @@ export default function ThemeAvatarSettings() {
               style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 12, cursor: "pointer",
                 border: !isCustomActive && current.theme?.id === t.id ? "2px solid #d4b07a" : "1px solid var(--border)",
-                background: t.bg,
+                background: "transparent",
               }}
             >
-              <span style={{ width: 16, height: 16, borderRadius: "50%", background: t.accent, display: "inline-block" }} />
-              <span style={{ fontSize: 12, color: t.text }}>{t.name}</span>
+              <span style={{ width: 16, height: 16, borderRadius: "50%", background: t.accent, display: "inline-block", border: "1px solid rgba(255,255,255,0.2)" }} />
+              <span style={{ fontSize: 12, color: "var(--text)" }}>{t.name}</span>
             </button>
           ))}
         </div>
