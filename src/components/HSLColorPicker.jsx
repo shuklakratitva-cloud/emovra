@@ -1,27 +1,17 @@
 import React, { useState, useEffect } from "react";
 
-// FIX: rebuilt on the HWB (Hue/Whiteness/Blackness) model instead of HSL,
-// per request - HSL's single "Brightness" slider conflates two different
-// things (moving toward black AND moving toward white) into one axis,
-// which made it hard to just see "pure vivid red" and then separately
-// decide how much white or black to mix in. HWB is a real, standard CSS
-// color model (the hwb() function) built exactly for this: Hue picks the
-// pure color, Whiteness and Blackness are two independent sliders that
-// each start at 0 - moving the Hue slider alone always shows the fully
-// vivid version of that hue.
+// HWB (Hue/Whiteness/Blackness) picker - Hue picks the pure vivid color,
+// Whiteness and Blackness are two independent sliders, each starting at
+// 0. Math verified directly: hue=0/w=0/b=0 produces true #ff0000.
 
 function hexToRgb(hex) {
   return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 }
-
 function rgbToHex(r, g, b) {
   const toHex = (x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0");
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
-
 function hueToRgb(h) {
-  // pure, fully-saturated color for a given hue (0-360) - this is what
-  // shows up at Whiteness=0, Blackness=0
   const c = 1, x = 1 - Math.abs(((h / 60) % 2) - 1);
   let r, g, b;
   if (h < 60) [r, g, b] = [c, x, 0];
@@ -32,7 +22,6 @@ function hueToRgb(h) {
   else [r, g, b] = [c, 0, x];
   return [r * 255, g * 255, b * 255];
 }
-
 function rgbToHwb(r, g, b) {
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -50,7 +39,6 @@ function rgbToHwb(r, g, b) {
   }
   return { h: Math.round(h), w: Math.round(w * 100), b: Math.round(blk * 100) };
 }
-
 function hwbToHex(h, w, b) {
   w /= 100; b /= 100;
   if (w + b >= 1) {
@@ -72,7 +60,6 @@ export default function HSLColorPicker({ value, onChange, label }) {
 
   function update(next) {
     const merged = { ...hwb, ...next };
-    // keep whiteness + blackness from exceeding 100% combined
     if (merged.w + merged.b > 100) {
       if (next.w !== undefined) merged.b = 100 - merged.w;
       else merged.w = 100 - merged.b;
@@ -93,7 +80,6 @@ export default function HSLColorPicker({ value, onChange, label }) {
         <div style={{ width: 34, height: 34, borderRadius: 8, background: value, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)", flexShrink: 0 }} />
         <div style={{ fontSize: 11, opacity: 0.6, fontFamily: "monospace" }}>{value}</div>
       </div>
-
       <div style={{ marginBottom: 6 }}>
         <div style={{ fontSize: 10, opacity: 0.5 }}>Hue (pure color)</div>
         <input type="range" min="0" max="360" value={hwb.h} onChange={(e) => update({ h: Number(e.target.value) })}

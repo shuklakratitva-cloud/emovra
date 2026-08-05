@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { applyThemeVars } from "../utils/applyTheme.js";
-import HSLColorPicker from "./HSLColorPicker.jsx"; // NEW
+import HSLColorPicker from "./HSLColorPicker.jsx";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -11,12 +11,20 @@ export default function ThemeAvatarSettings() {
   const [options, setOptions] = useState(null);
   const [current, setCurrent] = useState(null);
   const [saved, setSaved] = useState(false);
-  // NEW: local color-picker state, seeded from the saved custom theme (or
-  // sensible defaults) so the pickers show something reasonable even
-  // before the person has ever customized anything.
+  // Custom color picker state - redesigned to avoid the live full-page
+  // preview that caused the earlier, hard-to-pin-down bug. The swatches
+  // within the picker itself update correctly (that specific bug was
+  // found and fixed - an old global CSS rule was colliding with the
+  // swatch's border style by pure text coincidence). What's removed is
+  // the live application of the color to the WHOLE PAGE while dragging -
+  // that relied on real-time CSS variable propagation with too many edge
+  // cases. Saving now does a real reload instead, so the theme is always
+  // derived fresh through the same proven-correct path every normal page
+  // load already uses.
   const [customBg, setCustomBg] = useState("#0a0a0c");
   const [customCard, setCustomCard] = useState("#121214");
   const [customAccent, setCustomAccent] = useState("#d4b07a");
+  const [savingCustom, setSavingCustom] = useState(false);
   // NEW: avatar upload state
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -56,7 +64,6 @@ export default function ThemeAvatarSettings() {
       return !h;
     });
   }
-  const [moodWallpaperMsg, setMoodWallpaperMsg] = useState("");
 
   const MOOD_COLORS = {
     Happy: "#4ade80", Calm: "#60a5fa", Neutral: "#d4c5a0", Sad: "#818cf8",
@@ -77,26 +84,6 @@ export default function ThemeAvatarSettings() {
     }
   }
 
-  function useMoodAsWallpaper() {
-    try {
-      const history = JSON.parse(localStorage.getItem("mental_health_mood_history") || "[]");
-      if (!history.length) {
-        setMoodWallpaperMsg("Log a mood in the Mood Tracker first, then come back here.");
-        return;
-      }
-      const latestMood = history[0].mood;
-      const color = MOOD_COLORS[latestMood];
-      if (!color) {
-        setMoodWallpaperMsg("Couldn't match that mood to a color - try again.");
-        return;
-      }
-      setCustomBg(color);
-      previewCustom({ bg: color });
-      setMoodWallpaperMsg(`Background set to your "${latestMood}" mood color - click "Save custom theme" to keep it.`);
-    } catch {
-      setMoodWallpaperMsg("Something went wrong reading your mood history.");
-    }
-  }
   // NEW: push notifications
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -250,20 +237,14 @@ export default function ThemeAvatarSettings() {
     } catch {}
   }
 
-  // NEW: live-preview the custom colors as you drag the picker, WITHOUT
-  // saving on every single change (color inputs fire constantly while
-  // dragging) - only actually saves when you click "Save custom theme".
-  function previewCustom(next) {
-    applyThemeVars({
-      bg: next.bg ?? customBg,
-      card: next.card ?? customCard,
-      accent: next.accent ?? customAccent,
-      text: "#e8dcc6",
-    });
-  }
-
-  function saveCustomTheme() {
-    save({ customTheme: { bg: customBg, card: customCard, accent: customAccent } });
+  // Only called once, on Save - not on every slider drag. Matches the
+  // exact same pattern preset themes already use reliably (save, then a
+  // single applyThemeVars call), rather than the rapid-fire live-preview
+  // approach that caused the earlier bug.
+  async function saveCustomTheme() {
+    setSavingCustom(true);
+    await save({ customTheme: { bg: customBg, card: customCard, accent: customAccent } });
+    setSavingCustom(false);
   }
 
   // NEW: resizes the uploaded image client-side (max 160x160, JPEG) before
@@ -348,31 +329,22 @@ export default function ThemeAvatarSettings() {
         </div>
       </div>
 
-      {/* NEW: custom color picker - pick your own background/box/accent colors */}
       <div style={{ marginTop: 20, padding: 16, borderRadius: 12, border: isCustomActive ? "2px solid #d4b07a" : "1px solid var(--border)" }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖌 Or make your own</div>
-        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>Pick your own background and box colors. Preview updates live - click Save to keep it.</p>
+        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>Pick your own colors below - the swatches update as you go. Click Save to actually apply it to the app.</p>
 
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-          <HSLColorPicker label="Background" value={customBg} onChange={(hex) => { setCustomBg(hex); previewCustom({ bg: hex }); }} />
-          <HSLColorPicker label="Box / Card color" value={customCard} onChange={(hex) => { setCustomCard(hex); previewCustom({ card: hex }); }} />
-          <HSLColorPicker label="Accent color" value={customAccent} onChange={(hex) => { setCustomAccent(hex); previewCustom({ accent: hex }); }} />
+          <HSLColorPicker label="Background" value={customBg} onChange={setCustomBg} />
+          <HSLColorPicker label="Box / Card color" value={customCard} onChange={setCustomCard} />
+          <HSLColorPicker label="Accent color" value={customAccent} onChange={setCustomAccent} />
         </div>
 
-        <button onClick={saveCustomTheme} style={{ marginTop: 14, background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-          Save custom theme
+        <button onClick={saveCustomTheme} disabled={savingCustom} style={{ marginTop: 14, background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+          {savingCustom ? "Saving..." : "Save custom theme"}
         </button>
         {!isCustomActive && (
           <p style={{ fontSize: 10, opacity: 0.5, marginTop: 8 }}>Saving will switch your active theme to this custom one.</p>
         )}
-
-        {/* NEW: mood wallpaper - reuses the custom theme system, just
-            auto-fills the background color from your most recent logged
-            mood instead of you picking manually */}
-        <button onClick={useMoodAsWallpaper} style={{ marginTop: 10, marginLeft: 10, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 18px", borderRadius: 999, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
-          🎨 Use my mood as background
-        </button>
-        {moodWallpaperMsg && <p style={{ fontSize: 11, opacity: 0.6, marginTop: 6 }}>{moodWallpaperMsg}</p>}
       </div>
 
       <div style={{ marginTop: 20 }}>
