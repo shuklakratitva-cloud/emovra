@@ -14,6 +14,18 @@ export const THEMES = {
   "sunset-amber":       { id: "sunset-amber",        name: "Sunset Amber",        bg: "#160e08", card: "rgba(32,20,14,0.95)", accent: "#fb923c", text: "#f5e4d8" },
   "slate-blue":         { id: "slate-blue",         name: "Slate Blue",           bg: "#0a0e16", card: "rgba(18,24,34,0.95)", accent: "#60a5fa", text: "#dce6f5" },
   "cherry-blossom":     { id: "cherry-blossom",     name: "Cherry Blossom",       bg: "#140a10", card: "rgba(30,16,24,0.95)", accent: "#fb7185", text: "#f5dce4" },
+  // NEW: light themes - every preset up to this point was dark. Text
+  // color is flipped to a dark tone for readability against the light
+  // backgrounds. Honest note: some individual UI elements elsewhere in
+  // the app use hardcoded overlay colors designed with dark backgrounds
+  // in mind (e.g. "rgba(255,255,255,0.1)" style highlights) - those will
+  // still render, just not quite as polished in light mode as the core
+  // background/card/accent/text sweep is. Kept to 3 rather than matching
+  // the dark set 1-for-1, since this is a newer addition, not the
+  // primary experience the rest of the app was built around.
+  "soft-ivory":  { id: "soft-ivory",  name: "Soft Ivory",  bg: "#faf7f0", card: "rgba(255,255,255,0.9)",  accent: "#c98a2e", text: "#3a3226" },
+  "sky-mist":    { id: "sky-mist",    name: "Sky Mist",    bg: "#f2f6fa", card: "rgba(255,255,255,0.9)",  accent: "#3b82f6", text: "#22303f" },
+  "sage-light":  { id: "sage-light",  name: "Sage Light",  bg: "#f4f8f2", card: "rgba(255,255,255,0.9)",  accent: "#4d8c5c", text: "#26332a" },
 };
 
 export const AVATARS = ["🦋","🌸","🌊","🌙","⭐","🌻","🦊","🐢","🐝","🍃","🔥","🌈"];
