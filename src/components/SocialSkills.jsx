@@ -21,7 +21,7 @@ export default function SocialSkills() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [messages]);
 
   async function send() {
     if (!input.trim() || loading) return;

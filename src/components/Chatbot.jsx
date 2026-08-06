@@ -11,7 +11,7 @@ export default function Chatbot() {
   const endRef = useRef(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages]);
 
   async function send() {
