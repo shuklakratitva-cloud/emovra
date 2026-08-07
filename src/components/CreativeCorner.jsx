@@ -29,7 +29,11 @@ function ColorWheel({ onPick }) {
     const radius = rect.width / 2;
     if (dist > radius) return; // clicked outside the wheel
     let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    if (angle < 0) angle += 360;
+    // FIX: atan2's 0deg points right, increasing clockwise. The wheel's
+    // conic-gradient draws its 0deg pointing up (top), also increasing
+    // clockwise - a 90deg mismatch between where you click and what color
+    // that position actually shows. Rotating to align the two.
+    angle = (angle + 90 + 360) % 360;
     const sat = Math.min(100, Math.round((dist / radius) * 100));
     onPick(angle, sat);
   }
