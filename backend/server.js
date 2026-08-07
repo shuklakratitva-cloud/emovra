@@ -4,8 +4,21 @@ import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet"; // NEW: baseline security headers (was entirely missing)
+import * as Sentry from "@sentry/node"; // NEW: error monitoring
 
 dotenv.config();
+
+// NEW: error monitoring - only activates if SENTRY_DSN is set, so this is
+// a no-op (not a crash) for anyone who hasn't set up a Sentry account yet.
+// Free tier at sentry.io is enough for a project this size. Once you have
+// a DSN, add it as SENTRY_DSN in Render's environment variables - no code
+// change needed after that, it picks it up automatically on next deploy.
+if (process.env.SENTRY_DSN) {
+  Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1 });
+  console.log("🔭 Sentry error monitoring: ENABLED");
+} else {
+  console.log("🔭 Sentry error monitoring: not configured (set SENTRY_DSN to enable)");
+}
 
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
@@ -205,7 +218,22 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
   console.error("SERVER ERROR:", err.message);
+  if (process.env.SENTRY_DSN) Sentry.captureException(err); // NEW
   res.status(500).json({ success: false, message: err.message });
+});
+
+// NEW: catches crashes that happen outside any Express route entirely -
+// an unhandled promise rejection or uncaught exception would otherwise
+// take the whole server down with nothing but a bare stack trace in the
+// logs. Reports to Sentry (if configured) and logs either way, so a crash
+// is at minimum visible instead of just... the server going quiet.
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED REJECTION:", reason);
+  if (process.env.SENTRY_DSN) Sentry.captureException(reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+  if (process.env.SENTRY_DSN) Sentry.captureException(err);
 });
 
 const PORT = process.env.PORT || 5000;
