@@ -1,4 +1,5 @@
 import React from "react";
+import * as Sentry from "@sentry/react"; // NEW: error monitoring
 
 // FIX: rewrote the fallback UI - the old version said "Check console (F12)
 // for details," which is developer language, not something a distressed
@@ -18,6 +19,7 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error("App crashed:", error, info);
+    if (import.meta.env.VITE_SENTRY_DSN) Sentry.captureException(error, { extra: info }); // NEW
   }
 
   render() {

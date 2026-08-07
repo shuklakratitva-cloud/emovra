@@ -1,11 +1,20 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import * as Sentry from "@sentry/react"; // NEW: error monitoring
 
 import App from "./App";
 import "./index.css";
 import { initTheme } from "./utils/applyTheme.js";
 import ErrorBoundary from "./components/ErrorBoundary.jsx"; // NEW
+
+// NEW: error monitoring - same pattern as the backend. Only activates if
+// VITE_SENTRY_DSN is set at build time, so this is a no-op for anyone who
+// hasn't set up a Sentry account yet. Add it as an environment variable in
+// Cloudflare Pages' build settings once you have a DSN.
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({ dsn: import.meta.env.VITE_SENTRY_DSN, tracesSampleRate: 0.1 });
+}
 
 // NEW: applies Classic Black & Gold immediately (so there's never a flash
 // of unstyled content), then swaps in the person's saved theme preference

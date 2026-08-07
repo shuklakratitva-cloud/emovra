@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { LanguageProvider } from "./i18n/LanguageContext.jsx"; // NEW: Hindi/English language support
 import LandingPage from "./pages/LandingPage";
 import MindGuardApp from "./pages/MindGuardApp";
 import Dashboard from "./pages/Dashboard"; // NEW: personalized dashboard, shown right after login
@@ -30,31 +31,33 @@ function AdminRoute({ children }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
+    <LanguageProvider>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
 
-      {/* /app is public so Launch button works - MindGuardApp shows Login inside itself */}
-      <Route path="/app" element={<MindGuardApp />} />
+        {/* /app is public so Launch button works - MindGuardApp shows Login inside itself */}
+        <Route path="/app" element={<MindGuardApp />} />
 
-      {/* NEW: shown right after signup/login (Auth.jsx navigates here),
-          before the person reaches the main app tabs */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
+        {/* NEW: shown right after signup/login (Auth.jsx navigates here),
+            before the person reaches the main app tabs */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
 
-      {/* NEW: public, real privacy policy page - no login required, since
-          Google (and anyone else) needs to be able to reach it directly */}
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        {/* NEW: public, real privacy policy page - no login required, since
+            Google (and anyone else) needs to be able to reach it directly */}
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-      <Route path="/admin" element={
-        <AdminRoute>
-          <AdminPanel />
-        </AdminRoute>
-      } />
+        <Route path="/admin" element={
+          <AdminRoute>
+            <AdminPanel />
+          </AdminRoute>
+        } />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </LanguageProvider>
   );
 }
