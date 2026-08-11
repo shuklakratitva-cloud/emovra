@@ -74,7 +74,7 @@ export default function MindGuardApp() {
   // replacement: forgot-password now uses real email OTP instead.
 
   const token = localStorage.getItem('token');
-  const { transcript, listening, startListening, stopListening } = useSpeechRecognition();
+  const { transcript, listening, error: micError, startListening, stopListening } = useSpeechRecognition();
   const [avatarProfile, setAvatarProfile] = useState({ avatar: "🦋", avatarType: "emoji", avatarImage: "" }); // NEW
   // NEW: safety plan - fetched once, passed to RiskCard so it can show a
   // reminder of the person's own reasons/coping strategies during RED
@@ -160,7 +160,24 @@ useEffect(() => {
       if (token) {
         fetch(`${API}/data/my`, { headers: { Authorization: `Bearer ${token}` } })
   .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
-  .then(d => { if (Array.isArray(d) && d.length) setHistory(d.reverse().slice(-20)); })
+  .then(d => {
+    if (!Array.isArray(d) || !d.length) return;
+    // Merge server entries (RED/ORANGE only, by design) into the existing
+    // local history instead of replacing it - the local history includes
+    // GREEN/YELLOW moods that were never sent to the server, and blindly
+    // overwriting with server-only data was silently discarding those on
+    // every page load, which is the exact bug this fixes.
+    setHistory(h => {
+      const existingKeys = new Set(h.map(e => `${e.text}|${e.timestamp}`));
+      const merged = [...h];
+      for (const entry of d) {
+        const key = `${entry.text}|${entry.timestamp}`;
+        if (!existingKeys.has(key)) merged.push(entry);
+      }
+      merged.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      return merged.slice(-20);
+    });
+  })
   .catch(() => {});
       }
     } catch {}
@@ -520,11 +537,17 @@ useEffect(() => {
               <div style={{ padding: 20, borderRadius: 16, border: "0.5px solid rgba(212,197,160,0.18)", background: "var(--card-bg)" }}>
                 <h3 style={{ margin: "0 0 12px 0", color:'var(--text)' }}>How are you feeling today?</h3>
                 <textarea rows={5} value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" &&!e.shiftKey) { e.preventDefault(); handleAnalyze(); } }} placeholder="Type what's on your mind..." style={{ width: "100%", padding: 14, borderRadius: 12, border: "0.5px solid rgba(212,197,160,0.18)", background: "#0f0f11", color: "var(--text)", outline:'none' }} />
-                <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap:'wrap' }}>
-                  <button onClick={handleAnalyze} disabled={loading} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 800, cursor:'pointer', fontSize:12 }}>{loading? "Analyzing..." : "✨ Analyze"}</button>
+                <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap:'wrap', alignItems: 'center' }}>
+                  <style>{`@keyframes emovra-spin { to { transform: rotate(360deg); } }`}</style>
+                  <button onClick={handleAnalyze} disabled={loading} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 800, cursor: loading ? 'default' : 'pointer', fontSize:12, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    {loading && <span style={{ width: 12, height: 12, border: "2px solid rgba(0,0,0,0.25)", borderTopColor: "#000", borderRadius: "50%", display: "inline-block", animation: "emovra-spin 0.7s linear infinite" }} />}
+                    {loading? "Analyzing..." : "✨ Analyze"}
+                  </button>
+                  {loading && <span style={{ fontSize: 11, opacity: 0.5 }}>This can take up to 15 seconds</span>}
                   <button onClick={() => (listening? stopListening() : startListening())} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background:'transparent', color:'var(--text-h)', cursor:'pointer', fontSize:12 }}>🎙 {listening? "Stop" : "Speak"}</button>
                   <button onClick={() => { setInputText(""); setAnalysis(null); }} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(255,255,255,0.12)", background:'transparent', color:'rgba(232,220,198,0.6)', cursor:'pointer', fontSize:12 }}>Clear</button>
                 </div>
+                {micError && <div style={{ background: "#fee2e2", color: "#991b1b", padding: 8, borderRadius: 8, fontSize: 12, marginTop: 10 }}>{micError}</div>}
               </div>
 
               {analysis && (

@@ -69,7 +69,7 @@ export default function MoodChart({ history = [] }) {
 
   return (
     <div style={{maxWidth:680,width:"100%",marginTop:16,padding:16,border:"1px solid var(--border)",borderRadius:12,background:"var(--card-bg)",textAlign:"left"}}>
-      <strong>📈 Mood History ({data.length} entries) - Persists after refresh</strong>
+      <strong>📈 Mood History ({data.length} entries)</strong>
       <div style={{overflowX:"auto",marginTop:12}}>
         <svg viewBox={`0 0 ${width} ${height}`} style={{width:"100%",height:140,display:"block"}}>
           <line x1={padding} y1={padding} x2={padding} y2={height-padding} stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3"/>
@@ -100,7 +100,6 @@ export default function MoodChart({ history = [] }) {
         })}
       </div>
 
-      <small style={{opacity:0.5,display:"block",marginTop:8}}>Tip: Refresh page - this history will STAY. That's persistence working.</small>
     </div>
   );
 }

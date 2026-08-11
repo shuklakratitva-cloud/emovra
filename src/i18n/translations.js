@@ -1,10 +1,10 @@
 // src/i18n/translations.js
 //
-// Core translation dictionary. Currently covers the Landing Page fully -
-// the first thing every visitor sees, and the highest-value place to
-// start. Extending this same pattern to Auth, the main Dashboard tabs,
-// and Check-in is the natural next step, added incrementally rather than
-// attempting every string across every component in one pass.
+// Core translation dictionary. Covers the Landing Page and Auth
+// (signup/login/forgot password) fully. Extending this same pattern to
+// the Dashboard tabs and Check-in is the natural next step, added
+// incrementally rather than attempting every string across every
+// component in one pass.
 
 export const translations = {
   en: {
@@ -62,6 +62,68 @@ export const translations = {
     "support.title": "We are here for you",
 
     "footer.launch": "Launch App →",
+
+    // Auth (signup/login/forgot password)
+    "auth.almostThere": "Almost there",
+    "auth.signedInAs": "Signed in as {name}. Just need a couple more things required for safety features like SOS.",
+    "auth.age": "Age *",
+    "auth.emergencyContactName": "Emergency Contact Name * (Mom/Dad)",
+    "auth.emergencyPhone": "Emergency Phone *",
+    "auth.finishingUp": "Finishing up...",
+    "auth.finishSigningUp": "Finish signing up",
+    "auth.cancel": "← Cancel",
+    "auth.resetPassword": "Reset Password",
+    "auth.enterEmailForCode": "Enter your account email. We'll send a one-time code to it.",
+    "auth.yourAccountEmail": "Your account email *",
+    "auth.sendingCode": "Sending code...",
+    "auth.sendCode": "Send code",
+    "auth.backToSignInArrow": "← Back to sign in",
+    "auth.enterCode": "Enter Code",
+    "auth.enterCodeSentTo": "Enter the code sent to {email} and choose a new password.",
+    "auth.sixDigitCode": "6-digit code *",
+    "auth.newPassword": "New password *",
+    "auth.resetting": "Resetting...",
+    "auth.resendCode": "Resend code",
+    "auth.backToSignIn": "Back to sign in",
+    "auth.createAccount": "Create Account",
+    "auth.signIn": "Sign In",
+    "auth.fullName": "Full name *",
+    "auth.email": "Email *",
+    "auth.emergencyRequiredNote": "* Compulsory - Used only in RED emergency for SOS",
+    "auth.password": "Password *",
+    "auth.wakingServer": "Waking up server... wait 30s",
+    "auth.signUp": "Sign Up",
+    "auth.signingInGoogle": "Signing in with Google...",
+    "auth.forgotPassword": "Forgot password?",
+    "auth.alreadyHaveAccount": "Already have an account?",
+    "auth.dontHaveAccount": "Don't have an account?",
+
+    // Dashboard - tab labels
+    "tab.overview": "Overview",
+    "tab.habitsGoals": "Habits & Goals",
+    "tab.insights": "Insights",
+    "tab.relax": "Relax",
+    "tab.mindGames": "Mind & Games",
+    "tab.creative": "Creative",
+    "tab.reflect": "Reflect",
+    "tab.settings": "Settings",
+
+    // Dashboard - Overview content
+    "dash.continueToEmovra": "Continue to Emovra →",
+    "dash.level": "Level {n}",
+    "dash.dayStreak": "day streak",
+    "dash.progressToLevel": "{pct}% to level {n}",
+    "dash.happyBirthday": "Happy Birthday",
+    "dash.birthdayMsg": "Hope today treats you gently. We're glad you're here.",
+    "dash.gentleCheckIn": "A gentle check-in",
+    "dash.wroteIn": "{author} wrote in",
+    "dash.todaysChallenges": "Today's Challenges",
+    "dash.done": "Done",
+    "dash.claim": "Claim",
+    "dash.yourBadges": "Your Badges",
+    "dash.habitsTracked": "You have {count} habit(s) tracked, {due} due today. See the Habits & Goals tab.",
+    "dash.welcomeBack": "Welcome back",
+    "dash.whereYouAt": "Here's where you're at today.",
   },
 
   hi: {
@@ -119,5 +181,67 @@ export const translations = {
     "support.title": "हम आपके साथ हैं",
 
     "footer.launch": "ऐप लॉन्च करें →",
+
+    // Auth (signup/login/forgot password)
+    "auth.almostThere": "लगभग हो गया",
+    "auth.signedInAs": "{name} के रूप में साइन इन किया। बस कुछ और चीज़ें चाहिए जो SOS जैसी सुरक्षा सुविधाओं के लिए ज़रूरी हैं।",
+    "auth.age": "उम्र *",
+    "auth.emergencyContactName": "आपातकालीन संपर्क नाम * (माता/पिता)",
+    "auth.emergencyPhone": "आपातकालीन फ़ोन *",
+    "auth.finishingUp": "पूरा हो रहा है...",
+    "auth.finishSigningUp": "साइन अप पूरा करें",
+    "auth.cancel": "← रद्द करें",
+    "auth.resetPassword": "पासवर्ड रीसेट करें",
+    "auth.enterEmailForCode": "अपना खाता ईमेल दर्ज करें। हम उस पर एक बार का कोड भेजेंगे।",
+    "auth.yourAccountEmail": "आपका खाता ईमेल *",
+    "auth.sendingCode": "कोड भेजा जा रहा है...",
+    "auth.sendCode": "कोड भेजें",
+    "auth.backToSignInArrow": "← साइन इन पर वापस जाएं",
+    "auth.enterCode": "कोड दर्ज करें",
+    "auth.enterCodeSentTo": "{email} पर भेजा गया कोड दर्ज करें और एक नया पासवर्ड चुनें।",
+    "auth.sixDigitCode": "6-अंकों का कोड *",
+    "auth.newPassword": "नया पासवर्ड *",
+    "auth.resetting": "रीसेट हो रहा है...",
+    "auth.resendCode": "कोड फिर से भेजें",
+    "auth.backToSignIn": "साइन इन पर वापस जाएं",
+    "auth.createAccount": "खाता बनाएं",
+    "auth.signIn": "साइन इन करें",
+    "auth.fullName": "पूरा नाम *",
+    "auth.email": "ईमेल *",
+    "auth.emergencyRequiredNote": "* अनिवार्य - केवल RED आपातकाल में SOS के लिए उपयोग किया जाता है",
+    "auth.password": "पासवर्ड *",
+    "auth.wakingServer": "सर्वर जाग रहा है... 30 सेकंड प्रतीक्षा करें",
+    "auth.signUp": "साइन अप करें",
+    "auth.signingInGoogle": "Google से साइन इन हो रहा है...",
+    "auth.forgotPassword": "पासवर्ड भूल गए?",
+    "auth.alreadyHaveAccount": "पहले से खाता है?",
+    "auth.dontHaveAccount": "खाता नहीं है?",
+
+    // Dashboard - tab labels
+    "tab.overview": "अवलोकन",
+    "tab.habitsGoals": "आदतें और लक्ष्य",
+    "tab.insights": "जानकारी",
+    "tab.relax": "आराम",
+    "tab.mindGames": "दिमाग और खेल",
+    "tab.creative": "रचनात्मक",
+    "tab.reflect": "चिंतन",
+    "tab.settings": "सेटिंग्स",
+
+    // Dashboard - Overview content
+    "dash.continueToEmovra": "Emovra पर जारी रखें →",
+    "dash.level": "स्तर {n}",
+    "dash.dayStreak": "दिन की लगातार श्रृंखला",
+    "dash.progressToLevel": "स्तर {n} तक {pct}%",
+    "dash.happyBirthday": "जन्मदिन मुबारक हो",
+    "dash.birthdayMsg": "उम्मीद है आज का दिन आपके लिए अच्छा रहेगा। हमें खुशी है कि आप यहाँ हैं।",
+    "dash.gentleCheckIn": "एक हल्की जांच",
+    "dash.wroteIn": "{author} ने लिखा",
+    "dash.todaysChallenges": "आज की चुनौतियाँ",
+    "dash.done": "पूर्ण",
+    "dash.claim": "प्राप्त करें",
+    "dash.yourBadges": "आपके बैज",
+    "dash.habitsTracked": "आपके पास {count} आदतें ट्रैक की गई हैं, आज {due} देय हैं। आदतें और लक्ष्य टैब देखें।",
+    "dash.welcomeBack": "वापसी पर स्वागत है",
+    "dash.whereYouAt": "आज आप यहाँ हैं।",
   },
 };

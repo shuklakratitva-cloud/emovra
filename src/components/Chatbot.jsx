@@ -41,11 +41,11 @@ export default function Chatbot() {
   }
 
   return (
-    <div style={{ background: "var(--card-bg, #fff)", padding: "20px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px", display: "flex", flexDirection: "column", height: 480 }}>
+    <div style={{ background: "var(--card-bg, #fff)", padding: "20px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px", display: "flex", flexDirection: "column", minHeight: 220, maxHeight: 480 }}>
       <h2 style={{ margin: 0 }}>💬 Talk to Emovra AI</h2>
       <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Asks follow-up questions to understand you better - not a replacement for a real person or professional.</p>
 
-      <div style={{ flex: 1, overflowY: "auto", marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ overflowY: "auto", marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
         {messages.map((m, i) => (
           <div key={i} style={{
             alignSelf: m.role === "user" ? "flex-end" : "flex-start",

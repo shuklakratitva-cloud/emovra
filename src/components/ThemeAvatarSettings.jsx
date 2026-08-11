@@ -24,6 +24,9 @@ export default function ThemeAvatarSettings() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  // NEW: in-app feedback/bug reporting state
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackStatus, setFeedbackStatus] = useState(""); // "", "sending", "sent", "error"
   // NEW: accessibility settings - font size + high contrast, applied
   // immediately via CSS custom property + a body class, saved locally
   // (device preference, doesn't need backend sync)
@@ -175,6 +178,31 @@ export default function ThemeAvatarSettings() {
     } catch {
       alert("Something went wrong - try again.");
       setDeleting(false);
+    }
+  }
+
+  // NEW: in-app feedback/bug reporting - sends straight to the developer's
+  // email via the backend, so there's a real way to flag something beyond
+  // a screenshot or catching it directly.
+  async function submitFeedback() {
+    if (!feedbackText.trim()) return;
+    setFeedbackStatus("sending");
+    try {
+      const res = await fetch(`${API}/feedback`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ message: feedbackText, page: "Settings" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFeedbackStatus("sent");
+        setFeedbackText("");
+        setTimeout(() => setFeedbackStatus(""), 3000);
+      } else {
+        setFeedbackStatus("error");
+      }
+    } catch {
+      setFeedbackStatus("error");
     }
   }
 
@@ -429,6 +457,30 @@ export default function ThemeAvatarSettings() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* NEW: in-app feedback/bug reporting */}
+      <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>💬 Feedback or found a bug?</div>
+        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 10px" }}>Tell us what's wrong or what you'd like to see - it goes straight to the developer.</p>
+        <textarea
+          value={feedbackText}
+          onChange={(e) => setFeedbackText(e.target.value)}
+          placeholder="What's on your mind?"
+          rows={3}
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)", fontFamily: "inherit", fontSize: 13, resize: "vertical" }}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+          <button
+            onClick={submitFeedback}
+            disabled={!feedbackText.trim() || feedbackStatus === "sending"}
+            style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, fontSize: 12, cursor: feedbackText.trim() ? "pointer" : "not-allowed", opacity: feedbackText.trim() ? 1 : 0.5 }}
+          >
+            {feedbackStatus === "sending" ? "Sending..." : "Send feedback"}
+          </button>
+          {feedbackStatus === "sent" && <span style={{ fontSize: 12, color: "#4ade80" }}>✓ Thanks - sent!</span>}
+          {feedbackStatus === "error" && <span style={{ fontSize: 12, color: "#f87171" }}>Couldn't send - try again.</span>}
+        </div>
       </div>
     </div>
   );

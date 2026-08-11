@@ -11,8 +11,12 @@ export function LanguageProvider({ children }) {
     localStorage.setItem("emovra_lang", lang);
   }, [lang]);
 
-  function t(key) {
-    return translations[lang]?.[key] ?? translations.en[key] ?? key;
+  function t(key, vars) {
+    let str = translations[lang]?.[key] ?? translations.en[key] ?? key;
+    if (vars) {
+      for (const k in vars) str = str.replace(`{${k}}`, vars[k]);
+    }
+    return str;
   }
 
   function toggleLang() {

@@ -49,7 +49,13 @@ export default function useSpeechRecognition() {
       setTranscript(text);
     };
     recognition.onerror = (event) => {
-      setError(event.error || "Recognition error");
+      const friendly = {
+        "not-allowed": "Mic blocked. Allow microphone access in your browser's address bar and try again.",
+        "no-speech": "Didn't catch that - try speaking again.",
+        "audio-capture": "No microphone found on this device.",
+        "network": "Network issue - check your connection and try again.",
+      };
+      setError(friendly[event.error] || "Couldn't access the microphone. Try again or type instead.");
       setListening(false);
     };
     recognition.onend = () => setListening(false);

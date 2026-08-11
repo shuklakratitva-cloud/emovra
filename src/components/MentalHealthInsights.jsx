@@ -17,7 +17,7 @@ export default function MentalHealthInsights() {
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
       <h2 style={{ margin: 0 }}>📊 Mental Health Insights</h2>
       <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>
-        A reflection tool, not a diagnosis - based on your last 30 days.
+        A reflection tool, not a diagnosis - based on your last 30 days. Only check-ins flagged as needing attention are saved here - everyday GREEN/YELLOW check-ins are never stored, by design.
       </p>
 
       {!data ? <p style={{ fontSize: 13, opacity: 0.6, marginTop: 12 }}>Loading...</p> : (
@@ -25,7 +25,7 @@ export default function MentalHealthInsights() {
           <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 140, background: "rgba(212,197,160,0.08)", border: "1px solid var(--border)", borderRadius: 12, padding: 14, textAlign: "center" }}>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{data.totalCheckIns}</div>
-              <div style={{ fontSize: 11, opacity: 0.6 }}>Check-ins logged</div>
+              <div style={{ fontSize: 11, opacity: 0.6 }}>Flagged check-ins saved</div>
             </div>
             {data.topEmotion && (
               <div style={{ flex: 1, minWidth: 140, background: "rgba(212,197,160,0.08)", border: "1px solid var(--border)", borderRadius: 12, padding: 14, textAlign: "center" }}>

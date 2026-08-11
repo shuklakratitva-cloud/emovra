@@ -38,6 +38,15 @@ function ThoughtReframe() {
     setStep(1); setSituation(""); setThought(""); setDistortions([]); setReframe("");
   }
 
+  // NEW: was no way to remove a saved reframe entry once created - real
+  // gap, since this data persists in localStorage indefinitely otherwise.
+  function deleteReframe(index) {
+    const data = load();
+    data.reframes = (data.reframes || []).filter((_, i) => i !== index);
+    save(data);
+    setSaved(data.reframes);
+  }
+
   return (
     <div>
       {step === 1 && (
@@ -79,8 +88,9 @@ function ThoughtReframe() {
         <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
           <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.7 }}>Past reframes</p>
           {saved.slice(0, 5).map((r, i) => (
-            <div key={i} style={{ fontSize: 12, padding: "8px 0", opacity: 0.8 }}>
-              <b>{r.thought}</b> → {r.reframe}
+            <div key={i} style={{ fontSize: 12, padding: "8px 0", opacity: 0.8, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <span><b>{r.thought}</b> → {r.reframe}</span>
+              <button onClick={() => deleteReframe(i)} title="Delete this entry" style={{ background: "transparent", border: "none", color: "var(--muted, #999)", cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "2px 6px" }}>✕</button>
             </div>
           ))}
         </div>

@@ -1,5 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../i18n/LanguageContext.jsx"; // NEW
+import LanguageToggle from "../components/LanguageToggle.jsx"; // NEW
 import Footer from "../components/Footer.jsx"; // NEW: was never rendered anywhere - added here so the Dashboard also has the crisis-resource disclaimer
 
 // NEW: everything that used to be extra tabs in MindGuardApp.jsx now lives
@@ -41,18 +43,19 @@ function authHeaders() {
 const Loader = () => <div style={{ padding: 12, textAlign: "center", color: "var(--text-h)", fontSize: 11 }}>Loading...</div>;
 
 const SUB_TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "habits-goals", label: "Habits & Goals" },
-  { id: "insights", label: "Insights" },
-  { id: "relax", label: "Relax" },
-  { id: "mind", label: "Mind & Games" },
-  { id: "creative", label: "Creative" },
-  { id: "reflect", label: "Reflect" },
-  { id: "settings", label: "Settings" },
+  { id: "overview", labelKey: "tab.overview" },
+  { id: "habits-goals", labelKey: "tab.habitsGoals" },
+  { id: "insights", labelKey: "tab.insights" },
+  { id: "relax", labelKey: "tab.relax" },
+  { id: "mind", labelKey: "tab.mindGames" },
+  { id: "creative", labelKey: "tab.creative" },
+  { id: "reflect", labelKey: "tab.reflect" },
+  { id: "settings", labelKey: "tab.settings" },
 ];
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { t } = useLanguage(); // NEW
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
@@ -142,38 +145,41 @@ export default function Dashboard() {
             </div>
             <div>
               <h1 style={{ fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 34, margin: 0 }}>
-                Welcome back{data?.name ? `, ${data.name.split(" ")[0]}` : ""} 👋
+                {t("dash.welcomeBack")}{data?.name ? `, ${data.name.split(" ")[0]}` : ""} 👋
               </h1>
               <p style={{ color: "rgba(232,220,198,0.6)", fontSize: 13, marginTop: 6 }}>
-                Here's where you're at today.
+                {t("dash.whereYouAt")}
               </p>
             </div>
           </div>
-          <button
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <LanguageToggle />
+            <button
             onClick={() => navigate("/app")}
             style={{ background: "var(--accent)", color: "#000", border: "none", padding: "10px 20px", borderRadius: 999, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
           >
-            Continue to Emovra →
+            {t("dash.continueToEmovra")}
           </button>
+          </div>
         </div>
 
         {/* Level / XP / Streak - always visible, this is the core of the dashboard */}
         <div style={{ background: "var(--card-bg)", border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 16, padding: 20, marginTop: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text-h)" }}>Level {g?.level || 1}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text-h)" }}>{t("dash.level", { n: g?.level || 1 })}</div>
               <div style={{ fontSize: 12, color: "rgba(232,220,198,0.5)" }}>{g?.xp || 0} XP</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(251,146,60,0.12)", border: "1px solid rgba(251,146,60,0.3)", padding: "8px 16px", borderRadius: 999 }}>
               <span style={{ fontSize: 16 }}>🔥</span>
               <span style={{ fontWeight: 700, fontSize: 14 }}>{g?.streakDays || 0}</span>
-              <span style={{ fontSize: 11, color: "rgba(232,220,198,0.6)" }}>day streak</span>
+              <span style={{ fontSize: 11, color: "rgba(232,220,198,0.6)" }}>{t("dash.dayStreak")}</span>
             </div>
           </div>
           <div style={{ marginTop: 14, height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden" }}>
             <div style={{ width: `${progressPct}%`, height: "100%", background: "linear-gradient(90deg,var(--accent),var(--text))", transition: "width 0.4s ease" }} />
           </div>
-          <div style={{ fontSize: 10, color: "rgba(232,220,198,0.4)", marginTop: 6 }}>{progressPct}% to level {(g?.level || 1) + 1}</div>
+          <div style={{ fontSize: 10, color: "rgba(232,220,198,0.4)", marginTop: 6 }}>{t("dash.progressToLevel", { pct: progressPct, n: (g?.level || 1) + 1 })}</div>
         </div>
 
         {/* NEW: virtual pet - grows with existing level/XP, no new backend state */}
@@ -182,14 +188,14 @@ export default function Dashboard() {
         {data?.isBirthdayToday && (
           <div style={{ background: "linear-gradient(135deg, rgba(212,176,122,0.2), rgba(168,85,247,0.12))", border: "1px solid var(--accent)", borderRadius: 16, padding: 20, marginTop: 16, textAlign: "center" }}>
             <div style={{ fontSize: 28 }}>🎂🎉</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 6, color: "var(--text-h)" }}>Happy Birthday{data?.name ? `, ${data.name.split(" ")[0]}` : ""}!</div>
-            <p style={{ fontSize: 12, marginTop: 4, color: "rgba(232,220,198,0.7)" }}>Hope today treats you gently. We're glad you're here.</p>
+            <div style={{ fontWeight: 700, fontSize: 16, marginTop: 6, color: "var(--text-h)" }}>{t("dash.happyBirthday")}{data?.name ? `, ${data.name.split(" ")[0]}` : ""}!</div>
+            <p style={{ fontSize: 12, marginTop: 4, color: "rgba(232,220,198,0.7)" }}>{t("dash.birthdayMsg")}</p>
           </div>
         )}
 
         {data?.earlyWarning?.triggered && (
           <div style={{ background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.35)", borderRadius: 16, padding: 18, marginTop: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#fb923c" }}>💛 A gentle check-in</div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#fb923c" }}>💛 {t("dash.gentleCheckIn")}</div>
             <p style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>{data.earlyWarning.message}</p>
             <a href="tel:14416" style={{ display: "inline-block", marginTop: 10, background: "var(--accent)", color: "#000", padding: "8px 16px", borderRadius: 999, fontWeight: 700, fontSize: 12, textDecoration: "none" }}>
               📞 Tele-MANAS: 14416
@@ -199,7 +205,7 @@ export default function Dashboard() {
 
         {data?.friendEntryPreview && (
           <div style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.25)", borderRadius: 16, padding: 18, marginTop: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#c4b5fd" }}>👯 {data.friendEntryPreview.authorName} wrote in "{data.friendEntryPreview.journalTitle}"</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#c4b5fd" }}>👯 {t("dash.wroteIn", { author: data.friendEntryPreview.authorName })} "{data.friendEntryPreview.journalTitle}"</div>
             <p style={{ fontSize: 13, marginTop: 8, color: "var(--text)", opacity: 0.85, fontStyle: "italic" }}>
               "{data.friendEntryPreview.text.slice(0, 140)}{data.friendEntryPreview.text.length > 140 ? "..." : ""}"
             </p>
@@ -211,7 +217,7 @@ export default function Dashboard() {
 
         {/* Daily challenges */}
         <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, marginBottom: 10 }}>🎯 Today's Challenges</h3>
+          <h3 style={{ fontSize: 15, marginBottom: 10 }}>🎯 {t("dash.todaysChallenges")}</h3>
           {data?.challenges?.map((c) => (
             <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--card-bg)", border: "0.5px solid rgba(212,197,160,0.15)", borderRadius: 12, padding: "12px 16px", marginBottom: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -222,10 +228,10 @@ export default function Dashboard() {
                 </div>
               </div>
               {c.claimed ? (
-                <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ Done</span>
+                <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ {t("dash.done")}</span>
               ) : (
                 <button onClick={() => claim(c.id)} disabled={claiming === c.id} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                  {claiming === c.id ? "..." : "Claim"}
+                  {claiming === c.id ? "..." : t("dash.claim")}
                 </button>
               )}
             </div>
@@ -235,7 +241,7 @@ export default function Dashboard() {
         {/* Badges */}
         {g?.badges?.length > 0 && (
           <div style={{ marginTop: 20 }}>
-            <h3 style={{ fontSize: 15, marginBottom: 10 }}>🏅 Your Badges</h3>
+            <h3 style={{ fontSize: 15, marginBottom: 10 }}>🏅 {t("dash.yourBadges")}</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {g.badges.map((b) => (
                 <div key={b.id} title={b.description} style={{ background: "rgba(212,197,160,0.1)", border: "1px solid rgba(212,197,160,0.25)", borderRadius: 12, padding: "10px 14px", textAlign: "center", minWidth: 90 }}>
@@ -249,15 +255,15 @@ export default function Dashboard() {
 
         {/* NEW: sub-tabs for everything moved out of the main app */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 28, borderTop: "0.5px solid rgba(212,197,160,0.15)", paddingTop: 20 }}>
-          {SUB_TABS.map((t) => (
-            <button key={t.id} onClick={() => setSubTab(t.id)} style={{
+          {SUB_TABS.map((tab) => (
+            <button key={tab.id} onClick={() => setSubTab(tab.id)} style={{
               padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer",
-              border: subTab === t.id ? "1px solid var(--accent)" : "0.5px solid rgba(212,197,160,0.2)",
-              background: subTab === t.id ? "rgba(212,176,122,0.15)" : "transparent",
-              color: subTab === t.id ? "var(--text-h)" : "rgba(232,220,198,0.6)",
-              fontWeight: subTab === t.id ? 700 : 500,
+              border: subTab === tab.id ? "1px solid var(--accent)" : "0.5px solid rgba(212,197,160,0.2)",
+              background: subTab === tab.id ? "rgba(212,176,122,0.15)" : "transparent",
+              color: subTab === tab.id ? "var(--text-h)" : "rgba(232,220,198,0.6)",
+              fontWeight: subTab === tab.id ? 700 : 500,
             }}>
-              {t.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -266,7 +272,7 @@ export default function Dashboard() {
           {subTab === "overview" && data?.habits?.count > 0 && (
             <div style={{ background: "var(--card-bg)", border: "0.5px solid rgba(212,197,160,0.15)", borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 13 }}>
-                🌱 You have <b>{data.habits.count}</b> habit{data.habits.count !== 1 ? "s" : ""} tracked, <b>{data.habits.dueToday}</b> due today. See the Habits & Goals tab.
+                🌱 {t("dash.habitsTracked", { count: data.habits.count, due: data.habits.dueToday })}
               </div>
             </div>
           )}
@@ -335,7 +341,7 @@ export default function Dashboard() {
           onClick={() => navigate("/app")}
           style={{ marginTop: 28, width: "100%", background: "var(--accent)", color: "#000", border: "none", padding: "16px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}
         >
-          Continue to Emovra →
+          {t("dash.continueToEmovra")}
         </button>
         <Footer />
       </div>

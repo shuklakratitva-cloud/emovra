@@ -4,6 +4,8 @@ import LandingPage from "./pages/LandingPage";
 import MindGuardApp from "./pages/MindGuardApp";
 import Dashboard from "./pages/Dashboard"; // NEW: personalized dashboard, shown right after login
 import PrivacyPolicy from "./pages/PrivacyPolicy"; // NEW: real, hosted privacy policy - needed for Google OAuth publishing
+import TermsOfService from "./pages/TermsOfService"; // NEW: matching ToS page
+import NotFound from "./pages/NotFound"; // NEW: replaces the silent redirect-to-home for unmatched URLs
 // FIX: was importing AdminPanel, which calls a backend route
 // (/api/alerts/all) that never existed - the working Admin.jsx (with
 // working /api/admin/reds calls, filter tabs, WhatsApp/call buttons) was
@@ -49,6 +51,7 @@ export default function App() {
         {/* NEW: public, real privacy policy page - no login required, since
             Google (and anyone else) needs to be able to reach it directly */}
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
 
         <Route path="/admin" element={
           <AdminRoute>
@@ -56,7 +59,9 @@ export default function App() {
           </AdminRoute>
         } />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* FIX: was silently redirecting any unmatched URL to the homepage
+            with zero explanation - now shows a real 404 page instead */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </LanguageProvider>
   );

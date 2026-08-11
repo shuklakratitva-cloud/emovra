@@ -20,6 +20,7 @@ export default function LegalCookieBanner() {
         <p style={{ fontSize: '13px', color: '#ccc', lineHeight: '1.5' }}>
           We use cookies for login and safety. By using Emovra you agree you are giving data willingly. We are NOT a medical provider and have NO liability.
           {" "}<a href="/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: "#d4b07a" }}>Read our full Privacy Policy</a>
+          {" "}or our <a href="/terms-of-service" target="_blank" rel="noopener noreferrer" style={{ color: "#d4b07a" }}>Terms of Service</a>
         </p>
         {showDetails && <pre style={{ fontSize: '11px', background: '#1a1a1a', padding: '12px', borderRadius: '6px', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto' }}>{LEGAL_CONSENT_TEXT}</pre>}
         <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>

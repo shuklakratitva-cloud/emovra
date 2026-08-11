@@ -49,17 +49,17 @@ export default function DigitalTimeMachine() {
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
       <h2>⏳ Digital Time Machine</h2>
-      <p style={{ fontSize: 12, opacity: 0.6 }}>This month vs. last month, based on your Mood Tracker check-ins.</p>
+      <p style={{ fontSize: 12, opacity: 0.6 }}>This month vs. last month, based on your Mood Tracker entries (saved on this device).</p>
       <div style={{ display: "flex", gap: 16, marginTop: 14, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 150, padding: 14, borderRadius: 12, border: "1px solid var(--border)" }}>
           <div style={{ fontSize: 11, opacity: 0.6 }}>Last month</div>
           <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{topMood(lastMonth) || "No data"}</div>
-          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{Object.values(lastMonth).reduce((a, b) => a + b, 0)} check-ins</div>
+          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{Object.values(lastMonth).reduce((a, b) => a + b, 0)} mood entries</div>
         </div>
         <div style={{ flex: 1, minWidth: 150, padding: 14, borderRadius: 12, border: "1px solid var(--accent)" }}>
           <div style={{ fontSize: 11, opacity: 0.6 }}>This month</div>
           <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4, color: "var(--text-h)" }}>{topMood(thisMonth) || "No data"}</div>
-          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{Object.values(thisMonth).reduce((a, b) => a + b, 0)} check-ins</div>
+          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{Object.values(thisMonth).reduce((a, b) => a + b, 0)} mood entries</div>
         </div>
       </div>
     </div>

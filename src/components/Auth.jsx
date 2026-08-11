@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import LegalCookieBanner from "./LegalCookieBanner";
+import { useLanguage } from "../i18n/LanguageContext.jsx"; // NEW
+import LanguageToggle from "./LanguageToggle.jsx"; // NEW
 
 const getConsent = () => {
   try {
@@ -30,6 +32,7 @@ const BASE_URL = "https://emovra.onrender.com/api/auth";
 const GOOGLE_CLIENT_ID = "992525447470-niu0jm6nnqoqdam751qe2pa6ge6slpsq.apps.googleusercontent.com";
 
 export default function Auth({ onAuth }) {
+  const { t } = useLanguage(); // NEW
   const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(true);
   const [form, setForm] = useState({
@@ -221,13 +224,13 @@ export default function Auth({ onAuth }) {
   if (needsGoogleSignup) {
     return (
       <div style={{ maxWidth: "420px", margin: "50px auto", padding: "25px", background: "var(--card-bg, #1e1e2f)", borderRadius: "12px", color: "white" }}>
-        <h2>Almost there</h2>
+        <h2>{t("auth.almostThere")}</h2>
         <p style={{ fontSize: 13, color: "#a78bfa", marginTop: 8 }}>
-          Signed in as {needsGoogleSignup.name || needsGoogleSignup.email}. Just need a couple more things required for safety features like SOS.
+          {t("auth.signedInAs", { name: needsGoogleSignup.name || needsGoogleSignup.email })}
         </p>
         <form onSubmit={handleCompleteGoogleSignup} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "16px" }}>
-          <input type="number" min="10" max="100" placeholder="Age *" value={googleExtra.age} onChange={(e) => setGoogleExtra({...googleExtra, age: e.target.value})} required style={inputStyle} />
-          <input placeholder="Emergency Contact Name * (Mom/Dad)" value={googleExtra.emergencyName} onChange={(e) => setGoogleExtra({...googleExtra, emergencyName: e.target.value})} required style={inputStyle} />
+          <input type="number" min="10" max="100" placeholder={t("auth.age")} value={googleExtra.age} onChange={(e) => setGoogleExtra({...googleExtra, age: e.target.value})} required style={inputStyle} />
+          <input placeholder={t("auth.emergencyContactName")} value={googleExtra.emergencyName} onChange={(e) => setGoogleExtra({...googleExtra, emergencyName: e.target.value})} required style={inputStyle} />
           <div style={{ display: "flex", gap: "8px" }}>
             <select value={googleExtra.countryCode} onChange={(e) => setGoogleExtra({...googleExtra, countryCode: e.target.value})} style={{ width: "120px", padding: "10px", borderRadius: "8px", color: "black" }}>
               <option value="+91">🇮🇳 +91</option>
@@ -241,15 +244,15 @@ export default function Auth({ onAuth }) {
               <option value="+86">🇨🇳 +86</option>
               <option value="+65">🇸🇬 +65</option>
             </select>
-            <input type="tel" placeholder="Emergency Phone *" value={googleExtra.emergencyPhone} onChange={(e) => setGoogleExtra({...googleExtra, emergencyPhone: e.target.value})} required style={{ flex: 1, padding: "10px", borderRadius: "8px", color: "black" }} />
+            <input type="tel" placeholder={t("auth.emergencyPhone")} value={googleExtra.emergencyPhone} onChange={(e) => setGoogleExtra({...googleExtra, emergencyPhone: e.target.value})} required style={{ flex: 1, padding: "10px", borderRadius: "8px", color: "black" }} />
           </div>
           {googleError && <p style={{ fontSize: 12, color: "#fca5a5", margin: 0 }}>{googleError}</p>}
           <button type="submit" disabled={googleLoading} style={{ padding: "12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
-            {googleLoading ? "Finishing up..." : "Finish signing up"}
+            {googleLoading ? t("auth.finishingUp") : t("auth.finishSigningUp")}
           </button>
         </form>
         <p style={{ marginTop: "15px", textAlign: "center" }}>
-          <span onClick={() => { setNeedsGoogleSignup(null); setGoogleCredential(null); setGoogleError(""); }} style={{ color: "#a78bfa", cursor: "pointer", textDecoration: "underline" }}>← Cancel</span>
+          <span onClick={() => { setNeedsGoogleSignup(null); setGoogleCredential(null); setGoogleError(""); }} style={{ color: "#a78bfa", cursor: "pointer", textDecoration: "underline" }}>{t("auth.cancel")}</span>
         </p>
       </div>
     );
@@ -259,19 +262,19 @@ export default function Auth({ onAuth }) {
   if (forgotMode === "request") {
     return (
       <div style={{ maxWidth: "420px", margin: "50px auto", padding: "25px", background: "var(--card-bg, #1e1e2f)", borderRadius: "12px", color: "white" }}>
-        <h2>Reset Password</h2>
+        <h2>{t("auth.resetPassword")}</h2>
         <p style={{ fontSize: 13, color: "#a78bfa", marginTop: 8 }}>
-          Enter your account email. We'll send a one-time code to it.
+          {t("auth.enterEmailForCode")}
         </p>
         <form onSubmit={handleSendResetOtp} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "16px" }}>
-          <input type="email" placeholder="Your account email *" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required style={inputStyle} />
+          <input type="email" placeholder={t("auth.yourAccountEmail")} value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required style={inputStyle} />
           {forgotMsg && <p style={{ fontSize: 12, color: "#fca5a5", margin: 0 }}>{forgotMsg}</p>}
           <button type="submit" disabled={forgotLoading} style={{ padding: "12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
-            {forgotLoading ? "Sending code..." : "Send code"}
+            {forgotLoading ? t("auth.sendingCode") : t("auth.sendCode")}
           </button>
         </form>
         <p style={{ marginTop: "15px", textAlign: "center" }}>
-          <span onClick={() => { setForgotMode(null); setForgotMsg(""); }} style={{ color: "#a78bfa", cursor: "pointer", textDecoration: "underline" }}>← Back to sign in</span>
+          <span onClick={() => { setForgotMode(null); setForgotMsg(""); }} style={{ color: "#a78bfa", cursor: "pointer", textDecoration: "underline" }}>{t("auth.backToSignInArrow")}</span>
         </p>
       </div>
     );
@@ -280,21 +283,21 @@ export default function Auth({ onAuth }) {
   if (forgotMode === "reset") {
     return (
       <div style={{ maxWidth: "420px", margin: "50px auto", padding: "25px", background: "var(--card-bg, #1e1e2f)", borderRadius: "12px", color: "white" }}>
-        <h2>Enter Code</h2>
+        <h2>{t("auth.enterCode")}</h2>
         <p style={{ fontSize: 13, color: "#a78bfa", marginTop: 8 }}>
-          Enter the code sent to {forgotEmail} and choose a new password.
+          {t("auth.enterCodeSentTo", { email: forgotEmail })}
         </p>
         <form onSubmit={handleResetPassword} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "16px" }}>
-          <input type="text" inputMode="numeric" placeholder="6-digit code *" value={forgotOtp} onChange={(e) => setForgotOtp(e.target.value)} required style={inputStyle} />
-          <input type="password" placeholder="New password *" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required style={inputStyle} />
+          <input type="text" inputMode="numeric" placeholder={t("auth.sixDigitCode")} value={forgotOtp} onChange={(e) => setForgotOtp(e.target.value)} required style={inputStyle} />
+          <input type="password" placeholder={t("auth.newPassword")} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required style={inputStyle} />
           {forgotMsg && <p style={{ fontSize: 12, color: forgotMsg.includes("reset") ? "#86efac" : "#fca5a5", margin: 0 }}>{forgotMsg}</p>}
           <button type="submit" disabled={forgotLoading} style={{ padding: "12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
-            {forgotLoading ? "Resetting..." : "Reset Password"}
+            {forgotLoading ? t("auth.resetting") : t("auth.resetPassword")}
           </button>
         </form>
         <p style={{ marginTop: "15px", textAlign: "center", display: "flex", justifyContent: "space-between" }}>
-          <span onClick={() => { setForgotMode("request"); setForgotMsg(""); }} style={{ color: "#a78bfa", cursor: "pointer", fontSize: 13, textDecoration: "underline" }}>Resend code</span>
-          <span onClick={() => { setForgotMode(null); setForgotMsg(""); }} style={{ color: "#a78bfa", cursor: "pointer", fontSize: 13, textDecoration: "underline" }}>Back to sign in</span>
+          <span onClick={() => { setForgotMode("request"); setForgotMsg(""); }} style={{ color: "#a78bfa", cursor: "pointer", fontSize: 13, textDecoration: "underline" }}>{t("auth.resendCode")}</span>
+          <span onClick={() => { setForgotMode(null); setForgotMsg(""); }} style={{ color: "#a78bfa", cursor: "pointer", fontSize: 13, textDecoration: "underline" }}>{t("auth.backToSignIn")}</span>
         </p>
       </div>
     );
@@ -302,13 +305,16 @@ export default function Auth({ onAuth }) {
 
   return (
     <div style={{ maxWidth: "420px", margin: "50px auto", padding: "25px", background: "var(--card-bg, #1e1e2f)", borderRadius: "12px", color: "white" }}>
-      <h2>{isSignup? "Create Account" : "Sign In"} - MindGuard</h2>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+        <LanguageToggle style={{ color: "#a78bfa", borderColor: "rgba(167,139,250,0.4)" }} />
+      </div>
+      <h2>{isSignup? t("auth.createAccount") : t("auth.signIn")} - Emovra</h2>
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "20px" }}>
-        {isSignup && <input name="name" placeholder="Full name *" value={form.name} onChange={handleChange} required style={inputStyle} />}
-        <input name="email" type="email" placeholder="Email *" value={form.email} onChange={handleChange} required style={inputStyle} />
+        {isSignup && <input name="name" placeholder={t("auth.fullName")} value={form.name} onChange={handleChange} required style={inputStyle} />}
+        <input name="email" type="email" placeholder={t("auth.email")} value={form.email} onChange={handleChange} required style={inputStyle} />
         {isSignup && <>
-          <input name="age" type="number" min="10" max="100" placeholder="Age *" value={form.age} onChange={handleChange} required style={inputStyle} />
-          <input name="emergencyName" placeholder="Emergency Contact Name * (Mom/Dad)" value={form.emergencyName} onChange={handleChange} required style={inputStyle} />
+          <input name="age" type="number" min="10" max="100" placeholder={t("auth.age")} value={form.age} onChange={handleChange} required style={inputStyle} />
+          <input name="emergencyName" placeholder={t("auth.emergencyContactName")} value={form.emergencyName} onChange={handleChange} required style={inputStyle} />
           <div style={{ display: "flex", gap: "8px" }}>
             <select name="countryCode" value={form.countryCode} onChange={handleChange} style={{ width: "120px", padding: "10px", borderRadius: "8px", color: "black" }}>
               <option value="+91">🇮🇳 +91</option>
@@ -322,13 +328,13 @@ export default function Auth({ onAuth }) {
               <option value="+86">🇨🇳 +86</option>
               <option value="+65">🇸🇬 +65</option>
             </select>
-            <input name="emergencyPhone" type="tel" placeholder="Emergency Phone *" value={form.emergencyPhone} onChange={handleChange} required style={{ flex: 1, padding: "10px", borderRadius: "8px", color: "black" }} />
+            <input name="emergencyPhone" type="tel" placeholder={t("auth.emergencyPhone")} value={form.emergencyPhone} onChange={handleChange} required style={{ flex: 1, padding: "10px", borderRadius: "8px", color: "black" }} />
           </div>
-          <small style={{ color: "#ff6b6b", fontSize: "11px" }}>* Compulsory - Used only in RED emergency for SOS</small>
+          <small style={{ color: "#ff6b6b", fontSize: "11px" }}>{t("auth.emergencyRequiredNote")}</small>
         </>}
-        <input name="password" type="password" placeholder="Password *" value={form.password} onChange={handleChange} required style={inputStyle} />
+        <input name="password" type="password" placeholder={t("auth.password")} value={form.password} onChange={handleChange} required style={inputStyle} />
         <button type="submit" disabled={loading} style={{ padding: "12px", background: "#8b5cf6", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
-          {loading? "Waking up server... wait 30s" : isSignup? "Sign Up" : "Sign In"}
+          {loading? t("auth.wakingServer") : isSignup? t("auth.signUp") : t("auth.signIn")}
         </button>
       </form>
 
@@ -336,20 +342,20 @@ export default function Auth({ onAuth }) {
       <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
         <div ref={googleBtnRef} />
       </div>
-      {googleLoading && <p style={{ fontSize: 12, textAlign: "center", color: "#a78bfa", marginTop: 8 }}>Signing in with Google...</p>}
+      {googleLoading && <p style={{ fontSize: 12, textAlign: "center", color: "#a78bfa", marginTop: 8 }}>{t("auth.signingInGoogle")}</p>}
       {googleError && <p style={{ fontSize: 12, textAlign: "center", color: "#fca5a5", marginTop: 8 }}>{googleError}</p>}
 
       {!isSignup && (
         <p style={{ marginTop: "10px", textAlign: "center" }}>
           <span onClick={() => { setForgotMode("request"); setForgotEmail(""); setForgotOtp(""); setNewPassword(""); setForgotMsg(""); }} style={{ color: "#a78bfa", cursor: "pointer", fontSize: 13, textDecoration: "underline" }}>
-            Forgot password?
+            {t("auth.forgotPassword")}
           </span>
         </p>
       )}
 
       <p style={{ marginTop: "15px", textAlign: "center" }}>
-        {isSignup? "Already have an account?" : "Don't have an account?"}{" "}
-        <span onClick={() => setIsSignup(!isSignup)} style={{ color: "#a78bfa", cursor: "pointer", textDecoration: "underline" }}>{isSignup? "Sign In" : "Sign Up"}</span>
+        {isSignup? t("auth.alreadyHaveAccount") : t("auth.dontHaveAccount")}{" "}
+        <span onClick={() => setIsSignup(!isSignup)} style={{ color: "#a78bfa", cursor: "pointer", textDecoration: "underline" }}>{isSignup? t("auth.signIn") : t("auth.signUp")}</span>
       </p>
       <LegalCookieBanner />
     </div>
