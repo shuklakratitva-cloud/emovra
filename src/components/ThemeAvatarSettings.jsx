@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { applyThemeVars } from "../utils/applyTheme.js";
+import HSLColorPicker from "./HSLColorPicker.jsx";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -23,6 +24,10 @@ export default function ThemeAvatarSettings() {
   const [exporting, setExporting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [customBg, setCustomBg] = useState("#0a0a0c");
+  const [customCard, setCustomCard] = useState("#121214");
+  const [customAccent, setCustomAccent] = useState("#d4b07a");
+  const [savingCustom, setSavingCustom] = useState(false);
   const [deleting, setDeleting] = useState(false);
   // NEW: in-app feedback/bug reporting state
   const [feedbackText, setFeedbackText] = useState("");
@@ -250,6 +255,14 @@ export default function ThemeAvatarSettings() {
     } catch {}
   }
 
+  // Only called once, on Save - not on every slider drag. Matches the
+  // exact same pattern preset themes already use reliably.
+  async function saveCustomTheme() {
+    setSavingCustom(true);
+    await save({ customTheme: { bg: customBg, card: customCard, accent: customAccent } });
+    setSavingCustom(false);
+  }
+
   // NEW: resizes the uploaded image client-side (max 160x160, JPEG) before
   // sending it, so we're never uploading a multi-megabyte photo just to
   // display it at 60px - keeps the request fast and the database small.
@@ -308,6 +321,21 @@ export default function ThemeAvatarSettings() {
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
       <h2 style={{ margin: 0 }}>🎨 Personalize</h2>
+
+      <div style={{ marginTop: 20, padding: 16, borderRadius: 12, border: "1px solid var(--border)" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖌 Or make your own</div>
+        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>Pick your own colors below - the swatches update as you go. Click Save to actually apply it to the app.</p>
+
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          <HSLColorPicker label="Background" value={customBg} onChange={setCustomBg} />
+          <HSLColorPicker label="Box / Card color" value={customCard} onChange={setCustomCard} />
+          <HSLColorPicker label="Accent color" value={customAccent} onChange={setCustomAccent} />
+        </div>
+
+        <button onClick={saveCustomTheme} disabled={savingCustom} style={{ marginTop: 14, background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+          {savingCustom ? "Saving..." : "Save custom theme"}
+        </button>
+      </div>
 
       <div style={{ marginTop: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Avatar</div>

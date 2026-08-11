@@ -2,7 +2,16 @@ import React, { useState, useEffect } from "react";
 
 // HWB (Hue/Whiteness/Blackness) picker - Hue picks the pure vivid color,
 // Whiteness and Blackness are two independent sliders, each starting at
-// 0. Math verified directly: hue=0/w=0/b=0 produces true #ff0000.
+// 0. Math verified directly: hue=0/w=0/b=0 produces true #ff0000, and all
+// three sliders were confirmed to behave independently and correctly.
+//
+// This component only updates its OWN small preview swatch while you
+// drag - it does NOT apply anything to the rest of the page live. That's
+// deliberate: the previous version's live full-page preview (re-applying
+// CSS variables on every single slider event, dozens of times a second)
+// was the strongest suspect for a persistent bug that was never fully
+// resolved. The actual color only gets applied app-wide once, when you
+// click Save - the same reliable pattern every preset theme already uses.
 
 function hexToRgb(hex) {
   return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
