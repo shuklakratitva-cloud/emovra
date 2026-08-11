@@ -47,12 +47,9 @@ function readableTextFor(hexBg) {
   }
 }
 
-// FIX: restored custom theme support specifically, since the picker is
-// back - everyone still defaults to Classic Black & Gold otherwise (the
-// preset-switching system stays retired, this only re-enables a person's
-// own saved custom colors).
+// Priority: an explicit custom theme > a selected preset > the default.
 export function resolveTheme(user) {
-  if (user?.customTheme?.bg) {
+  if (user?.themePreference === "custom" && user?.customTheme?.bg) {
     return {
       id: "custom",
       name: "Custom",
@@ -61,6 +58,9 @@ export function resolveTheme(user) {
       accent: user.customTheme.accent || "#d4b07a",
       text: readableTextFor(user.customTheme.bg),
     };
+  }
+  if (user?.themePreference && THEMES[user.themePreference]) {
+    return THEMES[user.themePreference];
   }
   return THEMES["classic-black-gold"];
 }
