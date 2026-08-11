@@ -337,9 +337,32 @@ export default function ThemeAvatarSettings() {
     );
   }
 
+  const isCustomActive = current.themePreference === "custom";
+
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
       <h2 style={{ margin: 0 }}>🎨 Personalize</h2>
+      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Classic Black &amp; Gold is the default - these are optional.</p>
+
+      <div style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Theme</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {options.themes.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => save({ themePreference: t.id })}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 12, cursor: "pointer",
+                border: !isCustomActive && current.theme?.id === t.id ? "2px solid #d4b07a" : "1px solid var(--border)",
+                background: "transparent",
+              }}
+            >
+              <span style={{ width: 16, height: 16, borderRadius: "50%", background: t.accent, display: "inline-block", border: "1px solid rgba(255,255,255,0.2)" }} />
+              <span style={{ fontSize: 12, color: "var(--text)" }}>{t.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div style={{ marginTop: 20, padding: 16, borderRadius: 12, border: "1px solid var(--border)" }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖌 Or make your own</div>
