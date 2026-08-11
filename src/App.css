@@ -115,12 +115,6 @@ body, #root { background: var(--bg) !important; color: var(--text) !important; m
   color:#991b1b !important;
 }
 
-/* === FORCE CHILD COMPONENTS - KILL PURPLE === */
-div[style*="var(--card-bg)"], div[style*="var(--bg)"]{
-  background: rgba(18,18,20,0.95) !important;
-  border-color: rgba(212,197,160,0.18) !important;
-  color:#e8dcc6 !important;
-}
 div[style*="#2a1f"], div[style*="#1a1033"], div[style*="#1e1b2e"]{
   background: rgba(18,18,20,0.95) !important;
   border: 0.5px solid rgba(212,197,160,0.18) !important;
