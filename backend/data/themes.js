@@ -35,10 +35,32 @@ export const THEMES = {
 
 export const AVATARS = ["🦋","🌸","🌊","🌙","⭐","🌻","🦊","🐢","🐝","🍃","🔥","🌈"];
 
-// FIX: the theme-switching feature was fully retired per request -
-// everyone sees Classic Black & Gold now, regardless of what preference
-// might still be stored from before (no database migration needed, this
-// just stops reading it).
+function readableTextFor(hexBg) {
+  try {
+    const r = parseInt(hexBg.slice(1, 3), 16);
+    const g = parseInt(hexBg.slice(3, 5), 16);
+    const b = parseInt(hexBg.slice(5, 7), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 150 ? "#1a1a1a" : "#e8dcc6";
+  } catch {
+    return "#e8dcc6";
+  }
+}
+
+// FIX: restored custom theme support specifically, since the picker is
+// back - everyone still defaults to Classic Black & Gold otherwise (the
+// preset-switching system stays retired, this only re-enables a person's
+// own saved custom colors).
 export function resolveTheme(user) {
+  if (user?.customTheme?.bg) {
+    return {
+      id: "custom",
+      name: "Custom",
+      bg: user.customTheme.bg,
+      card: user.customTheme.card || user.customTheme.bg,
+      accent: user.customTheme.accent || "#d4b07a",
+      text: readableTextFor(user.customTheme.bg),
+    };
+  }
   return THEMES["classic-black-gold"];
 }
