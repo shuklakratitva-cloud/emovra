@@ -16,6 +16,11 @@ const RED_PHRASES = [
   "mujhe marna hai", "i want to die", "i want to end my life", "kill myself",
   "end my life", "mar jaunga", "mar jaungi", "khudkushi karunga",
   "suicide", "want to end it all", "no reason to live", "better off dead",
+  // NEW: same multilingual expansion as analyze.js's instant check - see
+  // that file for the full explanation and the native-speaker-review note.
+  "நான் செத்துவிட வேண்டும்", "எனக்கு சாக வேண்டும்", "నేను చావాలి",
+  "আমি মরে যেতে চাই", "मला मरायचे आहे", "મારે મરવું છે",
+  "ನಾನು ಸಾಯಬೇಕು", "എനിക്ക് മരിക്കണം", "ਮੈਂ ਮਰਨਾ ਚਾਹੁੰਦਾ ਹਾਂ", "میں مرنا چاہتا ہوں",
 ];
 
 const SCHOOL_ABUSE = /\b(teacher|sir|ma'?am|madam)\b[^.!?\n]{0,40}\b(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|insult(ed)?|beizzati|daant(a|i)?|target(s|ed)?|shout(s|ed|ing)?|compar(es|ed|ing)|makes? fun)\b|\b(sabke samne|class me|publicly)\b[^.!?\n]{0,40}\b(daant|beizzati|insult|shame|humiliat)/i;

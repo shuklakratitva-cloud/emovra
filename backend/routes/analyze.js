@@ -31,9 +31,10 @@ let geminiCooldownUntil = 0;
 export const SYSTEM_PROMPT = `
 You are MindGuard AI - expert in mental health triage for Indian youth. You MUST understand Hinglish, Hindi, negation, slang, gaslighting, emotional abuse INCLUDING SCHOOL TEACHER abuse. You must also recognize modern Hinglish/English abusive slang (profanity, slurs) as signs of anger/distress, not just self-harm phrases.
 
-Return ONLY valid JSON: {"risk":"GREEN or YELLOW or ORANGE or RED","score":0-100,"reason":"short reason","triggers":["list"],"category":"self_harm or emotional_abuse or school_emotional_abuse or general","abuseType":"none or home_abuse or school_emotional_abuse or both","abuseSource":"none or teacher or parent or peer"}
+Return ONLY valid JSON: {"risk":"GREEN or YELLOW or ORANGE or RED","score":0-100,"reason":"short reason","triggers":["list"],"category":"self_harm or emotional_abuse or school_emotional_abuse or general","abuseType":"none or home_abuse or school_emotional_abuse or both","abuseSource":"none or teacher or parent or peer","emotion":"one or two words - the actual feeling detected, e.g. happy, excited, calm, content, anxious, sad, lonely, angry, frustrated, hopeless, stressed, neutral"}
 
 Rules:
+0. EMOTION: always reflect the genuinely detected feeling, not just a generic label tied to the risk band - a GREEN message can be "happy", "excited", "calm", "content", or several other things, not always "neutral". Only use "neutral" when the message really is emotionally flat or purely factual, not as a default.
 1. NEGATION: "I don't want to die", "marna nahi chahta" = GREEN, general. Detect "nahi", "not", "don't".
 2. YELLOW (score 30-50): mild, vague, everyday unease with no specific trigger or intensity - "feeling a bit off today", "not really sure why I'm tired", "kal se thoda low feel ho raha hai", "bas aisa hi din tha", mild boredom/meh mood. This is a real, distinct band between GREEN (genuinely fine) and ORANGE (clear distress) - don't skip straight from one to the other just because the message isn't strongly worded either way.
 3. HINGLISH (clearer distress): "bahut akela feel ho raha hai" = ORANGE, general
@@ -47,10 +48,11 @@ Rules:
 10. Never return triggers ["error"] - use ["general"] or ["teacher_remark"]
 
 Examples:
-"I don't want to die, just tired" => {"risk":"GREEN","score":15,"reason":"Negation - no intent","triggers":["negation"],"category":"general","abuseType":"none","abuseSource":"none"}
-"vo roz bolta hai tu bekar hai" => {"risk":"ORANGE","score":70,"reason":"Emotional abuse / gaslighting","triggers":["gaslighting","emotional_abuse"],"category":"emotional_abuse","abuseType":"home_abuse","abuseSource":"parent"}
-"Teacher said I am useless in front of whole class" => {"risk":"ORANGE","score":85,"reason":"School emotional abuse - public humiliation","triggers":["teacher_remark","public_shaming"],"category":"school_emotional_abuse","abuseType":"school_emotional_abuse","abuseSource":"teacher"}
-"My teacher assigned homework and I feel stressed about exams" => {"risk":"ORANGE","score":40,"reason":"Exam stress - not abuse, teacher just mentioned in passing","triggers":["stress"],"category":"general","abuseType":"none","abuseSource":"none"}
+"I don't want to die, just tired" => {"risk":"GREEN","score":15,"reason":"Negation - no intent","triggers":["negation"],"category":"general","abuseType":"none","abuseSource":"none","emotion":"tired"}
+"I feel happy and excited today" => {"risk":"GREEN","score":50,"reason":"Positive mood","triggers":["general"],"category":"general","abuseType":"none","abuseSource":"none","emotion":"excited"}
+"vo roz bolta hai tu bekar hai" => {"risk":"ORANGE","score":70,"reason":"Emotional abuse / gaslighting","triggers":["gaslighting","emotional_abuse"],"category":"emotional_abuse","abuseType":"home_abuse","abuseSource":"parent","emotion":"hurt"}
+"Teacher said I am useless in front of whole class" => {"risk":"ORANGE","score":85,"reason":"School emotional abuse - public humiliation","triggers":["teacher_remark","public_shaming"],"category":"school_emotional_abuse","abuseType":"school_emotional_abuse","abuseSource":"teacher","emotion":"humiliated"}
+"My teacher assigned homework and I feel stressed about exams" => {"risk":"ORANGE","score":40,"reason":"Exam stress - not abuse, teacher just mentioned in passing","triggers":["stress"],"category":"general","abuseType":"none","abuseSource":"none","emotion":"stressed"}
 `;
 
 function safeLogRisk(source, risk, score, category, extra=""){
@@ -144,7 +146,18 @@ router.post('/', optionalAuth, async (req, res) => {
   const lower = text.toLowerCase();
 
   // === QUICK SAFETY NETS - NO GEMINI NEEDED ===
-  const isDirectRed = /(mujhe marna hai|i want to die|kill myself|end my life|mar jaunga|mar jaungi|khudkushi karunga|khatam karna hai.*khud ko)/i.test(lower);
+  // NEW: expanded beyond English/Hindi - this instant check is the
+  // fastest, most reliable path in the whole pipeline (runs before any AI
+  // call, works even if both AI providers are down), so it was the one
+  // part of the system with no coverage for the many other languages
+  // spoken across India. Added clear, well-established self-harm phrases
+  // for Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam,
+  // Punjabi, and Urdu - the most widely spoken languages after Hindi.
+  // Honest note: unlike the English/Hindi phrases (refined over real
+  // production testing), these have not been validated against real
+  // usage in each language - worth a native-speaker review before fully
+  // relying on them, same as any safety-critical keyword list should get.
+  const isDirectRed = /(mujhe marna hai|i want to die|kill myself|end my life|mar jaunga|mar jaungi|khudkushi karunga|khatam karna hai.*khud ko|நான் செத்துவிட வேண்டும்|எனக்கு சாக வேண்டும்|నేను చావాలి|আমি মরে যেতে চাই|मला मरायचे आहे|મારે મરવું છે|ನಾನು ಸಾಯಬೇಕು|എനിക്ക് മരിക്കണം|ਮੈਂ ਮਰਨਾ ਚਾਹੁੰਦਾ ਹਾਂ|میں مرنا چاہتا ہوں)/i.test(lower);
   const hasNegation = /(nahi|nahin|don't|do not|not|never|matlab nahi)/i.test(lower) &&!lower.includes("nahi jee paunga");
   const isSchoolAbuse = schoolAbusePatterns.test(lower);
   const abusePatterns = /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|toxic relationship|gaslighting|worthless bolta|kutta jaise|blackmail karta|slaps me)/i;

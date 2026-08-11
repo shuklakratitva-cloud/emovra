@@ -47,6 +47,7 @@ import weeklyDigestRoutes from "./routes/weeklyDigest.js"; // NEW: weekly reflec
 import pushRoutes from "./routes/push.js"; // NEW: push notifications
 import lettersRoutes from "./routes/letters.js"; // NEW: scheduled letters to future self
 import safetyPlanRoutes from "./routes/safetyPlan.js"; // NEW: personal crisis safety plan
+import feedbackRoutes from "./routes/feedback.js"; // NEW: in-app feedback/bug reporting
 
 const app = express();
 
@@ -209,6 +210,7 @@ app.use("/api/weekly-digest", weeklyDigestRoutes); // NEW: weekly reflection ema
 app.use("/api/push", pushRoutes); // NEW: push notifications
 app.use("/api/letters", lettersRoutes); // NEW: scheduled letters to future self
 app.use("/api/safety-plan", safetyPlanRoutes); // NEW: personal crisis safety plan
+app.use("/api/feedback", feedbackRoutes); // NEW: in-app feedback/bug reporting
 app.use("/api", geminiRoutes); // exposes POST /api/chat
 
 app.use((req, res) => {
