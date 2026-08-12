@@ -33,7 +33,7 @@ router.post("/", auth, async (req, res) => {
       text: `From: ${user.name || "(no name)"} <${user.email}>\nPage: ${page || "(not specified)"}\n\n${message.trim()}`,
     });
 
-    // Even if email sending isn't configured (RESEND_API_KEY missing) or
+    // Even if email sending isn't configured (BREVO_API_KEY missing) or
     // fails for some reason, still tell the person their feedback was
     // received rather than showing an error for something outside their
     // control - it's logged either way, so nothing is silently lost.

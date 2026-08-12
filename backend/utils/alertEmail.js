@@ -7,8 +7,8 @@
 // utils/localRiskFallback.js) and just pages you instead.
 //
 // REQUIRED ENV VARS (set these in Render):
-//   RESEND_API_KEY         - free at https://resend.com (3,000 emails/month
-//                             free, no card required)
+//   BREVO_API_KEY, BREVO_SENDER_EMAIL - free at https://brevo.com, see
+//                             utils/mailer.js for the full setup steps
 //   ADMIN_ALERT_EMAIL      - optional, defaults to shukla.kratitva@gmail.com
 //
 // Uses the shared mailer in utils/mailer.js (Resend, HTTPS-based - not

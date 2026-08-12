@@ -152,13 +152,16 @@ if (!process.env.ENCRYPT_KEY && !process.env.ENCRYPTION_SECRET) {
 // all before, AND turned out to be fundamentally broken on Render's free
 // tier anyway - outbound SMTP (ports 25/465/587) is blocked at the
 // network level there, no code fix possible. Switched to Resend (HTTPS
-// API, not blocked). This check now looks for RESEND_API_KEY instead.
+// API, not blocked), then to Brevo (also HTTPS) since Resend's free tier
+// couldn't send to anyone but the account owner without a verified
+// domain - Brevo allows sending to anyone via single-sender verification,
+// no domain purchase required. This check now looks for the Brevo vars.
 // Email is optional (Gemini-down alerts + email OTP degrade gracefully
 // without it), so this doesn't block startup - just visibility.
-if (!process.env.RESEND_API_KEY) {
-  console.warn("⚠ RESEND_API_KEY missing - Gemini-down alerts and password-reset emails will show codes on-screen instead of emailing them");
+if (!process.env.BREVO_API_KEY || !process.env.BREVO_SENDER_EMAIL) {
+  console.warn("⚠ BREVO_API_KEY or BREVO_SENDER_EMAIL missing - Gemini-down alerts and password-reset emails will show codes on-screen instead of emailing them");
 } else {
-  console.log("✅ RESEND_API_KEY found - email sending enabled");
+  console.log("✅ BREVO_API_KEY found - email sending enabled");
 }
 
 // NEW: same visibility pattern for the AI background image generation key

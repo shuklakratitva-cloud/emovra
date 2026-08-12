@@ -12,6 +12,7 @@ const router = express.Router();
 // API token from huggingface.co/settings/tokens (read access is enough),
 // added as HF_API_KEY in Render's environment variables.
 const HF_MODEL = "black-forest-labs/FLUX.1-schnell";
+const HF_PROVIDER = "hf-inference";
 
 router.post("/generate", auth, async (req, res) => {
   try {
@@ -41,7 +42,7 @@ router.post("/generate", auth, async (req, res) => {
     // The model itself declines genuine copyrighted-character reproduction
     // requests on its own safety side - no extra filtering needed here,
     // just a calm, generic framing so ordinary requests read naturally.
-    const response = await fetch(`https://api-inference.huggingface.co/models/${HF_MODEL}`, {
+    const response = await fetch(`https://router.huggingface.co/${HF_PROVIDER}/models/${HF_MODEL}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.HF_API_KEY}`,
