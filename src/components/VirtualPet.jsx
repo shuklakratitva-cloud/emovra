@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx"; // NEW
 
 // Grows through stages based on the person's EXISTING level - no new
 // backend state needed, just a visual layer on data that already exists.
@@ -10,36 +11,36 @@ const LS_KEY = "emovra_pet_type";
 
 const PET_STAGES = {
   bird: [
-    { minLevel: 1, emoji: "🥚", name: "Egg" },
-    { minLevel: 2, emoji: "🐣", name: "Hatchling" },
-    { minLevel: 4, emoji: "🐥", name: "Chick" },
-    { minLevel: 7, emoji: "🦆", name: "Fledgling" },
-    { minLevel: 10, emoji: "🦢", name: "Grown" },
-    { minLevel: 15, emoji: "🕊", name: "Soaring" },
+    { minLevel: 1, emoji: "🥚", name: "Egg", nameKey: "egg" },
+    { minLevel: 2, emoji: "🐣", name: "Hatchling", nameKey: "hatchling" },
+    { minLevel: 4, emoji: "🐥", name: "Chick", nameKey: "chick" },
+    { minLevel: 7, emoji: "🦆", name: "Fledgling", nameKey: "fledgling" },
+    { minLevel: 10, emoji: "🦢", name: "Grown", nameKey: "grown" },
+    { minLevel: 15, emoji: "🕊", name: "Soaring", nameKey: "soaring" },
   ],
   dragon: [
-    { minLevel: 1, emoji: "🥚", name: "Egg" },
-    { minLevel: 2, emoji: "🦎", name: "Hatchling" },
-    { minLevel: 4, emoji: "🐲", name: "Young Dragon" },
-    { minLevel: 7, emoji: "🐉", name: "Dragon" },
-    { minLevel: 10, emoji: "🐉", name: "Mighty Dragon" },
-    { minLevel: 15, emoji: "🐉", name: "Ancient Dragon" },
+    { minLevel: 1, emoji: "🥚", name: "Egg", nameKey: "egg" },
+    { minLevel: 2, emoji: "🦎", name: "Hatchling", nameKey: "hatchling" },
+    { minLevel: 4, emoji: "🐲", name: "Young Dragon", nameKey: "youngDragon" },
+    { minLevel: 7, emoji: "🐉", name: "Dragon", nameKey: "dragon" },
+    { minLevel: 10, emoji: "🐉", name: "Mighty Dragon", nameKey: "mightyDragon" },
+    { minLevel: 15, emoji: "🐉", name: "Ancient Dragon", nameKey: "ancientDragon" },
   ],
   dog: [
-    { minLevel: 1, emoji: "🐶", name: "Puppy" },
-    { minLevel: 2, emoji: "🐕", name: "Young Pup" },
-    { minLevel: 4, emoji: "🦮", name: "Loyal Dog" },
-    { minLevel: 7, emoji: "🐕‍🦺", name: "Working Dog" },
-    { minLevel: 10, emoji: "🐩", name: "Distinguished Dog" },
-    { minLevel: 15, emoji: "🐕", name: "Best Friend" },
+    { minLevel: 1, emoji: "🐶", name: "Puppy", nameKey: "puppy" },
+    { minLevel: 2, emoji: "🐕", name: "Young Pup", nameKey: "youngPup" },
+    { minLevel: 4, emoji: "🦮", name: "Loyal Dog", nameKey: "loyalDog" },
+    { minLevel: 7, emoji: "🐕‍🦺", name: "Working Dog", nameKey: "workingDog" },
+    { minLevel: 10, emoji: "🐩", name: "Distinguished Dog", nameKey: "distinguishedDog" },
+    { minLevel: 15, emoji: "🐕", name: "Best Friend", nameKey: "bestFriend" },
   ],
   cat: [
-    { minLevel: 1, emoji: "🐱", name: "Kitten" },
-    { minLevel: 2, emoji: "🐈", name: "Young Cat" },
-    { minLevel: 4, emoji: "😼", name: "Independent Cat" },
-    { minLevel: 7, emoji: "🐈‍⬛", name: "Sleek Cat" },
-    { minLevel: 10, emoji: "🐆", name: "Wise Cat" },
-    { minLevel: 15, emoji: "🦁", name: "Legendary Cat" },
+    { minLevel: 1, emoji: "🐱", name: "Kitten", nameKey: "kitten" },
+    { minLevel: 2, emoji: "🐈", name: "Young Cat", nameKey: "youngCat" },
+    { minLevel: 4, emoji: "😼", name: "Independent Cat", nameKey: "independentCat" },
+    { minLevel: 7, emoji: "🐈‍⬛", name: "Sleek Cat", nameKey: "sleekCat" },
+    { minLevel: 10, emoji: "🐆", name: "Wise Cat", nameKey: "wiseCat" },
+    { minLevel: 15, emoji: "🦁", name: "Legendary Cat", nameKey: "legendaryCat" },
   ],
 };
 
@@ -60,6 +61,7 @@ function stageFor(petType, level) {
 }
 
 export default function VirtualPet({ level = 1, xp = 0 }) {
+  const { t } = useLanguage(); // NEW
   const [petType, setPetType] = useState("bird");
   const [showPicker, setShowPicker] = useState(false);
 
@@ -81,14 +83,14 @@ export default function VirtualPet({ level = 1, xp = 0 }) {
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "20px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px", textAlign: "center" }}>
       <div style={{ fontSize: 64, lineHeight: 1 }}>{stage.emoji}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-h)", marginTop: 8 }}>{stage.name}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-h)", marginTop: 8 }}>{t(`pet.stage.${stage.nameKey}`)}</div>
       <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>
-        {nextStage ? `Grows into a ${nextStage.name.toLowerCase()} at level ${nextStage.minLevel}` : "Fully grown"}
+        {nextStage ? t("pet.growsInto", { stage: t(`pet.stage.${nextStage.nameKey}`).toLowerCase(), level: nextStage.minLevel }) : t("pet.fullyGrown")}
       </div>
-      <div style={{ fontSize: 10, opacity: 0.4, marginTop: 6 }}>Grows as you level up - keep checking in and building habits</div>
+      <div style={{ fontSize: 10, opacity: 0.4, marginTop: 6 }}>{t("pet.growsAsLevelUp")}</div>
 
       <button onClick={() => setShowPicker((s) => !s)} style={{ marginTop: 10, fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", padding: "6px 14px", borderRadius: 999, cursor: "pointer" }}>
-        {showPicker ? "Close" : "Change pet"}
+        {showPicker ? t("pet.close") : t("pet.changePet")}
       </button>
 
       {showPicker && (
@@ -105,7 +107,7 @@ export default function VirtualPet({ level = 1, xp = 0 }) {
               }}
             >
               <span style={{ fontSize: 22 }}>{p.icon}</span>
-              <span style={{ fontSize: 10, color: "var(--text)" }}>{p.label}</span>
+              <span style={{ fontSize: 10, color: "var(--text)" }}>{t(`pet.type.${p.id}`)}</span>
             </button>
           ))}
         </div>

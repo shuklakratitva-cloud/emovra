@@ -22,8 +22,22 @@ export default function WellnessCalendar() {
   }, [monthStr]);
 
   const firstOfMonth = new Date(`${monthStr}-01T00:00:00Z`);
-  const daysInMonth = new Date(firstOfMonth.getUTCFullYear(), firstOfMonth.getUTCMonth() + 1, 0).getUTCDate();
+  // FIX: was `new Date(year, month, 0).getUTCDate()` - the 3-arg Date
+  // constructor always interprets its arguments in LOCAL time, never UTC,
+  // regardless of which method you call on the result afterward. Mixing
+  // that with .getUTCDate() silently dropped the last day of the month
+  // for any timezone ahead of UTC (like IST). Computed directly in UTC
+  // terms instead, with no local-time step in between.
+  const daysInMonth = new Date(Date.UTC(firstOfMonth.getUTCFullYear(), firstOfMonth.getUTCMonth() + 1, 0)).getUTCDate();
   const startWeekday = firstOfMonth.getUTCDay(); // 0=Sun
+
+  // NEW: "today" highlighting - didn't exist before. Built from local date
+  // components (not UTC) since this runs in the person's own browser,
+  // already in their own timezone - using UTC here would risk the exact
+  // same class of bug just fixed above, lagging behind their actual day
+  // for hours near midnight IST.
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const cells = [];
   for (let i = 0; i < startWeekday; i++) cells.push(null);
@@ -56,9 +70,10 @@ export default function WellnessCalendar() {
             if (!day) return <div key={i} />;
             const dateStr = `${monthStr}-${String(day).padStart(2, "0")}`;
             const dot = colorFor(dateStr);
+            const isToday = dateStr === todayStr;
             return (
-              <div key={i} style={{ aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid var(--border)", fontSize: 11 }}>
-                <span>{day}</span>
+              <div key={i} style={{ aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: 8, border: isToday ? "2px solid var(--accent)" : "1px solid var(--border)", fontSize: 11 }}>
+                <span style={{ color: isToday ? "var(--text-h)" : "var(--text)", fontWeight: isToday ? 700 : 400 }}>{day}</span>
                 {dot !== "transparent" && <span style={{ width: 6, height: 6, borderRadius: "50%", background: dot, marginTop: 2 }} />}
               </div>
             );

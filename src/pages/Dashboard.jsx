@@ -223,15 +223,16 @@ export default function Dashboard() {
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 18 }}>{c.emoji}</span>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{c.title}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{t(`challenge.${c.id}`)}</div>
                   <div style={{ fontSize: 11, color: "rgba(232,220,198,0.5)" }}>+{c.xp} XP</div>
                 </div>
               </div>
               {c.claimed ? (
                 <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ {t("dash.done")}</span>
               ) : (
-                <button onClick={() => claim(c.id)} disabled={claiming === c.id} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                  {claiming === c.id ? "..." : t("dash.claim")}
+                <button onClick={() => claim(c.id)} disabled={claiming === c.id} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: claiming === c.id ? "default" : "pointer", display: "inline-flex", alignItems: "center", gap: 6, opacity: claiming === c.id ? 0.7 : 1 }}>
+                  {claiming === c.id && <span style={{ width: 10, height: 10, border: "2px solid rgba(0,0,0,0.25)", borderTopColor: "#000", borderRadius: "50%", display: "inline-block", animation: "emovra-spin 0.7s linear infinite" }} />}
+                  {claiming === c.id ? "Claiming..." : t("dash.claim")}
                 </button>
               )}
             </div>
@@ -332,7 +333,7 @@ export default function Dashboard() {
 
           {subTab === "settings" && (
             <Suspense fallback={<Loader />}>
-              <ThemeAvatarSettings />
+              <ThemeAvatarSettings onProfileUpdate={loadQuiet} />
             </Suspense>
           )}
         </div>

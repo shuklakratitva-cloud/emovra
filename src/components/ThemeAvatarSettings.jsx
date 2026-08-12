@@ -8,7 +8,7 @@ function authHeaders() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` };
 }
 
-export default function ThemeAvatarSettings() {
+export default function ThemeAvatarSettings({ onProfileUpdate }) {
   const [options, setOptions] = useState(null);
   const [current, setCurrent] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -251,9 +251,12 @@ export default function ThemeAvatarSettings() {
         if (optionsData.success) setOptions(optionsData);
         if (profileData.success) {
           setCurrent(profileData);
-          if (profileData.customTheme?.bg) setCustomBg(profileData.customTheme.bg);
-          if (profileData.customTheme?.card) setCustomCard(profileData.customTheme.card);
-          if (profileData.customTheme?.accent) setCustomAccent(profileData.customTheme.accent);
+          // Sync the custom-picker sliders from whatever theme is
+          // actually active right now (preset or custom) - not just from
+          // a previously-saved custom theme, which may not exist at all.
+          setCustomBg(profileData.customTheme?.bg || profileData.theme?.bg || "#0a0a0c");
+          setCustomCard(profileData.customTheme?.card || profileData.theme?.card || "#121214");
+          setCustomAccent(profileData.customTheme?.accent || profileData.theme?.accent || "#d4b07a");
         }
         if (!optionsData.success || !profileData.success) {
           setLoadError("Couldn't load your settings - try again.");
@@ -281,6 +284,7 @@ export default function ThemeAvatarSettings() {
         if (data.theme) applyThemeVars(data.theme); // instant visual feedback, not just saved silently
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
+        onProfileUpdate?.(); // NEW: tell Dashboard's header (and anything else outside Settings) to refresh too
       }
     } catch {}
   }
@@ -444,11 +448,11 @@ export default function ThemeAvatarSettings() {
           {options.themes.map((t) => (
             <button
               key={t.id}
-              onClick={() => { applyThemeVars({ ...t, backgroundImage: current.backgroundImage }); save({ themePreference: t.id }); }}
+              onClick={() => { applyThemeVars({ ...t, backgroundImage: current.backgroundImage }); setCustomBg(t.bg); setCustomCard(t.card); setCustomAccent(t.accent); save({ themePreference: t.id }); }}
               style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 12, cursor: "pointer",
                 border: !isCustomActive && current.theme?.id === t.id ? "2px solid #d4b07a" : "1px solid var(--border)",
-                background: "transparent",
+                background: "transparent", outline: "none",
               }}
             >
               <span style={{ width: 16, height: 16, borderRadius: "50%", background: t.accent, display: "inline-block", border: "1px solid rgba(255,255,255,0.2)" }} />

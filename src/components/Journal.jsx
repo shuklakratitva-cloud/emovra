@@ -258,6 +258,7 @@ export default function Journal() {
   }
 
   async function removeEntry(id) {
+    if (!confirm("Delete this journal entry? This can't be undone.")) return;
     try {
       await fetch(`${API}/private-journal/${id}`, { method: "DELETE", headers: authHeaders() });
       setEntries((es) => es.filter((e) => e._id !== id));

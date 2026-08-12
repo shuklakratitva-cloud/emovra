@@ -10,6 +10,9 @@ export default function GoalPlanner() {
   const [title, setTitle] = useState("");
   const [milestoneText, setMilestoneText] = useState("");
   const [milestones, setMilestones] = useState([]);
+  const [creating, setCreating] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   async function load() {
     try {
@@ -27,24 +30,33 @@ export default function GoalPlanner() {
   }
 
   async function createGoal() {
-    if (!title.trim()) return;
+    if (!title.trim() || creating) return;
+    setCreating(true);
     try {
       const res = await fetch(`${API}/goals`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ title, milestones }) });
       const data = await res.json();
       if (data.success) { setGoals((g) => [data.goal, ...g]); setTitle(""); setMilestones([]); }
     } catch {}
+    setCreating(false);
   }
 
   async function toggleMilestone(goalId, idx) {
+    const key = `${goalId}-${idx}`;
+    if (togglingId === key) return;
+    setTogglingId(key);
     try {
       const res = await fetch(`${API}/goals/${goalId}/milestone/${idx}/toggle`, { method: "POST", headers: authHeaders() });
       const data = await res.json();
       if (data.success) setGoals((g) => g.map((x) => (x._id === goalId ? data.goal : x)));
     } catch {}
+    setTogglingId(null);
   }
 
   async function remove(id) {
+    if (deletingId) return;
+    setDeletingId(id);
     try { await fetch(`${API}/goals/${id}`, { method: "DELETE", headers: authHeaders() }); setGoals((g) => g.filter((x) => x._id !== id)); } catch {}
+    setDeletingId(null);
   }
 
   return (
@@ -62,18 +74,18 @@ export default function GoalPlanner() {
           {milestones.map((m, i) => <li key={i}>{m}</li>)}
         </ul>
       )}
-      <button onClick={createGoal} style={{ marginTop: 10, background: "#d4b07a", color: "#000", border: "none", padding: "8px 18px", borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>Create Goal</button>
+      <button onClick={createGoal} disabled={creating} style={{ marginTop: 10, background: "#d4b07a", color: "#000", border: "none", padding: "8px 18px", borderRadius: 10, fontWeight: 700, cursor: creating ? "default" : "pointer", opacity: creating ? 0.6 : 1 }}>{creating ? "Creating..." : "Create Goal"}</button>
 
       <div style={{ marginTop: 20 }}>
         {goals.length === 0 ? <p style={{ fontSize: 13, opacity: 0.6 }}>No goals yet.</p> : goals.map((g) => (
           <div key={g._id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 14, marginBottom: 10, opacity: g.completed ? 0.7 : 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <b style={{ fontSize: 14 }}>{g.completed ? "🎉 " : ""}{g.title}</b>
-              <button onClick={() => remove(g._id)} style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer" }}>×</button>
+              <button onClick={() => remove(g._id)} disabled={deletingId === g._id} style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: deletingId === g._id ? "default" : "pointer", opacity: deletingId === g._id ? 0.4 : 1 }}>×</button>
             </div>
             {g.milestones.map((m, idx) => (
               <label key={idx} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 6, cursor: "pointer" }}>
-                <input type="checkbox" checked={m.done} onChange={() => toggleMilestone(g._id, idx)} />
+                <input type="checkbox" checked={m.done} disabled={togglingId === `${g._id}-${idx}`} onChange={() => toggleMilestone(g._id, idx)} />
                 <span style={{ textDecoration: m.done ? "line-through" : "none", opacity: m.done ? 0.6 : 1 }}>{m.text}</span>
               </label>
             ))}

@@ -455,6 +455,47 @@ useEffect(() => {
     );
   }
 
+  // NEW: mandatory verification gate - moved from a soft, skippable banner
+  // shown inside the app to a full screen shown right after signup,
+  // before any app content is visible at all.
+  if (!emailVerified) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ maxWidth: 420, width: "100%", background: "var(--card-bg, #16161a)", borderRadius: 20, padding: 32, border: "1px solid var(--border)", textAlign: "center" }}>
+          <div style={{ fontSize: 44 }}>📧</div>
+          <h2 style={{ color: "var(--text-h)", marginTop: 10 }}>Verify your email</h2>
+          <p style={{ fontSize: 13, opacity: 0.7, marginTop: 8, lineHeight: 1.6 }}>
+            One last step before you get started - this happens right after signup. We'll send a code to <b>{user.email}</b>.
+          </p>
+
+          {!verifyOpen ? (
+            <button onClick={resendVerifyEmail} disabled={verifyLoading} style={{ marginTop: 20, padding: "10px 24px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>
+              {verifyLoading ? "Sending..." : "Send verification code"}
+            </button>
+          ) : (
+            <div style={{ marginTop: 20, textAlign: "left" }}>
+              <div style={{ fontSize: 12, color: "var(--text-h)", marginBottom: 4 }}>{verifyMsg}</div>
+              <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 12 }}>Don't see it? Check your spam/junk folder too - the code can end up there.</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <input value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} placeholder="6-digit code" style={{ flex: 1, minWidth: 140, padding: "10px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "var(--text)" }} />
+                <button onClick={confirmVerifyEmail} disabled={verifyLoading} style={{ padding: "10px 18px", borderRadius: 8, background: "#22c55e", color: "#000", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 13 }}>
+                  Confirm
+                </button>
+              </div>
+              <button onClick={resendVerifyEmail} disabled={verifyLoading} style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "transparent", border: "1px solid rgba(212,197,160,0.2)", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>
+                Resend code
+              </button>
+            </div>
+          )}
+
+          <button onClick={handleLogout} style={{ marginTop: 20, display: "block", width: "100%", background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+            Log out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const advice = analysis?.advice || getAdvice(analysis?.riskLevel, analysis?.category);
   const counselingArray = Array.isArray(analysis?.counseling)? analysis.counseling : [];
   const isAdmin = user.role === "admin";
@@ -464,13 +505,13 @@ useEffect(() => {
       <OnboardingWalkthrough />
       <style>{`
         body{background:var(--bg)!important; color:var(--text)!important}
-        div[style*="var(--card-bg)"], div[style*="var(--bg)"]{ background: var(--card-bg)!important; border: 0.5px solid rgba(212,197,160,0.18)!important; color:var(--text)!important; }
         button[style*="linear-gradient"], button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{ background:var(--accent)!important; color:#000!important; border:none!important; }
         button{font-family:Inter,sans-serif}
       `}</style>
 
       <div style={{ minHeight:'100vh', background:'var(--bg)', color:'var(--text)' }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,0.95)", backdropFilter:'blur(20px)', borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,1)", backdropFilter: "blur(20px)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
           <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "var(--text-h)", letterSpacing:'0.15em', cursor: "pointer" }}>EMOVRA</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* NEW: quick link back to the personalized dashboard */}
@@ -484,38 +525,9 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* NEW: soft email verification banner - never blocks the app, just a nudge */}
-        {!emailVerified && (
-          <div style={{ maxWidth: 900, margin: "12px auto 0", padding: "0 20px" }}>
-            <div style={{ background: "rgba(212,176,122,0.08)", border: "1px solid rgba(212,176,122,0.25)", borderRadius: 12, padding: "12px 16px" }}>
-              {!verifyOpen ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12, color: "var(--text)" }}>📧 Your email isn't verified yet.</span>
-                  <button onClick={resendVerifyEmail} disabled={verifyLoading} style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
-                    {verifyLoading ? "Sending..." : "Verify now"}
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ fontSize: 12, color: "var(--text-h)", marginBottom: 8 }}>{verifyMsg}</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <input value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} placeholder="6-digit code" style={{ flex: 1, minWidth: 140, padding: "8px 12px", borderRadius: 8, border: "0.5px solid rgba(212,197,160,0.2)", background: "#0f0f11", color: "var(--text)" }} />
-                    <button onClick={confirmVerifyEmail} disabled={verifyLoading} style={{ padding: "8px 16px", borderRadius: 8, background: "#22c55e", color: "#000", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>
-                      Confirm
-                    </button>
-                    <button onClick={resendVerifyEmail} disabled={verifyLoading} style={{ padding: "8px 12px", borderRadius: 8, background: "transparent", border: "1px solid rgba(212,197,160,0.2)", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>
-                      Resend
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* NEW: tab bar - organizes everything that used to be one long
             stacked page. Nothing below was removed, just grouped. */}
-        <div style={{ maxWidth: 900, margin: "0 auto", padding: "10px 16px 0", display: "flex", gap: 6, flexWrap: "wrap", position: "sticky", top: 64, zIndex: 90, background: "rgba(10,10,12,0.95)", backdropFilter: "blur(20px)" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "10px 16px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer",
@@ -527,6 +539,7 @@ useEffect(() => {
               {t.label}
             </button>
           ))}
+        </div>
         </div>
 
         <main id="main-content" style={{ maxWidth: 720, margin: "18px auto", padding: "0 16px" }}>
