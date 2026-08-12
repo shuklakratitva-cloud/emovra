@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { applyThemeVars } from "../utils/applyTheme.js";
 import HSLColorPicker from "./HSLColorPicker.jsx";
+import { extractThemeFromImage } from "../utils/extractColors.js";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -28,6 +29,15 @@ export default function ThemeAvatarSettings() {
   const [customCard, setCustomCard] = useState("#121214");
   const [customAccent, setCustomAccent] = useState("#d4b07a");
   const [savingCustom, setSavingCustom] = useState(false);
+  // NEW: background image - upload or AI-generate, then auto-extract
+  // matching colors before applying.
+  const [bgPreviewImage, setBgPreviewImage] = useState(null); // pending, not yet saved
+  const [bgExtracted, setBgExtracted] = useState(null); // {bg, card, accent} from extraction
+  const [bgPrompt, setBgPrompt] = useState("");
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [genError, setGenError] = useState("");
+  const [applyingBg, setApplyingBg] = useState(false);
+  const bgFileInputRef = useRef(null);
   // Live preview - throttled to fire at most once every 120ms (trailing
   // edge, so the last value in a rapid burst always wins) rather than on
   // every single slider event, which can fire dozens of times per second
@@ -44,6 +54,7 @@ export default function ThemeAvatarSettings() {
         card: next.card ?? customCard,
         accent: next.accent ?? customAccent,
         text: "#e8dcc6",
+        backgroundImage: current.backgroundImage,
       });
     }, 120);
   }
@@ -282,6 +293,89 @@ export default function ThemeAvatarSettings() {
     setSavingCustom(false);
   }
 
+  // NEW: runs color extraction on whatever image is currently in preview
+  function runExtraction(dataUri) {
+    const img = new Image();
+    img.onload = () => {
+      const colors = extractThemeFromImage(img);
+      setBgExtracted(colors); // null if extraction failed - UI handles that
+    };
+    img.onerror = () => setBgExtracted(null);
+    img.src = dataUri;
+  }
+
+  function handleBgFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGenError("");
+    if (file.size > 6 * 1024 * 1024) {
+      setGenError("That image is too large - please use one under 6MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUri = reader.result;
+      setBgPreviewImage(dataUri);
+      runExtraction(dataUri);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function generateBgImage() {
+    if (!bgPrompt.trim() || generatingImage) return;
+    setGeneratingImage(true);
+    setGenError("");
+    try {
+      const res = await fetch(`${API}/background/generate`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ prompt: bgPrompt.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBgPreviewImage(data.image);
+        runExtraction(data.image);
+      } else {
+        setGenError(data.message || "Couldn't generate that image.");
+      }
+    } catch {
+      setGenError("Something went wrong - try again.");
+    }
+    setGeneratingImage(false);
+  }
+
+  async function applyBgImage() {
+    if (!bgPreviewImage) return;
+    setApplyingBg(true);
+    const payload = { backgroundImage: bgPreviewImage };
+    if (bgExtracted) {
+      payload.customTheme = bgExtracted;
+      // also mirror into the picker's own state so it stays in sync if
+      // the person opens "Or make your own" afterward
+      setCustomBg(bgExtracted.bg);
+      setCustomCard(bgExtracted.card);
+      setCustomAccent(bgExtracted.accent);
+    }
+    await save(payload);
+    setBgPreviewImage(null);
+    setBgExtracted(null);
+    setBgPrompt("");
+    setApplyingBg(false);
+  }
+
+  function cancelBgPreview() {
+    setBgPreviewImage(null);
+    setBgExtracted(null);
+    setGenError("");
+  }
+
+  const [removingBg, setRemovingBg] = useState(false);
+  async function removeBgImage() {
+    setRemovingBg(true);
+    await save({ removeBackgroundImage: true });
+    setRemovingBg(false);
+  }
+
   // NEW: resizes the uploaded image client-side (max 160x160, JPEG) before
   // sending it, so we're never uploading a multi-megabyte photo just to
   // display it at 60px - keeps the request fast and the database small.
@@ -350,7 +444,7 @@ export default function ThemeAvatarSettings() {
           {options.themes.map((t) => (
             <button
               key={t.id}
-              onClick={() => save({ themePreference: t.id })}
+              onClick={() => { applyThemeVars({ ...t, backgroundImage: current.backgroundImage }); save({ themePreference: t.id }); }}
               style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 12, cursor: "pointer",
                 border: !isCustomActive && current.theme?.id === t.id ? "2px solid #d4b07a" : "1px solid var(--border)",
@@ -377,6 +471,76 @@ export default function ThemeAvatarSettings() {
         <button onClick={saveCustomTheme} disabled={savingCustom} style={{ marginTop: 14, background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
           {savingCustom ? "Saving..." : "Save custom theme"}
         </button>
+      </div>
+
+      {/* NEW: Background image - upload your own or generate one with AI */}
+      <div style={{ marginTop: 20, padding: 16, borderRadius: 12, border: "1px solid var(--border)" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖼️ Background image</div>
+        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>Upload your own image, or describe one for AI to generate. Your background/card/accent colors will auto-match it.</p>
+
+        {current.backgroundImage && !bgPreviewImage && (
+          <div style={{ marginBottom: 14 }}>
+            <img src={current.backgroundImage} alt="Current background" style={{ width: "100%", maxWidth: 280, borderRadius: 10, display: "block" }} />
+            <button onClick={removeBgImage} disabled={removingBg} style={{ marginTop: 8, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 14px", borderRadius: 999, fontSize: 11, cursor: removingBg ? "default" : "pointer", opacity: removingBg ? 0.6 : 1 }}>
+              {removingBg ? "Removing..." : "Remove background image"}
+            </button>
+          </div>
+        )}
+
+        {!bgPreviewImage && (
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+            <div>
+              <input ref={bgFileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleBgFileUpload} style={{ display: "none" }} />
+              <button onClick={() => bgFileInputRef.current?.click()} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 16px", borderRadius: 999, fontSize: 12, cursor: "pointer" }}>
+                📤 Upload an image
+              </button>
+            </div>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={bgPrompt}
+                  onChange={(e) => setBgPrompt(e.target.value)}
+                  placeholder="e.g. calm forest at sunset"
+                  maxLength={300}
+                  style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)", fontSize: 12 }}
+                />
+                <button onClick={generateBgImage} disabled={!bgPrompt.trim() || generatingImage} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "8px 16px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: bgPrompt.trim() ? "pointer" : "not-allowed", opacity: bgPrompt.trim() ? 1 : 0.5, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  {generatingImage && <span style={{ width: 10, height: 10, border: "2px solid rgba(0,0,0,0.25)", borderTopColor: "#000", borderRadius: "50%", display: "inline-block", animation: "emovra-spin 0.7s linear infinite" }} />}
+                  {generatingImage ? "Generating..." : "✨ Generate"}
+                </button>
+              </div>
+              <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4 }}>Note: can't generate copyrighted characters or brands - describe a scene, style, or vibe instead.</p>
+            </div>
+          </div>
+        )}
+
+        {genError && <p style={{ fontSize: 12, color: "#fca5a5", marginTop: 10 }}>{genError}</p>}
+
+        {bgPreviewImage && (
+          <div>
+            <img src={bgPreviewImage} alt="Preview" style={{ width: "100%", maxWidth: 320, borderRadius: 10, display: "block" }} />
+            <div style={{ marginTop: 10 }}>
+              {bgExtracted ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 11, opacity: 0.6 }}>Matched colors:</span>
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.bg, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title="Background" />
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.card, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title="Card" />
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.accent, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title="Accent" />
+                </div>
+              ) : (
+                <p style={{ fontSize: 11, opacity: 0.6 }}>Couldn't auto-match colors for this image - it'll still be used as your background as-is.</p>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <button onClick={applyBgImage} disabled={applyingBg} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                {applyingBg ? "Applying..." : "Use this background"}
+              </button>
+              <button onClick={cancelBgPreview} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 18px", borderRadius: 999, fontSize: 12, cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop: 20 }}>

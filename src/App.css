@@ -115,11 +115,6 @@ body, #root { background: var(--bg) !important; color: var(--text) !important; m
   color:#991b1b !important;
 }
 
-div[style*="#2a1f"], div[style*="#1a1033"], div[style*="#1e1b2e"]{
-  background: rgba(18,18,20,0.95) !important;
-  border: 0.5px solid rgba(212,197,160,0.18) !important;
-}
-
 [data-theme="dark"] p,
 [data-theme="dark"] small,
 [data-theme="dark"] h1,
@@ -132,9 +127,9 @@ div[style*="#2a1f"], div[style*="#1a1033"], div[style*="#1e1b2e"]{
 }
 
 [data-theme="dark"] .helpline-box {
-  background: rgba(18,18,20,0.95) !important;
-  color: #e8dcc6 !important;
-  border: 0.5px solid rgba(212,197,160,0.18) !important;
+  background: var(--card-bg) !important;
+  color: var(--text) !important;
+  border: 0.5px solid var(--border) !important;
 }
 
 /* Extra: MoodTracker, Journal, Grounding, TeleManas purple fix */
@@ -177,9 +172,9 @@ button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
   padding:12px;
 }
 .voice-card{
-  background: rgba(18,18,20,0.95) !important;
-  border: 0.5px solid rgba(212,197,160,0.18) !important;
-  color: #e8dcc6 !important;
+  background: var(--card-bg) !important;
+  border: 0.5px solid var(--border) !important;
+  color: var(--text) !important;
 }
 
 /* NEW: high-contrast accessibility mode - boosts text/border contrast
@@ -199,3 +194,9 @@ body.emovra-high-contrast input,
 body.emovra-high-contrast textarea {
   border-width: 2px !important;
 }
+
+/* NEW: shared spin animation for loading indicators - was previously
+   defined inline in a single component, moved here so it can be reused
+   without duplicating a <style> tag everywhere it's needed. */
+@keyframes emovra-spin { to { transform: rotate(360deg); } }
+

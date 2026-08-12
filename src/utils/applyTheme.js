@@ -28,6 +28,23 @@ export function applyThemeVars(theme) {
   // can never be silently overridden by anything else in the cascade.
   document.body.style.setProperty("background", t.bg, "important");
   document.documentElement.style.setProperty("background", t.bg, "important");
+
+  // NEW: optional background image (uploaded or AI-generated). A dark
+  // overlay gradient sits between the image and the content so text
+  // stays readable regardless of what the image looks like - the image
+  // itself is decorative, not something the UI depends on for contrast.
+  if (t.backgroundImage) {
+    const overlay = `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55))`;
+    document.body.style.setProperty("background-image", `${overlay}, url(${t.backgroundImage})`, "important");
+    document.body.style.setProperty("background-size", "cover", "important");
+    document.body.style.setProperty("background-position", "center", "important");
+    document.body.style.setProperty("background-attachment", "fixed", "important");
+  } else {
+    document.body.style.removeProperty("background-image");
+    document.body.style.removeProperty("background-size");
+    document.body.style.removeProperty("background-position");
+    document.body.style.removeProperty("background-attachment");
+  }
 }
 
 // Call once on app load. Applies the default (Classic Black & Gold)

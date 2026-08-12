@@ -538,7 +538,6 @@ useEffect(() => {
                 <h3 style={{ margin: "0 0 12px 0", color:'var(--text)' }}>How are you feeling today?</h3>
                 <textarea rows={5} value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" &&!e.shiftKey) { e.preventDefault(); handleAnalyze(); } }} placeholder="Type what's on your mind..." style={{ width: "100%", padding: 14, borderRadius: 12, border: "0.5px solid rgba(212,197,160,0.18)", background: "#0f0f11", color: "var(--text)", outline:'none' }} />
                 <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap:'wrap', alignItems: 'center' }}>
-                  <style>{`@keyframes emovra-spin { to { transform: rotate(360deg); } }`}</style>
                   <button onClick={handleAnalyze} disabled={loading} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 800, cursor: loading ? 'default' : 'pointer', fontSize:12, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     {loading && <span style={{ width: 12, height: 12, border: "2px solid rgba(0,0,0,0.25)", borderTopColor: "#000", borderRadius: "50%", display: "inline-block", animation: "emovra-spin 0.7s linear infinite" }} />}
                     {loading? "Analyzing..." : "✨ Analyze"}

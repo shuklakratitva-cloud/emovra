@@ -15,6 +15,8 @@ export default function HabitTracker() {
   const [emoji, setEmoji] = useState("✅");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   async function load() {
     try {
@@ -28,12 +30,14 @@ export default function HabitTracker() {
   useEffect(() => { load(); }, []);
 
   async function addHabit() {
-    if (!title.trim()) return;
+    if (!title.trim() || adding) return;
+    setAdding(true);
     try {
       const res = await fetch(`${API}/habits`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ title, emoji }) });
       const data = await res.json();
       if (data.success) { setHabits((h) => [...h, data.habit]); setTitle(""); }
     } catch {}
+    setAdding(false);
   }
 
   async function complete(id) {
@@ -53,10 +57,13 @@ export default function HabitTracker() {
   }
 
   async function remove(id) {
+    if (deletingId) return;
+    setDeletingId(id);
     try {
       await fetch(`${API}/habits/${id}`, { method: "DELETE", headers: authHeaders() });
       setHabits((h) => h.filter((x) => x._id !== id));
     } catch {}
+    setDeletingId(null);
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -77,7 +84,7 @@ export default function HabitTracker() {
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Drink 8 glasses of water" style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }} />
-        <button onClick={addHabit} style={{ background: "#d4b07a", color: "#000", border: "none", padding: "0 18px", borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>Add</button>
+        <button onClick={addHabit} disabled={adding} style={{ background: "#d4b07a", color: "#000", border: "none", padding: "0 18px", borderRadius: 10, fontWeight: 700, cursor: adding ? "default" : "pointer", opacity: adding ? 0.6 : 1 }}>{adding ? "..." : "Add"}</button>
       </div>
 
       <div style={{ marginTop: 16 }}>
@@ -102,7 +109,7 @@ export default function HabitTracker() {
                     Mark done
                   </button>
                 )}
-                <button onClick={() => remove(h._id)} style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 16 }}>×</button>
+                <button onClick={() => remove(h._id)} disabled={deletingId === h._id} style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: deletingId === h._id ? "default" : "pointer", fontSize: 16, opacity: deletingId === h._id ? 0.4 : 1 }}>×</button>
               </div>
             </div>
           );

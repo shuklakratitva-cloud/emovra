@@ -68,7 +68,7 @@ function StressBall() {
           boxShadow: squished ? "0 2px 8px rgba(0,0,0,0.3)" : "0 8px 16px rgba(0,0,0,0.25)",
         }}
       />
-      <p style={{ marginTop: 14, fontSize: 12, opacity: 0.6 }}>Click and hold to squeeze - squeezed {pops} times</p>
+      <p style={{ marginTop: 14, fontSize: 12, opacity: 0.6 }}>Click and hold to squeeze - squeezed {pops} time{pops === 1 ? "" : "s"}</p>
     </div>
   );
 }
