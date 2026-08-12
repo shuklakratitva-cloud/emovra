@@ -161,6 +161,13 @@ if (!process.env.RESEND_API_KEY) {
   console.log("✅ RESEND_API_KEY found - email sending enabled");
 }
 
+// NEW: same visibility pattern for the AI background image generation key
+if (!process.env.HF_API_KEY) {
+  console.warn("⚠ HF_API_KEY missing - AI background generation will show an error until this is set");
+} else {
+  console.log("✅ HF_API_KEY found - AI background generation enabled");
+}
+
 app.get("/", (req, res) => res.send("MindGuard Backend Running - AI Enabled + Privacy RED/ORANGE only"));
 
 app.get("/health", (req, res) => res.status(200).send("OK"));
