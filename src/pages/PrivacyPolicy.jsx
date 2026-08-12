@@ -46,7 +46,7 @@ export default function PrivacyPolicy() {
         </Section>
 
         <Section title="Other services we rely on">
-          <p>MongoDB Atlas (database hosting), Render (backend hosting), Cloudflare (frontend hosting), and Resend (transactional email, e.g. password-reset codes). Each has its own privacy practices governing infrastructure-level data handling.</p>
+          <p>MongoDB Atlas (database hosting), Render (backend hosting), Cloudflare (frontend hosting), and Brevo (transactional email, e.g. password-reset codes). Each has its own privacy practices governing infrastructure-level data handling.</p>
         </Section>
 
         <Section title="Cookies &amp; local storage">
