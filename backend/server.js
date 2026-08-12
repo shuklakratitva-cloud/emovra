@@ -48,6 +48,7 @@ import pushRoutes from "./routes/push.js"; // NEW: push notifications
 import lettersRoutes from "./routes/letters.js"; // NEW: scheduled letters to future self
 import safetyPlanRoutes from "./routes/safetyPlan.js"; // NEW: personal crisis safety plan
 import feedbackRoutes from "./routes/feedback.js"; // NEW: in-app feedback/bug reporting
+import backgroundGenerateRoutes from "./routes/backgroundGenerate.js"; // NEW: AI background image generation
 
 const app = express();
 
@@ -211,6 +212,7 @@ app.use("/api/push", pushRoutes); // NEW: push notifications
 app.use("/api/letters", lettersRoutes); // NEW: scheduled letters to future self
 app.use("/api/safety-plan", safetyPlanRoutes); // NEW: personal crisis safety plan
 app.use("/api/feedback", feedbackRoutes); // NEW: in-app feedback/bug reporting
+app.use("/api/background", backgroundGenerateRoutes); // NEW: AI background image generation
 app.use("/api", geminiRoutes); // exposes POST /api/chat
 
 app.use((req, res) => {

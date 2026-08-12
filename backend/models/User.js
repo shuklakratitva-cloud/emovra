@@ -39,6 +39,7 @@ const userSchema = new mongoose.Schema({
   avatarType: { type: String, enum: ["emoji", "custom"], default: "emoji" }, // NEW
   avatarImage: { type: String, default: "" }, // NEW: base64 data URI, only used when avatarType === "custom"
   avatarAccessory: { type: String, default: "" }, // NEW: small emoji badge overlaid on avatar, unlocked by level
+  backgroundImage: { type: String, default: "" }, // NEW: base64 data URI - either uploaded by the person or AI-generated, used as the app's background image when set
 
   // NEW: birthday messages - deliberately storing ONLY month/day, not a
   // full date of birth, since a full DOB isn't needed for "happy birthday"

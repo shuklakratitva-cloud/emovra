@@ -19,6 +19,13 @@ export const THEMES = {
   "sunset-amber":       { id: "sunset-amber",        name: "Sunset Amber",        bg: "#2e1c10", card: "rgba(48,32,20,0.95)", accent: "#fb923c", text: "#f5e4d8" },
   "slate-blue":         { id: "slate-blue",         name: "Slate Blue",           bg: "#152036", card: "rgba(26,38,58,0.95)", accent: "#60a5fa", text: "#dce6f5" },
   "cherry-blossom":     { id: "cherry-blossom",     name: "Cherry Blossom",       bg: "#2a1622", card: "rgba(46,24,38,0.95)", accent: "#fb7185", text: "#f5dce4" },
+  // NEW: 5 more presets - genuinely new hues (coral, emerald, ice-blue,
+  // berry, warm earth) not covered by the existing 8.
+  "coral-reef":  { id: "coral-reef",  name: "Coral Reef",  bg: "#2e1712", card: "rgba(48,28,22,0.95)", accent: "#fb7156", text: "#f5ded8" },
+  "emerald":     { id: "emerald",     name: "Emerald",     bg: "#0f2a1e", card: "rgba(20,46,36,0.95)", accent: "#34d399", text: "#dcf5ea" },
+  "ice-blue":    { id: "ice-blue",    name: "Ice Blue",    bg: "#132430", card: "rgba(24,42,54,0.95)", accent: "#7dd3fc", text: "#e0f2fe" },
+  "berry":       { id: "berry",       name: "Berry",       bg: "#26102e", card: "rgba(44,20,50,0.95)", accent: "#e879f9", text: "#f5dcf8" },
+  "warm-earth":  { id: "warm-earth",  name: "Warm Earth",  bg: "#241a10", card: "rgba(42,32,20,0.95)", accent: "#d4a574", text: "#f0e4d4" },
   // NEW: light themes - every preset up to this point was dark. Text
   // color is flipped to a dark tone for readability against the light
   // backgrounds. Honest note: some individual UI elements elsewhere in
@@ -48,7 +55,9 @@ function readableTextFor(hexBg) {
 }
 
 // Priority: an explicit custom theme > a selected preset > the default.
+// backgroundImage (if any) layers on top of whichever color theme is active.
 export function resolveTheme(user) {
+  const bgImage = user?.backgroundImage || "";
   if (user?.themePreference === "custom" && user?.customTheme?.bg) {
     return {
       id: "custom",
@@ -57,10 +66,11 @@ export function resolveTheme(user) {
       card: user.customTheme.card || user.customTheme.bg,
       accent: user.customTheme.accent || "#d4b07a",
       text: readableTextFor(user.customTheme.bg),
+      backgroundImage: bgImage,
     };
   }
   if (user?.themePreference && THEMES[user.themePreference]) {
-    return THEMES[user.themePreference];
+    return { ...THEMES[user.themePreference], backgroundImage: bgImage };
   }
-  return THEMES["classic-black-gold"];
+  return { ...THEMES["classic-black-gold"], backgroundImage: bgImage };
 }

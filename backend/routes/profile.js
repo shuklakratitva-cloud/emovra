@@ -25,6 +25,7 @@ const ACCESSORIES = [
 // on the User model. The frontend also resizes the image before sending
 // it, so this is a safety net, not the primary size control.
 const MAX_AVATAR_DATA_URI_LENGTH = 280000;
+const MAX_BACKGROUND_DATA_URI_LENGTH = 2000000; // NEW: background images need to be higher-res than a 60px avatar
 
 // GET /api/profile/options - catalogs for the settings screen
 router.get("/options", (req, res) => {
@@ -34,7 +35,7 @@ router.get("/options", (req, res) => {
 // GET /api/profile/me - current settings + birthday-today check
 router.get("/me", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("name themePreference customTheme avatar avatarType avatarImage avatarAccessory level birthdayMonth birthdayDay personalityResult");
+    const user = await User.findById(req.user.id).select("name themePreference customTheme avatar avatarType avatarImage avatarAccessory backgroundImage level birthdayMonth birthdayDay personalityResult");
     if (!user) return res.status(404).json({ success: false, message: "Not found" });
 
     const today = new Date();
@@ -50,6 +51,7 @@ router.get("/me", auth, async (req, res) => {
       avatarType: user.avatarType,
       avatarImage: user.avatarType === "custom" ? user.avatarImage : "",
       avatarAccessory: user.avatarAccessory || "",
+      backgroundImage: user.backgroundImage || "",
       level: user.level || 1,
       birthdayMonth: user.birthdayMonth,
       birthdayDay: user.birthdayDay,
@@ -66,7 +68,7 @@ router.get("/me", auth, async (req, res) => {
 // routes/auth.js)
 router.patch("/settings", auth, async (req, res) => {
   try {
-    const { themePreference, avatar, avatarImage, avatarAccessory, birthdayMonth, birthdayDay, customTheme } = req.body;
+    const { themePreference, avatar, avatarImage, avatarAccessory, birthdayMonth, birthdayDay, customTheme, backgroundImage, removeBackgroundImage } = req.body;
     const update = {};
 
     // custom color picker - validates each value is a real hex color
@@ -104,6 +106,21 @@ router.patch("/settings", auth, async (req, res) => {
       update.avatarType = "emoji";
     }
 
+    // NEW: background image - uploaded by the person or AI-generated,
+    // same validation pattern as avatarImage above.
+    if (backgroundImage && typeof backgroundImage === "string") {
+      const isDataUri = /^data:image\/(png|jpe?g|webp);base64,/.test(backgroundImage);
+      if (!isDataUri) {
+        return res.status(400).json({ success: false, message: "Invalid image format" });
+      }
+      if (backgroundImage.length > MAX_BACKGROUND_DATA_URI_LENGTH) {
+        return res.status(400).json({ success: false, message: "Image too large - please use a smaller image" });
+      }
+      update.backgroundImage = backgroundImage;
+    } else if (removeBackgroundImage) {
+      update.backgroundImage = "";
+    }
+
     // NEW: avatar accessory - level-gated, checked server-side (not just
     // hidden in the UI) so someone can't unlock one early by just calling
     // the API directly.
@@ -124,7 +141,7 @@ router.patch("/settings", auth, async (req, res) => {
     if (birthdayDay && birthdayDay >= 1 && birthdayDay <= 31) update.birthdayDay = birthdayDay;
 
     const user = await User.findByIdAndUpdate(req.user.id, update, { new: true })
-      .select("themePreference customTheme avatar avatarType avatarImage avatarAccessory level birthdayMonth birthdayDay");
+      .select("themePreference customTheme avatar avatarType avatarImage avatarAccessory backgroundImage level birthdayMonth birthdayDay");
 
     res.json({
       success: true,
@@ -135,6 +152,7 @@ router.patch("/settings", auth, async (req, res) => {
       avatarType: user.avatarType,
       avatarImage: user.avatarType === "custom" ? user.avatarImage : "",
       avatarAccessory: user.avatarAccessory || "",
+      backgroundImage: user.backgroundImage || "",
       level: user.level || 1,
       birthdayMonth: user.birthdayMonth,
       birthdayDay: user.birthdayDay,
