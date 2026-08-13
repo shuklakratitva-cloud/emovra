@@ -455,10 +455,15 @@ useEffect(() => {
     );
   }
 
-  // NEW: mandatory verification gate - moved from a soft, skippable banner
-  // shown inside the app to a full screen shown right after signup,
-  // before any app content is visible at all.
-  if (!emailVerified) {
+  // TEMPORARILY DISABLED (see mailer.js / server logs) - verification
+  // emails currently can't reliably reach anyone but the sender, since
+  // Brevo + a free Gmail sender address gets rejected by Gmail's own
+  // anti-spoofing protections. Blocking signup behind a step that can't
+  // structurally complete right now would lock every real user out.
+  // Re-enable by changing this back to `if (!emailVerified)` once a real
+  // domain is authenticated with Brevo - everything else (the gate UI,
+  // send/confirm functions, backend routes) is untouched and ready to go.
+  if (false && !emailVerified) {
     return (
       <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ maxWidth: 420, width: "100%", background: "var(--card-bg, #16161a)", borderRadius: 20, padding: 32, border: "1px solid var(--border)", textAlign: "center" }}>

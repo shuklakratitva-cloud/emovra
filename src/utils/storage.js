@@ -1,6 +1,14 @@
+import { encryptLocal, decryptLocal } from "./localCipher.js";
 export const STORAGE_KEYS={MOOD_HISTORY:"mental_health_mood_history",JOURNAL_ENTRIES:"mental_health_journal_entries",THEME:"mental_health_theme",LAST_ANALYSIS:"mental_health_last_analysis"};
-export function saveToStorage(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
-export function loadFromStorage(k,d=null){try{const i=localStorage.getItem(k);if(!i)return d;return JSON.parse(i)}catch(e){return d}}
+export function saveToStorage(k,v){try{localStorage.setItem(k,encryptLocal(JSON.stringify(v)));return true}catch(e){return false}}
+export function loadFromStorage(k,d=null){
+  try{
+    const i=localStorage.getItem(k);
+    if(!i)return d;
+    try{ return JSON.parse(decryptLocal(i)); }
+    catch{ return JSON.parse(i); } // migrate: this might be old, pre-encryption plain data
+  }catch(e){return d}
+}
 export function removeFromStorage(k){try{localStorage.removeItem(k);return true}catch(e){return false}}
 export function clearAppStorage(){Object.values(STORAGE_KEYS).forEach(k=>localStorage.removeItem(k))}
 export function saveMood(e){const h=loadMoodHistory();h.unshift(e);return saveToStorage(STORAGE_KEYS.MOOD_HISTORY,h)}

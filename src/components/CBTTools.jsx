@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from "react";
+import { encryptLocal, decryptLocal } from "../utils/localCipher.js";
 
 const LS_KEY = "emovra_cbt_data";
-function load() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } }
-function save(data) { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+function load() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return {};
+    try { return JSON.parse(decryptLocal(raw)) || {}; }
+    catch { return JSON.parse(raw) || {}; } // migrate: might be old, pre-encryption plain data
+  } catch { return {}; }
+}
+function save(data) { localStorage.setItem(LS_KEY, encryptLocal(JSON.stringify(data))); }
 
 const DISTORTIONS = [
   { id: "catastrophizing", label: "Catastrophizing", desc: "Assuming the worst possible outcome" },

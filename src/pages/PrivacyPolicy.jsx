@@ -51,6 +51,7 @@ export default function PrivacyPolicy() {
 
         <Section title="Cookies &amp; local storage">
           <p>Emovra uses your browser's local storage to keep you signed in (an authentication token) and to remember preferences. We don't use third-party advertising trackers.</p>
+          <p>A few features - Mood Tracker history, CBT thought-reframe entries, Life Timeline, and your most recent check-in result - are stored only in your browser, not on our servers, so they stay on your device. This local data is obscured before it's stored, but this is a lighter protection than the server-side encryption used for saved check-ins and Letters to Future You, which use a securely-managed key your browser never has access to. Anyone with technical access to your own device and enough know-how could still potentially recover this local data - if you use a shared or public computer, we'd recommend not leaving yourself signed in.</p>
         </Section>
 
         <Section title="Children &amp; age">
