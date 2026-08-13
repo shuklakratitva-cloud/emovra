@@ -24,7 +24,7 @@ export const translations = {
     "hero.learnMore": "Learn More →",
 
     "feature.private.title": "Private & Secure",
-    "feature.private.desc": "End-to-end encrypted, privacy first",
+    "feature.private.desc": "Encrypted, privacy first",
     "feature.therapist.title": "Therapist-Approved",
     "feature.therapist.desc": "Built with clinical psychology experts",
     "feature.daily.title": "Daily Calm",
@@ -187,7 +187,7 @@ export const translations = {
     "hero.learnMore": "और जानें →",
 
     "feature.private.title": "निजी और सुरक्षित",
-    "feature.private.desc": "एंड-टू-एंड एन्क्रिप्टेड, गोपनीयता सर्वोपरि",
+    "feature.private.desc": "एन्क्रिप्टेड, गोपनीयता सर्वोपरि",
     "feature.therapist.title": "थेरेपिस्ट-अनुमोदित",
     "feature.therapist.desc": "क्लिनिकल मनोविज्ञान विशेषज्ञों के साथ बनाया गया",
     "feature.daily.title": "दैनिक शांति",
