@@ -60,7 +60,7 @@ export default function TeleManas() {
       </div>
 
       <div style={{ marginTop: "20px", fontSize: "14px", color: "var(--muted)" }}>
-        <strong style={{color:"var(--text)"}}>Privacy Note:</strong> Your journal entries, mood history, and analyses are stored locally in your browser unless you choose to share them.
+        <strong style={{color:"var(--text)"}}>Privacy Note:</strong> Your Personal Journal entries are encrypted and stored on our server so you can access them from any device - never analyzed, never shown to anyone else, not even an admin. Your Mood Tracker history and last check-in result stay only on this device, in your browser, unless you choose to share them.
       </div>
     </div>
   );
