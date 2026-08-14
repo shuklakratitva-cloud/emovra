@@ -81,8 +81,8 @@ export default function VirtualPet({ level = 1, xp = 0 }) {
   const nextStage = stages.find((s) => s.minLevel > level);
 
   return (
-    <div className="emovra-card-rise" style={{ animationDelay: "0.2s", background: "var(--card-bg, #fff)", padding: "20px", borderRadius: "24px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px", textAlign: "center" }}>
-      <div className="emovra-breathing" style={{ fontSize: 64, lineHeight: 1, display: "inline-block" }}>{stage.emoji}</div>
+    <div style={{ background: "var(--card-bg, #fff)", padding: "20px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px", textAlign: "center" }}>
+      <div style={{ fontSize: 64, lineHeight: 1 }}>{stage.emoji}</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-h)", marginTop: 8 }}>{t(`pet.stage.${stage.nameKey}`)}</div>
       <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>
         {nextStage ? t("pet.growsInto", { stage: t(`pet.stage.${nextStage.nameKey}`).toLowerCase(), level: nextStage.minLevel }) : t("pet.fullyGrown")}
