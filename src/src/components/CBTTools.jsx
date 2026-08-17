@@ -1,0 +1,180 @@
+import React, { useState, useEffect } from "react";
+import { encryptLocal, decryptLocal } from "../utils/localCipher.js";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
+
+const LS_KEY = "emovra_cbt_data";
+function load() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return {};
+    try { return JSON.parse(decryptLocal(raw)) || {}; }
+    catch { return JSON.parse(raw) || {}; } // migrate: might be old, pre-encryption plain data
+  } catch { return {}; }
+}
+function save(data) { localStorage.setItem(LS_KEY, encryptLocal(JSON.stringify(data))); }
+
+const DISTORTIONS = [
+  { id: "catastrophizing", label: "Catastrophizing", desc: "Assuming the worst possible outcome" },
+  { id: "mindreading", label: "Mind reading", desc: "Assuming you know what others think" },
+  { id: "allornothing", label: "All-or-nothing", desc: "Seeing things as totally good or totally bad" },
+  { id: "overgeneralizing", label: "Overgeneralizing", desc: "One bad moment means it always happens" },
+  { id: "shoulds", label: "\"Should\" statements", desc: "Rigid rules about how things must be" },
+  { id: "personalizing", label: "Personalizing", desc: "Blaming yourself for things outside your control" },
+];
+
+const VALUES_LIST = ["Honesty", "Family", "Growth", "Creativity", "Independence", "Connection", "Kindness", "Achievement", "Adventure", "Stability", "Justice", "Curiosity", "Health", "Loyalty", "Freedom", "Balance"];
+
+// Maps the raw English strength strings (used as the persisted/storage
+// value, unchanged) to a translation key slug for display only - the
+// stored value stays exactly as it was before i18n was added.
+const STRENGTH_KEYS = {
+  Persistence: "persistence",
+  Empathy: "empathy",
+  Humor: "humor",
+  Creativity: "creativity",
+  Loyalty: "loyalty",
+  Curiosity: "curiosity",
+  Patience: "patience",
+  Honesty: "honesty",
+  Adaptability: "adaptability",
+  Courage: "courage",
+  Focus: "focus",
+  Optimism: "optimism",
+};
+
+function ThoughtReframe() {
+  const { t } = useLanguage();
+  const [step, setStep] = useState(1);
+  const [situation, setSituation] = useState("");
+  const [thought, setThought] = useState("");
+  const [distortions, setDistortions] = useState([]);
+  const [reframe, setReframe] = useState("");
+  const [saved, setSaved] = useState([]);
+
+  useEffect(() => { setSaved(load().reframes || []); }, []);
+
+  function toggleDistortion(id) {
+    setDistortions((d) => d.includes(id) ? d.filter((x) => x !== id) : [...d, id]);
+  }
+
+  function finish() {
+    const data = load();
+    const entry = { situation, thought, distortions, reframe, date: new Date().toISOString() };
+    data.reframes = [entry, ...(data.reframes || [])].slice(0, 50);
+    save(data);
+    setSaved(data.reframes);
+    setStep(1); setSituation(""); setThought(""); setDistortions([]); setReframe("");
+  }
+
+  // NEW: was no way to remove a saved reframe entry once created - real
+  // gap, since this data persists in localStorage indefinitely otherwise.
+  function deleteReframe(index) {
+    const data = load();
+    data.reframes = (data.reframes || []).filter((_, i) => i !== index);
+    save(data);
+    setSaved(data.reframes);
+  }
+
+  return (
+    <div>
+      {step === 1 && (
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600 }}>{t("cbtTools.step1Heading")}</p>
+          <textarea value={situation} onChange={(e) => setSituation(e.target.value)} placeholder={t("cbtTools.step1Placeholder")} rows={2} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
+          <button onClick={() => setStep(2)} disabled={!situation.trim()} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>{t("cbtTools.next")}</button>
+        </div>
+      )}
+      {step === 2 && (
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600 }}>{t("cbtTools.step2Heading")}</p>
+          <textarea value={thought} onChange={(e) => setThought(e.target.value)} placeholder={t("cbtTools.step2Placeholder")} rows={2} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
+          <button onClick={() => setStep(3)} disabled={!thought.trim()} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>{t("cbtTools.next")}</button>
+        </div>
+      )}
+      {step === 3 && (
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600 }}>{t("cbtTools.step3Heading")}</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {DISTORTIONS.map((d) => (
+              <button key={d.id} onClick={() => toggleDistortion(d.id)} title={t(`cbtTools.distortion.${d.id}.desc`)} style={{ padding: "6px 12px", borderRadius: 999, fontSize: 11, cursor: "pointer", border: distortions.includes(d.id) ? "1px solid var(--accent)" : "1px solid var(--border)", background: distortions.includes(d.id) ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}>
+                {t(`cbtTools.distortion.${d.id}.label`)}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setStep(4)} style={{ marginTop: 12, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>{t("cbtTools.next")}</button>
+        </div>
+      )}
+      {step === 4 && (
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600 }}>{t("cbtTools.step4Heading")}</p>
+          <textarea value={reframe} onChange={(e) => setReframe(e.target.value)} placeholder={t("cbtTools.step4Placeholder")} rows={2} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
+          <button onClick={finish} disabled={!reframe.trim()} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>{t("cbtTools.save")}</button>
+        </div>
+      )}
+
+      {saved.length > 0 && (
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+          <p style={{ fontSize: 12, fontWeight: 600, opacity: 0.7 }}>{t("cbtTools.pastReframes")}</p>
+          {saved.slice(0, 5).map((r, i) => (
+            <div key={i} style={{ fontSize: 12, padding: "8px 0", opacity: 0.8, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <span><b>{r.thought}</b> → {r.reframe}</span>
+              <button onClick={() => deleteReframe(i)} title={t("cbtTools.deleteEntry")} style={{ background: "transparent", border: "none", color: "var(--muted, #999)", cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "2px 6px" }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const STRENGTHS = ["Persistence", "Empathy", "Humor", "Creativity", "Loyalty", "Curiosity", "Patience", "Honesty", "Adaptability", "Courage", "Focus", "Optimism"];
+function StrengthsFinder() {
+  const { t } = useLanguage();
+  const [picked, setPicked] = useState([]);
+  useEffect(() => { setPicked(load().strengths || []); }, []);
+  function toggle(v) {
+    setPicked((p) => {
+      const next = p.includes(v) ? p.filter((x) => x !== v) : [...p, v];
+      const data = load(); data.strengths = next; save(data);
+      return next;
+    });
+  }
+  return (
+    <div>
+      <p style={{ fontSize: 12, opacity: 0.7 }}>{t("cbtTools.strengthsPrompt")}</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+        {STRENGTHS.map((v) => (
+          <button key={v} onClick={() => toggle(v)} style={{ padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer", border: picked.includes(v) ? "1px solid var(--accent)" : "1px solid var(--border)", background: picked.includes(v) ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}>
+            {t(`cbtTools.strength.${STRENGTH_KEYS[v]}`)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const TOOLS = [
+  { id: "reframe", labelKey: "cbtTools.toolReframe", Component: ThoughtReframe },
+  { id: "strengths", labelKey: "cbtTools.toolStrengths", Component: StrengthsFinder },
+];
+
+export default function CBTTools() {
+  const { t } = useLanguage();
+  const [active, setActive] = useState("reframe");
+  const Active = TOOLS.find((tool) => tool.id === active)?.Component;
+
+  return (
+    <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
+      <h2>{t("cbtTools.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6 }}>{t("cbtTools.subtitle")}</p>
+      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+        {TOOLS.map((tool) => (
+          <button key={tool.id} onClick={() => setActive(tool.id)} style={{ padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer", border: active === tool.id ? "1px solid var(--accent)" : "1px solid var(--border)", background: active === tool.id ? "rgba(212,176,122,0.15)" : "transparent", color: active === tool.id ? "var(--text-h)" : "var(--muted)", fontWeight: active === tool.id ? 700 : 500 }}>
+            {t(tool.labelKey)}
+          </button>
+        ))}
+      </div>
+      <div style={{ marginTop: 16 }}>{Active && <Active />}</div>
+    </div>
+  );
+}

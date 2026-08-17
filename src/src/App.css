@@ -1,0 +1,279 @@
+#center{display:flex;flex-direction:column;align-items:center;padding:24px;gap:12px}
+.hero{display:flex;justify-content:center;padding:16px 0}
+.ticks{height:1px;background:var(--border);margin:24px 0;width:100%}
+#spacer{height:40px}
+.primary-btn{
+  padding:10px 20px;
+  background:#d4b07a;
+  color:#000;
+  border:none;
+  border-radius:20px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:13px;
+  transition:0.2s
+}
+.primary-btn:hover{opacity:0.9;transform:translateY(-1px)}
+.primary-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.secondary-btn{
+  padding:10px 18px;
+  border-radius:20px;
+  cursor:pointer;
+  border:0.5px solid rgba(212,197,160,0.3);
+  background:transparent;
+  color:#d4c5a0;
+  font-weight:600;
+  font-size:13px;
+  transition:0.2s
+}
+.secondary-btn:hover{background:rgba(212,197,160,0.08)}
+textarea{
+  font-family:inherit;
+  background:#0f0f11;
+  color:#e8dcc6;
+  border:0.5px solid rgba(212,197,160,0.18);
+  outline:none;
+  border-radius:12px
+}
+textarea:focus{border-color:#d4b07a;box-shadow:0 0 0 3px rgba(212,176,122,0.15)}
+
+/* === THEME VARIABLES - BLACK & GOLD BY DEFAULT === */
+/* NEW: --accent added. This is the variable src/utils/applyTheme.js
+   overrides at runtime when someone picks a different theme in Settings -
+   previously nothing consumed a variable for the gold accent color at all,
+   it was hardcoded as #d4b07a directly everywhere, so switching themes had
+   nowhere to actually take effect. */
+:root {
+  --bg: #0a0a0c;
+  --card-bg: rgba(18,18,20,0.95);
+  --text: #e8dcc6;
+  --text-h: #d4c5a0;
+  --border: rgba(212,197,160,0.18);
+  --muted: rgba(232,220,198,0.5);
+  --accent: #d4b07a;
+}
+[data-theme="dark"] {
+  --bg: #0a0a0c;
+  --card-bg: rgba(18,18,20,0.95);
+  --text: #e8dcc6;
+  --text-h: #d4c5a0;
+  --border: rgba(212,197,160,0.18);
+  --muted: rgba(232,220,198,0.5);
+  --accent: #d4b07a;
+}
+[data-theme="light"] {
+  --bg: #0a0a0c;
+  --card-bg: rgba(18,18,20,0.95);
+  --text: #e8dcc6;
+  --text-h: #d4c5a0;
+  --border: rgba(212,197,160,0.18);
+  --muted: rgba(232,220,198,0.5);
+  --accent: #d4b07a;
+}
+
+body, #root { background: var(--bg) !important; color: var(--text) !important; min-height:100vh; margin:0; transition: background 0.2s, color 0.2s; }
+
+/* === FIX: HEADER - BLACK GOLD === */
+.app-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:12px 18px;
+  max-width:900px;
+  margin:0 auto;
+  flex-wrap:wrap;
+  position:sticky;
+  top:0;
+  z-index:100;
+  background:rgba(10,10,12,0.95) !important;
+  border-bottom:0.5px solid rgba(212,197,160,0.15);
+  backdrop-filter: blur(20px);
+}
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+/* === FIX: RED ALERT SHOULD NEVER BE OVERRIDDEN === */
+.red-alert-box{
+  background:#fee2e2 !important;
+  border:2px solid #ef4444 !important;
+  color:#991b1b !important;
+}
+.red-alert-box a{color:#fff !important}
+[data-theme="dark"] .red-alert-box{
+  background:#fee2e2 !important;
+  color:#991b1b !important;
+}
+[data-theme="dark"] .red-alert-box p,
+[data-theme="dark"] .red-alert-box div,
+[data-theme="dark"] .red-alert-box b,
+[data-theme="dark"] .red-alert-box span{
+  color:#991b1b !important;
+}
+
+[data-theme="dark"] p,
+[data-theme="dark"] small,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] li,
+[data-theme="dark"] span:not(.red-alert-box *) {
+  color: var(--text);
+}
+
+[data-theme="dark"] .helpline-box {
+  background: var(--card-bg) !important;
+  color: var(--text) !important;
+  border: 0.5px solid var(--border) !important;
+}
+
+/* Extra: MoodTracker, Journal, Grounding, TeleManas purple fix */
+button[style*="#8b5cf6"], button[style*="#7c3aed"], button[style*="#a855f7"]{
+  background:#d4b07a !important;
+  color:#000 !important;
+}
+
+/* === RISK COLORS - GREEN ORANGE RED - BLACK GOLD THEME === */
+.risk-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 12px;
+  border-radius:20px;
+  font-weight:800;
+  font-size:12px;
+  letter-spacing:0.5px;
+  border:1px solid;
+}
+.risk-GREEN, .risk-green{
+  background: rgba(22,163,74,0.15) !important;
+  color: #4ade80 !important;
+  border-color: rgba(74,222,128,0.3) !important;
+}
+.risk-ORANGE, .risk-orange, .risk-YELLOW, .risk-yellow{
+  background: rgba(234,88,12,0.15) !important;
+  color: #fb923c !important;
+  border-color: rgba(251,146,60,0.3) !important;
+}
+.risk-RED, .risk-red{
+  background: rgba(220,38,38,0.15) !important;
+  color: #f87171 !important;
+  border-color: rgba(248,113,113,0.3) !important;
+}
+.orange-alert-box{
+  background: rgba(234,88,12,0.12) !important;
+  border: 1.5px solid rgba(251,146,60,0.4) !important;
+  color: #fb923c !important;
+  border-radius:12px;
+  padding:12px;
+}
+.voice-card{
+  background: var(--card-bg) !important;
+  border: 0.5px solid var(--border) !important;
+  color: var(--text) !important;
+}
+
+/* NEW: high-contrast accessibility mode - boosts text/border contrast
+   against the dark background without needing to touch every component's
+   individual styling. Toggled via Settings, saved to localStorage. */
+body.emovra-high-contrast {
+  --text: #ffffff !important;
+  --text-h: #ffe9b3 !important;
+  --border: rgba(255,255,255,0.45) !important;
+  --muted: #e5e5e5 !important;
+}
+body.emovra-high-contrast * {
+  text-shadow: none !important;
+}
+body.emovra-high-contrast button,
+body.emovra-high-contrast input,
+body.emovra-high-contrast textarea {
+  border-width: 2px !important;
+}
+
+/* NEW: shared spin animation for loading indicators - was previously
+   defined inline in a single component, moved here so it can be reused
+   without duplicating a <style> tag everywhere it's needed. */
+@keyframes emovra-spin { to { transform: rotate(360deg); } }
+
+/* NEW: Dashboard visual polish - staggered fade-rise for cards and a
+   gentle breathing pulse, inspired by a mockup's bento-grid dashboard
+   concept. Pure CSS (no framer-motion dependency added) to avoid new
+   deployment risk. Respects prefers-reduced-motion. */
+@keyframes emovra-rise-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes emovra-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.emovra-card-rise {
+  animation: emovra-rise-in 0.5s ease-out both;
+}
+.emovra-breathing {
+  animation: emovra-breathe 3.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .emovra-card-rise, .emovra-breathing { animation: none; }
+}
+
+/* NEW: sidebar + main-content shell, adapted from a dashboard redesign
+   guide. Pure CSS media-query toggle (no JS screen-width detection) -
+   both the sidebar and the existing pill tab bar always exist in the
+   DOM, only one is visible at a time depending on viewport width. */
+.emovra-app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+.emovra-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 24px 14px;
+  border-right: 0.5px solid rgba(212,197,160,0.15);
+  display: none;
+}
+.emovra-sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: rgba(232,220,198,0.65);
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  border-left: 3px solid transparent;
+  background: transparent;
+}
+.emovra-sidebar-nav-item:hover {
+  background: rgba(212,197,160,0.06);
+}
+.emovra-sidebar-nav-item.active {
+  background: rgba(212,176,122,0.12);
+  color: var(--text-h);
+  border-left: 3px solid var(--accent);
+}
+.emovra-mobile-tabbar {
+  display: flex;
+}
+.emovra-widget-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (min-width: 900px) {
+  .emovra-sidebar { display: block; }
+  .emovra-mobile-tabbar { display: none; }
+}
+@media (max-width: 900px) {
+  .emovra-widget-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .emovra-widget-grid { grid-template-columns: 1fr; }
+}
+
