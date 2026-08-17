@@ -1,5 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from "../i18n/LanguageContext.jsx"; // NEW
+import LanguageToggle from "../components/LanguageToggle.jsx"; // NEW
 import RiskCard from "../components/RiskCard";
 import MoodTracker from "../components/MoodTracker";
 import { getCounselingAdvice, getTopEmotions } from "../utils/counselor.js";
@@ -42,14 +44,15 @@ const Loader = () => <div style={{ padding: 12, textAlign: 'center', color: 'var
 // NEW: only the original features + AI chat live here now. Habits &
 // Goals, Insights, Wellness Tools, and Settings moved to Dashboard.jsx.
 const TABS = [
-  { id: "checkin", label: "Check-in" },
-  { id: "voice-mood", label: "Voice & Mood" },
-  { id: "journal", label: "Journal" },
-  { id: "wellness", label: "Grounding & Support" },
-  { id: "chat", label: "Talk to AI" },
+  { id: "checkin", labelKey: "apptab.checkin" },
+  { id: "voice-mood", labelKey: "apptab.voiceMood" },
+  { id: "journal", labelKey: "apptab.journal" },
+  { id: "wellness", labelKey: "apptab.wellness" },
+  { id: "chat", labelKey: "apptab.chat" },
 ];
 
 export default function MindGuardApp() {
+  const { t } = useLanguage(); // NEW
   const navigate = useNavigate();
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState(null);
@@ -520,28 +523,29 @@ useEffect(() => {
           <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "var(--text-h)", letterSpacing:'0.15em', cursor: "pointer" }}>EMOVRA</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* NEW: quick link back to the personalized dashboard */}
-            <button onClick={() => navigate("/dashboard")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "transparent", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📊 Dashboard</button>
+            <LanguageToggle style={{ color: "#a78bfa", borderColor: "rgba(167,139,250,0.4)" }} />
+            <button onClick={() => navigate("/dashboard")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "transparent", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📊 {t("app.dashboardBtn")}</button>
             {avatarProfile.avatarType === "custom" && avatarProfile.avatarImage
               ? <img src={avatarProfile.avatarImage} alt="avatar" style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }} />
               : <span style={{ fontSize: 20 }}>{avatarProfile.avatar}</span>}
-            <span style={{ fontSize: 12, color:'var(--text)', opacity:0.7 }}>Hi, {user.name} {isAdmin && "👑"}</span>
-            {isAdmin && (<button onClick={() => navigate("/admin")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "rgba(212,197,160,0.12)", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>Admin</button>)}
-            <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "#141416", color: "var(--text-h)", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Logout</button>
+            <span style={{ fontSize: 12, color:'var(--text)', opacity:0.7 }}>{t("app.hiGreeting", { name: user.name })} {isAdmin && "👑"}</span>
+            {isAdmin && (<button onClick={() => navigate("/admin")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "rgba(212,197,160,0.12)", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>{t("app.admin")}</button>)}
+            <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "#141416", color: "var(--text-h)", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>{t("app.logout")}</button>
           </div>
         </div>
 
         {/* NEW: tab bar - organizes everything that used to be one long
             stacked page. Nothing below was removed, just grouped. */}
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "10px 16px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
+          {TABS.map((tb) => (
+            <button key={tb.id} onClick={() => setTab(tb.id)} style={{
               padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer",
-              border: tab === t.id ? "1px solid var(--accent)" : "0.5px solid rgba(212,197,160,0.2)",
-              background: tab === t.id ? "rgba(212,176,122,0.15)" : "transparent",
-              color: tab === t.id ? "var(--text-h)" : "rgba(232,220,198,0.6)",
-              fontWeight: tab === t.id ? 700 : 500,
+              border: tab === tb.id ? "1px solid var(--accent)" : "0.5px solid rgba(212,197,160,0.2)",
+              background: tab === tb.id ? "rgba(212,176,122,0.15)" : "transparent",
+              color: tab === tb.id ? "var(--text-h)" : "rgba(232,220,198,0.6)",
+              fontWeight: tab === tb.id ? 700 : 500,
             }}>
-              {t.label}
+              {t(tb.labelKey)}
             </button>
           ))}
         </div>
