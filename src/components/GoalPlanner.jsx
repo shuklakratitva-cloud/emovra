@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -13,6 +14,7 @@ export default function GoalPlanner() {
   const [creating, setCreating] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const { t } = useLanguage();
 
   async function load() {
     try {
@@ -61,12 +63,12 @@ export default function GoalPlanner() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2 style={{ margin: 0 }}>🗺 Goal Planner</h2>
-      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Break a goal into small steps you can actually check off.</p>
+      <h2 style={{ margin: 0 }}>🗺 {t("goalPlanner.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>{t("goalPlanner.subtitle")}</p>
 
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Goal title, e.g. Feel calmer before exams" style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", marginTop: 14 }} />
+      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("goalPlanner.titlePlaceholder")} style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", marginTop: 14 }} />
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <input value={milestoneText} onChange={(e) => setMilestoneText(e.target.value)} placeholder="Add a milestone..." onKeyDown={(e) => e.key === "Enter" && addMilestone()} style={{ flex: 1, padding: 8, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }} />
+        <input value={milestoneText} onChange={(e) => setMilestoneText(e.target.value)} placeholder={t("goalPlanner.milestonePlaceholder")} onKeyDown={(e) => e.key === "Enter" && addMilestone()} style={{ flex: 1, padding: 8, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }} />
         <button onClick={addMilestone} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 10, padding: "0 14px", cursor: "pointer" }}>+</button>
       </div>
       {milestones.length > 0 && (
@@ -74,10 +76,10 @@ export default function GoalPlanner() {
           {milestones.map((m, i) => <li key={i}>{m}</li>)}
         </ul>
       )}
-      <button onClick={createGoal} disabled={creating} style={{ marginTop: 10, background: "#d4b07a", color: "#000", border: "none", padding: "8px 18px", borderRadius: 10, fontWeight: 700, cursor: creating ? "default" : "pointer", opacity: creating ? 0.6 : 1 }}>{creating ? "Creating..." : "Create Goal"}</button>
+      <button onClick={createGoal} disabled={creating} style={{ marginTop: 10, background: "#d4b07a", color: "#000", border: "none", padding: "8px 18px", borderRadius: 10, fontWeight: 700, cursor: creating ? "default" : "pointer", opacity: creating ? 0.6 : 1 }}>{creating ? t("goalPlanner.creating") : t("goalPlanner.createButton")}</button>
 
       <div style={{ marginTop: 20 }}>
-        {goals.length === 0 ? <p style={{ fontSize: 13, opacity: 0.6 }}>No goals yet.</p> : goals.map((g) => (
+        {goals.length === 0 ? <p style={{ fontSize: 13, opacity: 0.6 }}>{t("goalPlanner.empty")}</p> : goals.map((g) => (
           <div key={g._id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 14, marginBottom: 10, opacity: g.completed ? 0.7 : 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <b style={{ fontSize: 14 }}>{g.completed ? "🎉 " : ""}{g.title}</b>

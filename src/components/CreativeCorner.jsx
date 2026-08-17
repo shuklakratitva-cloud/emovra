@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const PROMPTS = [
   "Draw or describe what calm feels like to you.",
@@ -19,6 +20,7 @@ const BRUSH_SIZES = [{ label: "S", size: 2 }, { label: "M", size: 5 }, { label: 
 // simple lightness slider so any final shade is reachable, not just the
 // fully-saturated ring color.
 function ColorWheel({ onPick }) {
+  const { t } = useLanguage();
   const wheelRef = useRef(null);
   function handleClick(e) {
     const rect = wheelRef.current.getBoundingClientRect();
@@ -41,7 +43,7 @@ function ColorWheel({ onPick }) {
     <div
       ref={wheelRef}
       onClick={handleClick}
-      title="Click to pick a color"
+      title={t("creativeCorner.colorWheelTitle")}
       style={{
         width: 90, height: 90, borderRadius: "50%", cursor: "crosshair", flexShrink: 0,
         background: "conic-gradient(from 0deg, red, yellow, lime, cyan, blue, magenta, red)",
@@ -61,11 +63,12 @@ function hslToHex(h, s, l) {
 }
 
 export default function CreativeCorner() {
+  const { t } = useLanguage();
   const canvasRef = useRef(null);
   const [drawing, setDrawing] = useState(false);
   const [color, setColor] = useState("#d4b07a");
   const [brushSize, setBrushSize] = useState(5);
-  const [prompt, setPrompt] = useState(PROMPTS[Math.floor(Math.random() * PROMPTS.length)]);
+  const [promptIndex, setPromptIndex] = useState(() => Math.floor(Math.random() * PROMPTS.length));
   const [writing, setWriting] = useState("");
 
   // NEW: undo/redo - a stack of full canvas snapshots. Simple and robust
@@ -171,7 +174,7 @@ export default function CreativeCorner() {
   }
 
   function newPrompt() {
-    setPrompt(PROMPTS[Math.floor(Math.random() * PROMPTS.length)]);
+    setPromptIndex(Math.floor(Math.random() * PROMPTS.length));
   }
 
   function pickFromWheel(hue, sat) {
@@ -180,16 +183,16 @@ export default function CreativeCorner() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2 style={{ margin: 0 }}>🎨 Creative Corner</h2>
+      <h2 style={{ margin: 0 }}>{t("creativeCorner.heading")}</h2>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 10, flexWrap: "wrap" }}>
-        <p style={{ fontSize: 13, fontStyle: "italic", flex: 1, margin: 0 }}>"{prompt}"</p>
-        <button onClick={newPrompt} style={{ fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>New prompt</button>
+        <p style={{ fontSize: 13, fontStyle: "italic", flex: 1, margin: 0 }}>"{t(`creativeCorner.prompt.${promptIndex}`)}"</p>
+        <button onClick={newPrompt} style={{ fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>{t("creativeCorner.newPrompt")}</button>
       </div>
 
-      <textarea rows={3} value={writing} onChange={(e) => setWriting(e.target.value)} placeholder="Write here, if that's more your thing..." style={{ width: "100%", marginTop: 12, padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }} />
+      <textarea rows={3} value={writing} onChange={(e) => setWriting(e.target.value)} placeholder={t("creativeCorner.writePlaceholder")} style={{ width: "100%", marginTop: 12, padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }} />
 
       <div style={{ marginTop: 14 }}>
-        <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 6 }}>...or doodle</div>
+        <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 6 }}>{t("creativeCorner.doodleLabel")}</div>
         <canvas
           ref={canvasRef}
           width={600} height={280}
@@ -206,11 +209,11 @@ export default function CreativeCorner() {
               {SWATCHES.map((c) => (
                 <button key={c} onClick={() => setColor(c)} style={{ width: 22, height: 22, borderRadius: "50%", background: c, borderWidth: color === c ? 2 : 1, borderStyle: "solid", borderColor: color === c ? "#fff" : "var(--border)", cursor: "pointer" }} />
               ))}
-              <div style={{ width: 22, height: 22, borderRadius: "50%", background: color, borderWidth: 2, borderStyle: "solid", borderColor: "#fff", marginLeft: 4 }} title="Current color" />
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: color, borderWidth: 2, borderStyle: "solid", borderColor: "#fff", marginLeft: 4 }} title={t("creativeCorner.currentColorTitle")} />
             </div>
 
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <span style={{ fontSize: 10, opacity: 0.5, marginRight: 4 }}>Brush</span>
+              <span style={{ fontSize: 10, opacity: 0.5, marginRight: 4 }}>{t("creativeCorner.brushLabel")}</span>
               {BRUSH_SIZES.map((b) => (
                 <button
                   key={b.label}
@@ -230,10 +233,10 @@ export default function CreativeCorner() {
             </div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={undo} disabled={!canUndo} style={{ fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: canUndo ? "var(--text)" : "var(--muted)", borderRadius: 8, padding: "6px 10px", cursor: canUndo ? "pointer" : "not-allowed", opacity: canUndo ? 1 : 0.4 }}>↶ Undo</button>
-              <button onClick={redo} disabled={!canRedo} style={{ fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: canRedo ? "var(--text)" : "var(--muted)", borderRadius: 8, padding: "6px 10px", cursor: canRedo ? "pointer" : "not-allowed", opacity: canRedo ? 1 : 0.4 }}>↷ Redo</button>
-              <button onClick={clearCanvas} style={{ fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>Clear</button>
-              <button onClick={download} style={{ fontSize: 11, background: "#d4b07a", border: "none", color: "#000", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontWeight: 700 }}>Save as image</button>
+              <button onClick={undo} disabled={!canUndo} style={{ fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: canUndo ? "var(--text)" : "var(--muted)", borderRadius: 8, padding: "6px 10px", cursor: canUndo ? "pointer" : "not-allowed", opacity: canUndo ? 1 : 0.4 }}>{t("creativeCorner.undo")}</button>
+              <button onClick={redo} disabled={!canRedo} style={{ fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: canRedo ? "var(--text)" : "var(--muted)", borderRadius: 8, padding: "6px 10px", cursor: canRedo ? "pointer" : "not-allowed", opacity: canRedo ? 1 : 0.4 }}>{t("creativeCorner.redo")}</button>
+              <button onClick={clearCanvas} style={{ fontSize: 11, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>{t("creativeCorner.clear")}</button>
+              <button onClick={download} style={{ fontSize: 11, background: "#d4b07a", border: "none", color: "#000", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontWeight: 700 }}>{t("creativeCorner.saveImage")}</button>
             </div>
           </div>
         </div>

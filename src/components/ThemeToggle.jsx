@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 export default function ThemeToggle() {
   const [dark, setDark] = useState(() => {
     return localStorage.getItem("theme") === "dark" ||
            (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
   });
+  const { t } = useLanguage();
 
   useEffect(() => {
     const theme = dark? "dark" : "light";
@@ -23,9 +25,9 @@ export default function ThemeToggle() {
         background: "var(--card-bg)", color: "var(--text)",
         cursor: "pointer"
       }}
-      aria-label="Toggle theme"
+      aria-label={t("themeToggle.ariaLabel")}
     >
-      {dark? "☀️ Light" : "🌙 Dark"}
+      {dark? `☀️ ${t("themeToggle.light")}` : `🌙 ${t("themeToggle.dark")}`}
     </button>
   );
 }

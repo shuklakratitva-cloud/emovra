@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 // Uses the SAME local mood history the Mood Tracker already writes to -
 // no new storage, no AI, just a simple this-period-vs-last-period count
 // comparison. Purely a heuristic tally, not a prediction of anything.
 export default function DigitalTimeMachine() {
+  const { t } = useLanguage();
   const [thisMonth, setThisMonth] = useState({});
   const [lastMonth, setLastMonth] = useState({});
   const [hasData, setHasData] = useState(false);
@@ -40,26 +42,26 @@ export default function DigitalTimeMachine() {
   if (!hasData) {
     return (
       <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-        <h2>⏳ Digital Time Machine</h2>
-        <p style={{ fontSize: 12, opacity: 0.6 }}>Log a few moods in the Mood Tracker, then come back to see how things shift over time.</p>
+        <h2>⏳ {t("digitalTimeMachine.heading")}</h2>
+        <p style={{ fontSize: 12, opacity: 0.6 }}>{t("digitalTimeMachine.emptyState")}</p>
       </div>
     );
   }
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>⏳ Digital Time Machine</h2>
-      <p style={{ fontSize: 12, opacity: 0.6 }}>This month vs. last month, based on your Mood Tracker entries (saved on this device).</p>
+      <h2>⏳ {t("digitalTimeMachine.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6 }}>{t("digitalTimeMachine.subtitle")}</p>
       <div style={{ display: "flex", gap: 16, marginTop: 14, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 150, padding: 14, borderRadius: 12, border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 11, opacity: 0.6 }}>Last month</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{topMood(lastMonth) || "No data"}</div>
-          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{Object.values(lastMonth).reduce((a, b) => a + b, 0)} mood entries</div>
+          <div style={{ fontSize: 11, opacity: 0.6 }}>{t("digitalTimeMachine.lastMonth")}</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{topMood(lastMonth) || t("digitalTimeMachine.noData")}</div>
+          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{t("digitalTimeMachine.moodEntriesCount", { count: Object.values(lastMonth).reduce((a, b) => a + b, 0) })}</div>
         </div>
         <div style={{ flex: 1, minWidth: 150, padding: 14, borderRadius: 12, border: "1px solid var(--accent)" }}>
-          <div style={{ fontSize: 11, opacity: 0.6 }}>This month</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4, color: "var(--text-h)" }}>{topMood(thisMonth) || "No data"}</div>
-          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{Object.values(thisMonth).reduce((a, b) => a + b, 0)} mood entries</div>
+          <div style={{ fontSize: 11, opacity: 0.6 }}>{t("digitalTimeMachine.thisMonth")}</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4, color: "var(--text-h)" }}>{topMood(thisMonth) || t("digitalTimeMachine.noData")}</div>
+          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{t("digitalTimeMachine.moodEntriesCount", { count: Object.values(thisMonth).reduce((a, b) => a + b, 0) })}</div>
         </div>
       </div>
     </div>

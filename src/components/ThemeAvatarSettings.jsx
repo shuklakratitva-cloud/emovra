@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { applyThemeVars } from "../utils/applyTheme.js";
 import HSLColorPicker from "./HSLColorPicker.jsx";
 import { extractThemeFromImage } from "../utils/extractColors.js";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -9,6 +10,7 @@ function authHeaders() {
 }
 
 export default function ThemeAvatarSettings({ onProfileUpdate }) {
+  const { t } = useLanguage();
   const [options, setOptions] = useState(null);
   const [current, setCurrent] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -21,6 +23,15 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
   // anything was wrong. This is what "Settings tab disappeared" actually
   // was. Now shows a real error state with a retry button instead.
   const [loadError, setLoadError] = useState("");
+  // FIX: save() used to swallow every failure silently (empty catch, and
+  // it never checked res.ok). That's the actual cause of "background image
+  // isn't uploading" - the color extraction happens entirely client-side in
+  // the browser (canvas, no network call), so that part always "worked" and
+  // showed a preview, but the actual PATCH to /profile/settings was
+  // failing - most often a 413 from the server, since it was sending the
+  // full-size image with no size limit on the receiving end (see the
+  // matching fix in server.js) - and nothing on screen ever said so.
+  const [saveError, setSaveError] = useState("");
   // NEW: data export + account deletion state
   const [exporting, setExporting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -133,14 +144,14 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        setPushMsg("Notifications were blocked - you can re-enable them in your browser's site settings.");
+        setPushMsg(t("themeAvatarSettings.pushBlocked"));
         setPushLoading(false);
         return;
       }
       const keyRes = await fetch(`${API}/push/vapid-public-key`);
       const keyData = await keyRes.json();
       if (!keyData.success) {
-        setPushMsg("Push notifications aren't set up on the server yet.");
+        setPushMsg(t("themeAvatarSettings.pushNotConfigured"));
         setPushLoading(false);
         return;
       }
@@ -152,9 +163,9 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
       });
       await fetch(`${API}/push/subscribe`, { method: "POST", headers: authHeaders(), body: JSON.stringify(sub.toJSON()) });
       setPushSubscribed(true);
-      setPushMsg("Notifications enabled.");
+      setPushMsg(t("themeAvatarSettings.pushEnabled"));
     } catch (e) {
-      setPushMsg("Couldn't enable notifications - try again.");
+      setPushMsg(t("themeAvatarSettings.pushEnableError"));
     }
     setPushLoading(false);
   }
@@ -169,9 +180,9 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
         await sub.unsubscribe();
       }
       setPushSubscribed(false);
-      setPushMsg("Notifications turned off.");
+      setPushMsg(t("themeAvatarSettings.pushDisabled"));
     } catch {
-      setPushMsg("Something went wrong - try again.");
+      setPushMsg(t("themeAvatarSettings.genericError"));
     }
     setPushLoading(false);
   }
@@ -192,7 +203,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
       a.remove();
       URL.revokeObjectURL(url);
     } catch {
-      alert("Couldn't export your data - try again in a moment.");
+      alert(t("themeAvatarSettings.exportError"));
     }
     setExporting(false);
   }
@@ -207,11 +218,11 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
         localStorage.removeItem("user");
         window.location.href = "/";
       } else {
-        alert(data.message || "Could not delete account.");
+        alert(data.message || t("themeAvatarSettings.deleteAccountFailedDefault"));
         setDeleting(false);
       }
     } catch {
-      alert("Something went wrong - try again.");
+      alert(t("themeAvatarSettings.genericError"));
       setDeleting(false);
     }
   }
@@ -259,16 +270,16 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
           setCustomAccent(profileData.customTheme?.accent || profileData.theme?.accent || "#d4b07a");
         }
         if (!optionsData.success || !profileData.success) {
-          setLoadError("Couldn't load your settings - try again.");
+          setLoadError(t("themeAvatarSettings.loadSettingsError"));
         }
       })
       .catch((err) => {
         if (err?.status === 401 || err?.status === 403) {
-          setLoadError("Your session has expired - please log out and log back in.");
+          setLoadError(t("themeAvatarSettings.sessionExpired"));
         } else if (err?.status) {
-          setLoadError(`Server error (${err.status}) - try again in a moment.`);
+          setLoadError(t("themeAvatarSettings.serverErrorWithStatus", { status: err.status }));
         } else {
-          setLoadError("Couldn't reach the server - check your connection and try again.");
+          setLoadError(t("themeAvatarSettings.connectionError"));
         }
       });
   }
@@ -276,8 +287,27 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
   useEffect(() => { loadProfile(); }, []);
 
   async function save(update) {
+    setSaveError("");
     try {
       const res = await fetch(`${API}/profile/settings`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(update) });
+      // FIX: a non-2xx response (e.g. 413 Payload Too Large from a big
+      // background image, or a 401 from an expired token) used to fall
+      // through to `res.json()` and either throw (caught and silently
+      // discarded below) or parse an error body that was never checked
+      // for `.success`. Either way the person saw nothing happen - the
+      // image preview and extracted colors were already showing from the
+      // earlier, purely-client-side step, so it looked like it "worked"
+      // right up until nothing was actually saved.
+      if (!res.ok) {
+        if (res.status === 413) {
+          setSaveError(t("themeAvatarSettings.imageTooLargeServer"));
+        } else if (res.status === 401) {
+          setSaveError(t("themeAvatarSettings.sessionExpired"));
+        } else {
+          setSaveError(t("themeAvatarSettings.saveFailedWithStatus", { status: res.status }));
+        }
+        return false;
+      }
       const data = await res.json();
       if (data.success) {
         setCurrent((c) => ({ ...c, ...data }));
@@ -285,8 +315,14 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
         onProfileUpdate?.(); // NEW: tell Dashboard's header (and anything else outside Settings) to refresh too
+        return true;
       }
-    } catch {}
+      setSaveError(data.message || t("themeAvatarSettings.saveFailedDefault"));
+      return false;
+    } catch {
+      setSaveError(t("themeAvatarSettings.connectionError"));
+      return false;
+    }
   }
 
   // Only called once, on Save - not on every slider drag. Matches the
@@ -313,7 +349,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
     if (!file) return;
     setGenError("");
     if (file.size > 6 * 1024 * 1024) {
-      setGenError("That image is too large - please use one under 6MB.");
+      setGenError(t("themeAvatarSettings.bgImageTooLarge"));
       return;
     }
     const reader = new FileReader();
@@ -340,10 +376,10 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
         setBgPreviewImage(data.image);
         runExtraction(data.image);
       } else {
-        setGenError(data.message || "Couldn't generate that image.");
+        setGenError(data.message || t("themeAvatarSettings.generateImageFailedDefault"));
       }
     } catch {
-      setGenError("Something went wrong - try again.");
+      setGenError(t("themeAvatarSettings.genericError"));
     }
     setGeneratingImage(false);
   }
@@ -360,10 +396,16 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
       setCustomCard(bgExtracted.card);
       setCustomAccent(bgExtracted.accent);
     }
-    await save(payload);
-    setBgPreviewImage(null);
-    setBgExtracted(null);
-    setBgPrompt("");
+    // FIX: only clear the preview/prompt on an actual confirmed save. It
+    // used to clear unconditionally, so a failed save (see save() above)
+    // silently threw away the image the person just picked, with no error
+    // shown and nothing left on screen to retry from.
+    const ok = await save(payload);
+    if (ok) {
+      setBgPreviewImage(null);
+      setBgExtracted(null);
+      setBgPrompt("");
+    }
     setApplyingBg(false);
   }
 
@@ -389,7 +431,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
     setUploadError("");
 
     if (file.size > 8 * 1024 * 1024) {
-      setUploadError("Image too large - please pick something under 8MB.");
+      setUploadError(t("themeAvatarSettings.avatarTooLarge"));
       return;
     }
 
@@ -411,7 +453,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
         setUploading(true);
         save({ avatarImage: dataUrl }).finally(() => setUploading(false));
       };
-      img.onerror = () => setUploadError("Couldn't read that image - try a different file.");
+      img.onerror = () => setUploadError(t("themeAvatarSettings.avatarReadError"));
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
@@ -422,7 +464,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
       <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", marginTop: "20px", textAlign: "center" }}>
         <p style={{ fontSize: 13, color: "#f87171" }}>{loadError}</p>
         <button onClick={loadProfile} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12 }}>
-          Try again
+          {t("themeAvatarSettings.tryAgain")}
         </button>
       </div>
     );
@@ -430,7 +472,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
   if (!options || !current) {
     return (
       <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", marginTop: "20px", textAlign: "center" }}>
-        <p style={{ fontSize: 13, opacity: 0.6 }}>Loading settings...</p>
+        <p style={{ fontSize: 13, opacity: 0.6 }}>{t("themeAvatarSettings.loadingSettings")}</p>
       </div>
     );
   }
@@ -439,11 +481,11 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2 style={{ margin: 0 }}>🎨 Personalize</h2>
-      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Classic Black &amp; Gold is the default - these are optional.</p>
+      <h2 style={{ margin: 0 }}>🎨 {t("themeAvatarSettings.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>{t("themeAvatarSettings.subtitle")}</p>
 
       <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Theme</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("themeAvatarSettings.themeLabel")}</div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {options.themes.map((t) => (
             <button
@@ -463,30 +505,30 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
       </div>
 
       <div style={{ marginTop: 20, padding: 16, borderRadius: 12, border: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖌 Or make your own</div>
-        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>Pick your own colors below - the app previews live as you go. Click Save to keep it.</p>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖌 {t("themeAvatarSettings.customThemeHeading")}</div>
+        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>{t("themeAvatarSettings.customThemeSubtitle")}</p>
 
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-          <HSLColorPicker label="Background" value={customBg} onChange={(hex) => { setCustomBg(hex); previewCustomThrottled({ bg: hex }); }} />
-          <HSLColorPicker label="Box / Card color" value={customCard} onChange={(hex) => { setCustomCard(hex); previewCustomThrottled({ card: hex }); }} />
-          <HSLColorPicker label="Accent color" value={customAccent} onChange={(hex) => { setCustomAccent(hex); previewCustomThrottled({ accent: hex }); }} />
+          <HSLColorPicker label={t("themeAvatarSettings.backgroundColorLabel")} value={customBg} onChange={(hex) => { setCustomBg(hex); previewCustomThrottled({ bg: hex }); }} />
+          <HSLColorPicker label={t("themeAvatarSettings.cardColorLabel")} value={customCard} onChange={(hex) => { setCustomCard(hex); previewCustomThrottled({ card: hex }); }} />
+          <HSLColorPicker label={t("themeAvatarSettings.accentColorLabel")} value={customAccent} onChange={(hex) => { setCustomAccent(hex); previewCustomThrottled({ accent: hex }); }} />
         </div>
 
         <button onClick={saveCustomTheme} disabled={savingCustom} style={{ marginTop: 14, background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-          {savingCustom ? "Saving..." : "Save custom theme"}
+          {savingCustom ? t("themeAvatarSettings.savingCustomTheme") : t("themeAvatarSettings.saveCustomThemeButton")}
         </button>
       </div>
 
       {/* NEW: Background image - upload your own or generate one with AI */}
       <div style={{ marginTop: 20, padding: 16, borderRadius: 12, border: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖼️ Background image</div>
-        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>Upload your own image, or describe one for AI to generate. Your background/card/accent colors will auto-match it.</p>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖼️ {t("themeAvatarSettings.backgroundImageHeading")}</div>
+        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>{t("themeAvatarSettings.backgroundImageSubtitle")}</p>
 
         {current.backgroundImage && !bgPreviewImage && (
           <div style={{ marginBottom: 14 }}>
-            <img src={current.backgroundImage} alt="Current background" style={{ width: "100%", maxWidth: 280, borderRadius: 10, display: "block" }} />
+            <img src={current.backgroundImage} alt={t("themeAvatarSettings.currentBackgroundAlt")} style={{ width: "100%", maxWidth: 280, borderRadius: 10, display: "block" }} />
             <button onClick={removeBgImage} disabled={removingBg} style={{ marginTop: 8, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 14px", borderRadius: 999, fontSize: 11, cursor: removingBg ? "default" : "pointer", opacity: removingBg ? 0.6 : 1 }}>
-              {removingBg ? "Removing..." : "Remove background image"}
+              {removingBg ? t("themeAvatarSettings.removingBackground") : t("themeAvatarSettings.removeBackgroundImageButton")}
             </button>
           </div>
         )}
@@ -496,7 +538,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
             <div>
               <input ref={bgFileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleBgFileUpload} style={{ display: "none" }} />
               <button onClick={() => bgFileInputRef.current?.click()} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 16px", borderRadius: 999, fontSize: 12, cursor: "pointer" }}>
-                📤 Upload an image
+                📤 {t("themeAvatarSettings.uploadImageButton")}
               </button>
             </div>
             <div style={{ flex: 1, minWidth: 220 }}>
@@ -504,16 +546,16 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
                 <input
                   value={bgPrompt}
                   onChange={(e) => setBgPrompt(e.target.value)}
-                  placeholder="e.g. calm forest at sunset"
+                  placeholder={t("themeAvatarSettings.bgPromptPlaceholder")}
                   maxLength={300}
                   style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)", fontSize: 12 }}
                 />
                 <button onClick={generateBgImage} disabled={!bgPrompt.trim() || generatingImage} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "8px 16px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: bgPrompt.trim() ? "pointer" : "not-allowed", opacity: bgPrompt.trim() ? 1 : 0.5, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
                   {generatingImage && <span style={{ width: 10, height: 10, border: "2px solid rgba(0,0,0,0.25)", borderTopColor: "#000", borderRadius: "50%", display: "inline-block", animation: "emovra-spin 0.7s linear infinite" }} />}
-                  {generatingImage ? "Generating..." : "✨ Generate"}
+                  {generatingImage ? t("themeAvatarSettings.generatingImage") : <>✨ {t("themeAvatarSettings.generateButton")}</>}
                 </button>
               </div>
-              <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4 }}>Note: can't generate copyrighted characters or brands - describe a scene, style, or vibe instead.</p>
+              <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4 }}>{t("themeAvatarSettings.generateNote")}</p>
             </div>
           </div>
         )}
@@ -522,40 +564,41 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
 
         {bgPreviewImage && (
           <div>
-            <img src={bgPreviewImage} alt="Preview" style={{ width: "100%", maxWidth: 320, borderRadius: 10, display: "block" }} />
+            <img src={bgPreviewImage} alt={t("themeAvatarSettings.previewAlt")} style={{ width: "100%", maxWidth: 320, borderRadius: 10, display: "block" }} />
             <div style={{ marginTop: 10 }}>
               {bgExtracted ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 11, opacity: 0.6 }}>Matched colors:</span>
-                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.bg, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title="Background" />
-                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.card, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title="Card" />
-                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.accent, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title="Accent" />
+                  <span style={{ fontSize: 11, opacity: 0.6 }}>{t("themeAvatarSettings.matchedColors")}</span>
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.bg, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title={t("themeAvatarSettings.backgroundColorLabel")} />
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.card, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title={t("themeAvatarSettings.swatchCardTitle")} />
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: bgExtracted.accent, borderWidth: 1, borderStyle: "solid", borderColor: "var(--border)" }} title={t("themeAvatarSettings.swatchAccentTitle")} />
                 </div>
               ) : (
-                <p style={{ fontSize: 11, opacity: 0.6 }}>Couldn't auto-match colors for this image - it'll still be used as your background as-is.</p>
+                <p style={{ fontSize: 11, opacity: 0.6 }}>{t("themeAvatarSettings.colorMatchFailed")}</p>
               )}
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
               <button onClick={applyBgImage} disabled={applyingBg} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "8px 18px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                {applyingBg ? "Applying..." : "Use this background"}
+                {applyingBg ? t("themeAvatarSettings.applyingBackground") : t("themeAvatarSettings.useThisBackgroundButton")}
               </button>
               <button onClick={cancelBgPreview} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 18px", borderRadius: 999, fontSize: 12, cursor: "pointer" }}>
-                Cancel
+                {t("themeAvatarSettings.cancelButton")}
               </button>
             </div>
           </div>
         )}
+        {saveError && <p style={{ fontSize: 12, color: "#f87171", marginTop: 10 }}>{saveError}</p>}
       </div>
 
       <div style={{ marginTop: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Avatar</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("themeAvatarSettings.avatarLabel")}</div>
 
         {/* NEW: current avatar preview, shows either the uploaded image or the emoji */}
         <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ position: "relative", width: 60, height: 60 }}>
             <div style={{ width: 60, height: 60, borderRadius: "50%", overflow: "hidden", border: `2px solid ${moodRingColor() || "var(--accent)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "var(--card-bg)" }}>
               {current.avatarType === "custom" && current.avatarImage
-                ? <img src={current.avatarImage} alt="Your avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ? <img src={current.avatarImage} alt={t("themeAvatarSettings.yourAvatarAlt")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : (current.avatar || "🦋")}
             </div>
             {current.avatarAccessory && (
@@ -563,7 +606,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
             )}
           </div>
           <label style={{ fontSize: 12, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 14px", borderRadius: 999, cursor: uploading ? "wait" : "pointer", opacity: uploading ? 0.6 : 1 }}>
-            {uploading ? "Uploading..." : "Upload your own photo"}
+            {uploading ? t("themeAvatarSettings.uploadingPhoto") : t("themeAvatarSettings.uploadYourPhotoButton")}
             <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={uploading} style={{ display: "none" }} />
           </label>
         </div>
@@ -580,10 +623,10 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
         {/* NEW: avatar accessories - unlockable by level */}
         {options.accessories?.length > 0 && (
           <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8 }}>Accessories (unlock by leveling up)</div>
+            <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8 }}>{t("themeAvatarSettings.accessoriesHeading")}</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button onClick={() => save({ avatarAccessory: "" })} style={{ fontSize: 11, padding: "8px 12px", borderRadius: 999, border: !current.avatarAccessory ? "2px solid #d4b07a" : "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer" }}>
-                None
+                {t("themeAvatarSettings.noneOption")}
               </button>
               {options.accessories.map((acc) => {
                 const unlocked = (current.level || 1) >= acc.minLevel;
@@ -592,10 +635,10 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
                     key={acc.emoji}
                     onClick={() => unlocked && save({ avatarAccessory: acc.emoji })}
                     disabled={!unlocked}
-                    title={unlocked ? acc.name : `Unlocks at level ${acc.minLevel}`}
+                    title={unlocked ? acc.name : t("themeAvatarSettings.unlocksAtLevel", { level: acc.minLevel })}
                     style={{ fontSize: 18, padding: "8px 12px", borderRadius: 999, border: current.avatarAccessory === acc.emoji ? "2px solid #d4b07a" : "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: unlocked ? "pointer" : "not-allowed", opacity: unlocked ? 1 : 0.35 }}
                   >
-                    {acc.emoji} {!unlocked && <span style={{ fontSize: 9 }}>🔒Lv{acc.minLevel}</span>}
+                    {acc.emoji} {!unlocked && <span style={{ fontSize: 9 }}>{t("themeAvatarSettings.lockedLevelBadge", { level: acc.minLevel })}</span>}
                   </button>
                 );
               })}
@@ -605,32 +648,32 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
       </div>
 
       <div style={{ marginTop: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Birthday (month/day only - we don't need the year)</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("themeAvatarSettings.birthdayHeading")}</div>
         <div style={{ display: "flex", gap: 8 }}>
           <select defaultValue={current.birthdayMonth || ""} onChange={(e) => save({ birthdayMonth: Number(e.target.value), birthdayDay: current.birthdayDay || 1 })} style={{ padding: 8, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }}>
-            <option value="">Month</option>
+            <option value="">{t("themeAvatarSettings.monthPlaceholder")}</option>
             {Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>{new Date(2000, i, 1).toLocaleString("default", { month: "long" })}</option>)}
           </select>
           <select defaultValue={current.birthdayDay || ""} onChange={(e) => save({ birthdayDay: Number(e.target.value), birthdayMonth: current.birthdayMonth || 1 })} style={{ padding: 8, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }}>
-            <option value="">Day</option>
+            <option value="">{t("themeAvatarSettings.dayPlaceholder")}</option>
             {Array.from({ length: 31 }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
           </select>
         </div>
       </div>
 
-      {saved && <p style={{ fontSize: 12, color: "#4ade80", marginTop: 12 }}>Saved ✓</p>}
+      {saved && <p style={{ fontSize: 12, color: "#4ade80", marginTop: 12 }}>{t("themeAvatarSettings.saved")} ✓</p>}
 
       {/* NEW: push notifications toggle */}
       {pushSupported && (
         <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Notifications</div>
-          <p style={{ fontSize: 11, opacity: 0.6, marginBottom: 10 }}>A gentle daily nudge to check in, only if you haven't already that day.</p>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("themeAvatarSettings.notificationsHeading")}</div>
+          <p style={{ fontSize: 11, opacity: 0.6, marginBottom: 10 }}>{t("themeAvatarSettings.notificationsSubtitle")}</p>
           <button
             onClick={pushSubscribed ? disablePush : enablePush}
             disabled={pushLoading}
             style={{ padding: "8px 18px", borderRadius: 999, border: pushSubscribed ? "1px solid var(--border)" : "none", background: pushSubscribed ? "transparent" : "var(--accent)", color: pushSubscribed ? "var(--text)" : "#000", fontWeight: 700, cursor: "pointer", fontSize: 12 }}
           >
-            {pushLoading ? "Working..." : pushSubscribed ? "Turn off notifications" : "Enable daily reminder"}
+            {pushLoading ? t("themeAvatarSettings.pushWorking") : pushSubscribed ? t("themeAvatarSettings.turnOffNotificationsButton") : t("themeAvatarSettings.enableDailyReminderButton")}
           </button>
           {pushMsg && <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>{pushMsg}</p>}
         </div>
@@ -638,10 +681,10 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
 
       {/* NEW: accessibility - font size + high contrast */}
       <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Accessibility</div>
-        <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8 }}>Text size</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{t("themeAvatarSettings.accessibilityHeading")}</div>
+        <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8 }}>{t("themeAvatarSettings.textSizeLabel")}</div>
         <div style={{ display: "flex", gap: 8 }}>
-          {[{ v: "90", l: "Small" }, { v: "100", l: "Default" }, { v: "115", l: "Large" }, { v: "130", l: "Extra Large" }].map((opt) => (
+          {[{ v: "90", l: t("themeAvatarSettings.fontSizeSmall") }, { v: "100", l: t("themeAvatarSettings.fontSizeDefault") }, { v: "115", l: t("themeAvatarSettings.fontSizeLarge") }, { v: "130", l: t("themeAvatarSettings.fontSizeExtraLarge") }].map((opt) => (
             <button
               key={opt.v}
               onClick={() => changeFontScale(opt.v)}
@@ -656,7 +699,7 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
             onClick={toggleHighContrast}
             style={{ padding: "8px 16px", borderRadius: 999, fontSize: 12, cursor: "pointer", border: highContrast ? "2px solid var(--accent)" : "1px solid var(--border)", background: highContrast ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}
           >
-            {highContrast ? "✓ High contrast on" : "High contrast mode"}
+            {highContrast ? <>✓ {t("themeAvatarSettings.highContrastOn")}</> : t("themeAvatarSettings.highContrastMode")}
           </button>
         </div>
       </div>
@@ -665,32 +708,32 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
           delivers on what the Privacy Policy promises, instead of leaving
           it as a manual email-me process */}
       <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Your Data</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{t("themeAvatarSettings.yourDataHeading")}</div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button onClick={exportData} disabled={exporting} style={{ padding: "8px 16px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12 }}>
-            {exporting ? "Preparing..." : "⬇ Export my data"}
+            {exporting ? t("themeAvatarSettings.preparingExport") : <>⬇ {t("themeAvatarSettings.exportMyDataButton")}</>}
           </button>
           <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: "8px 16px", borderRadius: 999, border: "1px solid #f87171", background: "transparent", color: "#f87171", cursor: "pointer", fontSize: 12 }}>
-            Delete my account
+            {t("themeAvatarSettings.deleteMyAccountButton")}
           </button>
         </div>
 
         {showDeleteConfirm && (
           <div style={{ marginTop: 14, padding: 16, borderRadius: 12, border: "1px solid #f87171", background: "rgba(248,113,113,0.06)" }}>
             <p style={{ fontSize: 13, margin: "0 0 10px" }}>
-              This permanently deletes your account, journal, check-in history, habits, goals, and everything else. <b>This can't be undone.</b> Type <b>DELETE</b> to confirm.
+              {t("themeAvatarSettings.deleteWarningIntro")} <b>{t("themeAvatarSettings.deleteWarningUndone")}</b> {t("themeAvatarSettings.deleteWarningType", { word: "DELETE" })}
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="Type DELETE" style={{ flex: 1, minWidth: 140, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
+              <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder={t("themeAvatarSettings.deleteConfirmPlaceholder", { word: "DELETE" })} style={{ flex: 1, minWidth: 140, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
               <button
                 onClick={deleteAccount}
                 disabled={deleteConfirmText !== "DELETE" || deleting}
                 style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: deleteConfirmText === "DELETE" ? "#dc2626" : "#555", color: "#fff", fontWeight: 700, cursor: deleteConfirmText === "DELETE" ? "pointer" : "not-allowed", fontSize: 12 }}
               >
-                {deleting ? "Deleting..." : "Permanently delete"}
+                {deleting ? t("themeAvatarSettings.deletingButton") : t("themeAvatarSettings.permanentlyDeleteButton")}
               </button>
               <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 12 }}>
-                Cancel
+                {t("themeAvatarSettings.cancelButton")}
               </button>
             </div>
           </div>
@@ -699,12 +742,12 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
 
       {/* NEW: in-app feedback/bug reporting */}
       <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>💬 Feedback or found a bug?</div>
-        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 10px" }}>Tell us what's wrong or what you'd like to see - it goes straight to the developer.</p>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>💬 {t("themeAvatarSettings.feedbackHeading")}</div>
+        <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 10px" }}>{t("themeAvatarSettings.feedbackSubtitle")}</p>
         <textarea
           value={feedbackText}
           onChange={(e) => setFeedbackText(e.target.value)}
-          placeholder="What's on your mind?"
+          placeholder={t("themeAvatarSettings.feedbackPlaceholder")}
           rows={3}
           style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)", fontFamily: "inherit", fontSize: 13, resize: "vertical" }}
         />
@@ -714,10 +757,10 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
             disabled={!feedbackText.trim() || feedbackStatus === "sending"}
             style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, fontSize: 12, cursor: feedbackText.trim() ? "pointer" : "not-allowed", opacity: feedbackText.trim() ? 1 : 0.5 }}
           >
-            {feedbackStatus === "sending" ? "Sending..." : "Send feedback"}
+            {feedbackStatus === "sending" ? t("themeAvatarSettings.sendingFeedback") : t("themeAvatarSettings.sendFeedbackButton")}
           </button>
-          {feedbackStatus === "sent" && <span style={{ fontSize: 12, color: "#4ade80" }}>✓ Thanks - sent!</span>}
-          {feedbackStatus === "error" && <span style={{ fontSize: 12, color: "#f87171" }}>Couldn't send - try again.</span>}
+          {feedbackStatus === "sent" && <span style={{ fontSize: 12, color: "#4ade80" }}>✓ {t("themeAvatarSettings.feedbackSent")}</span>}
+          {feedbackStatus === "error" && <span style={{ fontSize: 12, color: "#f87171" }}>{t("themeAvatarSettings.feedbackError")}</span>}
         </div>
       </div>
     </div>

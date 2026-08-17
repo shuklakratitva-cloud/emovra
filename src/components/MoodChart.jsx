@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 // ✅ NEW: Safe converter for all cases (string, object, null)
 function toStr(v){
@@ -16,6 +17,7 @@ function toEmotion(v){
 
 export default function MoodChart({ history = [] }) {
   const [data, setData] = useState(history);
+  const { t } = useLanguage();
 
   useEffect(() => {
     // ✅ NEW: Clean history on load - fixes old object entries
@@ -31,8 +33,8 @@ export default function MoodChart({ history = [] }) {
   if (!data || data.length === 0) {
     return (
       <div style={{maxWidth:680,width:"100%",marginTop:16,padding:16,border:"1px solid var(--border)",borderRadius:12,background:"var(--card-bg)",textAlign:"left"}}>
-        <strong>📈 Mood History</strong>
-        <p style={{opacity:0.6,marginTop:8,fontSize:13}}>No history yet. Analyze 2+ moods to see your trend line.</p>
+        <strong>📈 {t("moodChart.title")}</strong>
+        <p style={{opacity:0.6,marginTop:8,fontSize:13}}>{t("moodChart.emptyDesc")}</p>
       </div>
     );
   }
@@ -69,7 +71,7 @@ export default function MoodChart({ history = [] }) {
 
   return (
     <div style={{maxWidth:680,width:"100%",marginTop:16,padding:16,border:"1px solid var(--border)",borderRadius:12,background:"var(--card-bg)",textAlign:"left"}}>
-      <strong>📈 Mood History ({data.length} entries)</strong>
+      <strong>📈 {t("moodChart.titleWithCount", { count: data.length })}</strong>
       <div style={{overflowX:"auto",marginTop:12}}>
         <svg viewBox={`0 0 ${width} ${height}`} style={{width:"100%",height:140,display:"block"}}>
           <line x1={padding} y1={padding} x2={padding} y2={height-padding} stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3"/>
@@ -94,7 +96,7 @@ export default function MoodChart({ history = [] }) {
           return (
             <span key={h.id||i} style={{fontSize:11,padding:"4px 10px",borderRadius:20,background:bg,color:"#1f2937",border:`1px solid ${border}`,fontWeight:600,display:"inline-flex",alignItems:"center",gap:5}}>
               <span style={{width:7,height:7,borderRadius:"50%",background:dot,display:"inline-block"}}></span>
-              {level} - {emo} Score:{String(h.score?? '')}
+              {level} - {emo} {t("moodChart.score", { score: String(h.score?? '') })}
             </span>
           );
         })}

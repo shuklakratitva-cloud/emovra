@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
@@ -17,6 +18,7 @@ export default function HabitTracker() {
   const [toast, setToast] = useState(null);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const { t } = useLanguage();
 
   async function load() {
     try {
@@ -47,11 +49,11 @@ export default function HabitTracker() {
       if (data.success) {
         setHabits((h) => h.map((x) => (x._id === id ? data.habit : x)));
         if (data.newBadges?.length) {
-          setToast(`🎉 New badge: ${data.newBadges.map((b) => b.name).join(", ")}!`);
+          setToast(`🎉 ${t("habitTracker.newBadge", { names: data.newBadges.map((b) => b.name).join(", ") })}`);
           setTimeout(() => setToast(null), 3500);
         }
       } else {
-        alert(data.message || "Already done today");
+        alert(data.message || t("habitTracker.alreadyDone"));
       }
     } catch {}
   }
@@ -70,8 +72,8 @@ export default function HabitTracker() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2 style={{ margin: 0 }}>🌱 Habit Tracker</h2>
-      <p style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>Small daily habits, tracked one check-in at a time.</p>
+      <h2 style={{ margin: 0 }}>🌱 {t("habitTracker.heading")}</h2>
+      <p style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>{t("habitTracker.subtitle")}</p>
 
       {toast && <div style={{ marginTop: 10, background: "rgba(212,176,122,0.15)", border: "1px solid #d4b07a", borderRadius: 10, padding: 10, fontSize: 13, fontWeight: 600 }}>{toast}</div>}
 
@@ -83,13 +85,13 @@ export default function HabitTracker() {
         ))}
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Drink 8 glasses of water" style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }} />
-        <button onClick={addHabit} disabled={adding} style={{ background: "#d4b07a", color: "#000", border: "none", padding: "0 18px", borderRadius: 10, fontWeight: 700, cursor: adding ? "default" : "pointer", opacity: adding ? 0.6 : 1 }}>{adding ? "..." : "Add"}</button>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("habitTracker.titlePlaceholder")} style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }} />
+        <button onClick={addHabit} disabled={adding} style={{ background: "#d4b07a", color: "#000", border: "none", padding: "0 18px", borderRadius: 10, fontWeight: 700, cursor: adding ? "default" : "pointer", opacity: adding ? 0.6 : 1 }}>{adding ? "..." : t("habitTracker.addButton")}</button>
       </div>
 
       <div style={{ marginTop: 16 }}>
-        {loading ? <p style={{ fontSize: 13, opacity: 0.6 }}>Loading...</p> : habits.length === 0 ? (
-          <p style={{ fontSize: 13, opacity: 0.6 }}>No habits yet - add one above.</p>
+        {loading ? <p style={{ fontSize: 13, opacity: 0.6 }}>{t("habitTracker.loading")}</p> : habits.length === 0 ? (
+          <p style={{ fontSize: 13, opacity: 0.6 }}>{t("habitTracker.empty")}</p>
         ) : habits.map((h) => {
           const doneToday = h.lastCompletedDate === today;
           return (
@@ -98,15 +100,15 @@ export default function HabitTracker() {
                 <span style={{ fontSize: 20 }}>{h.emoji}</span>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{h.title}</div>
-                  <div style={{ fontSize: 11, opacity: 0.6 }}>🔥 {h.streak} day streak · best {h.longestStreak}</div>
+                  <div style={{ fontSize: 11, opacity: 0.6 }}>🔥 {h.streak} {t("habitTracker.streakSuffix", { best: h.longestStreak })}</div>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 {doneToday ? (
-                  <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ Done today</span>
+                  <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ {t("habitTracker.doneToday")}</span>
                 ) : (
                   <button onClick={() => complete(h._id)} style={{ background: "#d4b07a", color: "#000", border: "none", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                    Mark done
+                    {t("habitTracker.markDone")}
                   </button>
                 )}
                 <button onClick={() => remove(h._id)} disabled={deletingId === h._id} style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: deletingId === h._id ? "default" : "pointer", fontSize: 16, opacity: deletingId === h._id ? 0.4 : 1 }}>×</button>

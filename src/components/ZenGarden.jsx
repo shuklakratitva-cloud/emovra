@@ -1,10 +1,12 @@
 import React, { useRef, useEffect, useState } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 export default function ZenGarden() {
   const canvasRef = useRef(null);
   const drawing = useRef(false);
   const lastPoint = useRef(null);
   const [rakeWidth, setRakeWidth] = useState(5);
+  const { t } = useLanguage();
 
   function getSandGradient(ctx, w, h) {
     const grad = ctx.createLinearGradient(0, 0, w, h);
@@ -66,8 +68,8 @@ export default function ZenGarden() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>🪨 Zen Garden</h2>
-      <p style={{ fontSize: 12, opacity: 0.6 }}>Drag across the sand to rake it - no goal, just movement.</p>
+      <h2>🪨 {t("zenGarden.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6 }}>{t("zenGarden.subtitle")}</p>
       <canvas
         ref={canvasRef}
         width={560}
@@ -77,10 +79,10 @@ export default function ZenGarden() {
         onTouchStart={start} onTouchMove={move} onTouchEnd={end}
       />
       <div style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
-        <label style={{ fontSize: 11, opacity: 0.6 }}>Rake width</label>
+        <label style={{ fontSize: 11, opacity: 0.6 }}>{t("zenGarden.rakeWidthLabel")}</label>
         <input type="range" min={2} max={12} value={rakeWidth} onChange={(e) => setRakeWidth(Number(e.target.value))} />
         <button onClick={resetSand} style={{ padding: "6px 14px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>
-          Smooth the sand
+          {t("zenGarden.smoothButton")}
         </button>
       </div>
     </div>

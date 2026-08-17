@@ -1,5 +1,6 @@
 // src/components/Journal.jsx - private, encrypted, unanalyzed personal journal + voice notes + shared journal
 import React, { useState, useRef, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
@@ -18,6 +19,7 @@ function VoiceNoteRecorder({ onRecorded }) {
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
+  const { t } = useLanguage();
 
   async function start() {
     try {
@@ -37,7 +39,7 @@ function VoiceNoteRecorder({ onRecorded }) {
       recorder.start();
       setRecording(true);
     } catch {
-      alert("Mic access blocked. Allow microphone permission and try again.");
+      alert(t("journal.micBlocked"));
     }
   }
 
@@ -57,18 +59,18 @@ function VoiceNoteRecorder({ onRecorded }) {
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
       {!recording ? (
         <button type="button" onClick={start} style={{ padding: "8px 16px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12 }}>
-          🎙️ Add voice note
+          🎙️ {t("journal.addVoiceNote")}
         </button>
       ) : (
         <button type="button" onClick={stop} style={{ padding: "8px 16px", borderRadius: 20, border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-          ⏹️ Stop recording
+          ⏹️ {t("journal.stopRecording")}
         </button>
       )}
       {audioUrl && (
         <>
           <audio controls src={audioUrl} style={{ height: 32 }} />
           <button type="button" onClick={clear} style={{ fontSize: 11, background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", textDecoration: "underline" }}>
-            remove
+            {t("journal.remove")}
           </button>
         </>
       )}
@@ -87,6 +89,7 @@ function SharedJournalPanel() {
   const [msg, setMsg] = useState("");
   const [openJournal, setOpenJournal] = useState(null);
   const [threadText, setThreadText] = useState("");
+  const { t } = useLanguage();
 
   const headers = authHeaders();
 
@@ -102,27 +105,27 @@ function SharedJournalPanel() {
   useEffect(() => { loadMine(); }, [token]);
 
   async function createJournal() {
-    if (!token) { setMsg("Sign in to create a shared journal."); return; }
+    if (!token) { setMsg(t("journal.signInToCreate")); return; }
     setLoading(true);
     try {
       const res = await fetch(`${API}/journal-share/create`, { method: "POST", headers, body: JSON.stringify({ title: "Our Journal" }) });
       const data = await res.json();
-      if (data.success) { setJournals((j) => [data.journal, ...j]); setMsg(`Created! Invite code: ${data.journal.inviteCode}`); }
-      else setMsg(data.message || "Could not create journal.");
-    } catch { setMsg("Network error - try again."); }
+      if (data.success) { setJournals((j) => [data.journal, ...j]); setMsg(t("journal.createdInviteCode", { code: data.journal.inviteCode })); }
+      else setMsg(data.message || t("journal.couldNotCreate"));
+    } catch { setMsg(t("journal.networkError")); }
     setLoading(false);
   }
 
   async function joinJournal() {
-    if (!token) { setMsg("Sign in to join a shared journal."); return; }
+    if (!token) { setMsg(t("journal.signInToJoin")); return; }
     if (!joinCode.trim()) return;
     setLoading(true);
     try {
       const res = await fetch(`${API}/journal-share/join`, { method: "POST", headers, body: JSON.stringify({ inviteCode: joinCode.trim() }) });
       const data = await res.json();
-      if (data.success) { setJournals((j) => [data.journal, ...j.filter(x => x._id !== data.journal._id)]); setMsg("Joined!"); setJoinCode(""); }
-      else setMsg(data.message || "Invalid invite code.");
-    } catch { setMsg("Network error - try again."); }
+      if (data.success) { setJournals((j) => [data.journal, ...j.filter(x => x._id !== data.journal._id)]); setMsg(t("journal.joined")); setJoinCode(""); }
+      else setMsg(data.message || t("journal.invalidInviteCode"));
+    } catch { setMsg(t("journal.networkError")); }
     setLoading(false);
   }
 
@@ -147,16 +150,16 @@ function SharedJournalPanel() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>👯 Shared Journal</h2>
-      <p style={{ fontSize: 13, opacity: 0.7 }}>Invite a friend to write with you, or join theirs with a code.</p>
+      <h2>👯 {t("journal.sharedJournalTitle")}</h2>
+      <p style={{ fontSize: 13, opacity: 0.7 }}>{t("journal.sharedJournalSubtitle")}</p>
 
       <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
         <button onClick={createJournal} disabled={loading} style={{ padding: "10px 18px", borderRadius: 20, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
-          + Start a shared journal
+          + {t("journal.startSharedJournal")}
         </button>
-        <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="Enter invite code" style={{ padding: "10px 14px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", fontSize: 13 }} />
+        <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder={t("journal.enterInviteCode")} style={{ padding: "10px 14px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", fontSize: 13 }} />
         <button onClick={joinJournal} disabled={loading} style={{ padding: "10px 18px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 13 }}>
-          Join
+          {t("journal.join")}
         </button>
       </div>
 
@@ -168,7 +171,7 @@ function SharedJournalPanel() {
             <div key={j._id} onClick={() => openThread(j._id)} style={{ padding: 12, border: "1px solid var(--border)", borderRadius: 10, marginTop: 8, cursor: "pointer" }}>
               <b>{j.title}</b>
               <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>
-                Code: {j.inviteCode} · {j.collaborators.length} collaborator{j.collaborators.length !== 1 ? "s" : ""} · {j.entries.length} entries
+                {t("journal.journalMeta", { code: j.inviteCode, collabCount: j.collaborators.length, entryCount: j.entries.length })}
               </div>
             </div>
           ))}
@@ -178,22 +181,22 @@ function SharedJournalPanel() {
       {openJournal && (
         <div style={{ marginTop: 16 }}>
           <button onClick={() => setOpenJournal(null)} style={{ fontSize: 12, background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", textDecoration: "underline", marginBottom: 10 }}>
-            ← back to shared journals
+            ← {t("journal.backToSharedJournals")}
           </button>
-          <h3>{openJournal.title} <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.6 }}>· invite code {openJournal.inviteCode}</span></h3>
+          <h3>{openJournal.title} <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.6 }}>· {t("journal.inviteCodeLabel", { code: openJournal.inviteCode })}</span></h3>
 
           <div style={{ maxHeight: 300, overflowY: "auto", marginTop: 10 }}>
-            {openJournal.entries.length === 0 ? <p style={{ opacity: 0.6, fontSize: 13 }}>No entries yet - write the first one below.</p> : openJournal.entries.map((e) => (
+            {openJournal.entries.length === 0 ? <p style={{ opacity: 0.6, fontSize: 13 }}>{t("journal.noEntriesYet")}</p> : openJournal.entries.map((e) => (
               <div key={e._id} style={{ padding: 10, border: "1px solid var(--border)", borderRadius: 10, marginTop: 8 }}>
                 <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{e.text}</p>
-                <small style={{ opacity: 0.5 }}>{e.authorName || "Someone"} · {new Date(e.timestamp).toLocaleString()}</small>
+                <small style={{ opacity: 0.5 }}>{e.authorName || t("journal.someone")} · {new Date(e.timestamp).toLocaleString()}</small>
               </div>
             ))}
           </div>
 
-          <textarea rows={3} value={threadText} onChange={(e) => setThreadText(e.target.value)} placeholder="Write something for this journal..." style={{ width: "100%", marginTop: 10, padding: 10, borderRadius: 10 }} />
+          <textarea rows={3} value={threadText} onChange={(e) => setThreadText(e.target.value)} placeholder={t("journal.writeSomethingPlaceholder")} style={{ width: "100%", marginTop: 10, padding: 10, borderRadius: 10 }} />
           <button onClick={postEntry} disabled={loading} style={{ marginTop: 8, padding: "8px 18px", borderRadius: 20, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
-            {loading ? "Posting..." : "Post"}
+            {loading ? t("journal.posting") : t("journal.post")}
           </button>
         </div>
       )}
@@ -218,6 +221,7 @@ export default function Journal() {
   const [loading, setLoading] = useState(false);
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null);
   const [search, setSearch] = useState(""); // NEW: client-side search - entries are already decrypted for the owner once loaded, no new backend endpoint needed
+  const { t } = useLanguage();
 
   async function loadEntries() {
     try {
@@ -252,13 +256,13 @@ export default function Journal() {
       setJournalText("");
       setVoiceNoteUrl(null);
     } catch {
-      alert("Could not save - check your connection and try again.");
+      alert(t("journal.couldNotSave"));
     }
     setLoading(false);
   }
 
   async function removeEntry(id) {
-    if (!confirm("Delete this journal entry? This can't be undone.")) return;
+    if (!confirm(t("journal.confirmDeleteEntry"))) return;
     try {
       await fetch(`${API}/private-journal/${id}`, { method: "DELETE", headers: authHeaders() });
       setEntries((es) => es.filter((e) => e._id !== id));
@@ -266,7 +270,7 @@ export default function Journal() {
   }
 
   async function clearJournal() {
-    if (!confirm("Delete all your journal entries? This can't be undone.")) return;
+    if (!confirm(t("journal.confirmDeleteAll"))) return;
     try {
       await fetch(`${API}/private-journal`, { method: "DELETE", headers: authHeaders() });
       setEntries([]);
@@ -275,55 +279,55 @@ export default function Journal() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>📖 Personal Journal</h2>
+      <h2>📖 {t("journal.personalJournalTitle")}</h2>
       <p style={{fontSize:13, opacity:0.7}}>
-        🔒 Private and encrypted - nobody reads this, not even an admin, and nothing here is analyzed. Just yours.
+        🔒 {t("journal.privacyNote")}
       </p>
 
-      <textarea rows={6} value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder="Write your journal entry here..." style={{ width: "100%", padding: "12px", borderRadius: "10px", resize: "vertical", marginTop: 12, border: "1px solid #ddd" }} />
+      <textarea rows={6} value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder={t("journal.writeEntryPlaceholder")} style={{ width: "100%", padding: "12px", borderRadius: "10px", resize: "vertical", marginTop: 12, border: "1px solid #ddd" }} />
 
       <VoiceNoteRecorder onRecorded={setVoiceNoteUrl} />
 
       <button onClick={handleSave} disabled={loading} style={{ marginTop: "12px", padding: "10px 20px", cursor: loading?"not-allowed":"pointer", background: loading?"#999":"var(--accent)", color: "#000", border: "none", borderRadius: 8, opacity: loading?0.6:1, fontWeight: 700 }}>
-        {loading ? "Saving..." : "Save Entry"}
+        {loading ? t("journal.saving") : t("journal.saveEntry")}
       </button>
 
       <hr style={{ margin: "20px 0" }} />
-      <h3>Total Entries: {entries.length}</h3>
+      <h3>{t("journal.totalEntries", { count: entries.length })}</h3>
       {entries.length > 0 && (
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search your entries..."
+          placeholder={t("journal.searchEntriesPlaceholder")}
           style={{ width: "100%", padding: "8px 14px", borderRadius: 999, border: "1px solid var(--border, #ddd)", background: "transparent", color: "var(--text)", marginBottom: 14 }}
         />
       )}
       {(() => {
         const filtered = search.trim() ? entries.filter((e) => e.text.toLowerCase().includes(search.trim().toLowerCase())) : entries;
-        if (entries.length === 0) return <p>No journal entries yet.</p>;
-        if (filtered.length === 0) return <p style={{ opacity: 0.6, fontSize: 13 }}>No entries match "{search}".</p>;
+        if (entries.length === 0) return <p>{t("journal.noEntriesAtAll")}</p>;
+        if (filtered.length === 0) return <p style={{ opacity: 0.6, fontSize: 13 }}>{t("journal.noEntriesMatch", { search })}</p>;
         return filtered.map((entry) => (
         <div key={entry._id} style={{ border: "1px solid var(--border, #ddd)", borderRadius: "10px", padding: "15px", marginBottom: "15px" }}>
           {editingId === entry._id ? (
             <>
               <textarea rows={4} value={editText} onChange={(e) => setEditText(e.target.value)} style={{ width: "100%", marginBottom: "10px", padding: "10px", borderRadius: "8px" }} />
-              <button onClick={() => saveEdit(entry._id)} disabled={loading} style={{ padding: "6px 14px", background: "var(--accent)", color: "#000", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 700 }}>{loading?"Saving...":"Save"}</button>
-              <button onClick={() => { setEditingId(null); setEditText(""); }} style={{ marginLeft: "10px", padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => saveEdit(entry._id)} disabled={loading} style={{ padding: "6px 14px", background: "var(--accent)", color: "#000", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 700 }}>{loading?t("journal.saving"):t("journal.save")}</button>
+              <button onClick={() => { setEditingId(null); setEditText(""); }} style={{ marginLeft: "10px", padding: "6px 14px", cursor: "pointer" }}>{t("journal.cancel")}</button>
             </>
           ) : (
             <>
               <p style={{ whiteSpace: "pre-wrap" }}>{entry.text}</p>
-              <small>Created: {new Date(entry.createdAt).toLocaleString()}</small>
-              {entry.updatedAt !== entry.createdAt && <><br /><small>Updated: {new Date(entry.updatedAt).toLocaleString()}</small></>}
+              <small>{t("journal.createdLabel", { date: new Date(entry.createdAt).toLocaleString() })}</small>
+              {entry.updatedAt !== entry.createdAt && <><br /><small>{t("journal.updatedLabel", { date: new Date(entry.updatedAt).toLocaleString() })}</small></>}
               <br /><br />
-              <button onClick={() => startEditing(entry)} style={{ padding: "6px 12px", cursor: "pointer" }}>Edit</button>
-              <button onClick={() => removeEntry(entry._id)} style={{ marginLeft: "10px", padding: "6px 12px", cursor: "pointer" }}>Delete</button>
+              <button onClick={() => startEditing(entry)} style={{ padding: "6px 12px", cursor: "pointer" }}>{t("journal.edit")}</button>
+              <button onClick={() => removeEntry(entry._id)} style={{ marginLeft: "10px", padding: "6px 12px", cursor: "pointer" }}>{t("journal.delete")}</button>
             </>
           )}
         </div>
         ));
       })()}
-      {entries.length > 0 && <button onClick={clearJournal} style={{ marginTop: "20px", background: "#dc2626", color: "#fff", padding: "10px 18px", border: "none", borderRadius: "10px", cursor: "pointer" }}>Clear Journal</button>}
+      {entries.length > 0 && <button onClick={clearJournal} style={{ marginTop: "20px", background: "#dc2626", color: "#fff", padding: "10px 18px", border: "none", borderRadius: "10px", cursor: "pointer" }}>{t("journal.clearJournal")}</button>}
 
       <SharedJournalPanel />
     </div>

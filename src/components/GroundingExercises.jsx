@@ -2,15 +2,17 @@
 
 import React, { useState } from "react";
 import { GROUNDING_EXERCISES } from "../data/exercises";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
 export default function GroundingExercises() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [markedDone, setMarkedDone] = useState(false);
+  const { t } = useLanguage();
 
   if (!GROUNDING_EXERCISES || GROUNDING_EXERCISES.length === 0) {
-    return <div style={{ padding: 24 }}>No grounding exercises configured.</div>;
+    return <div style={{ padding: 24 }}>{t("groundingExercises.notConfigured")}</div>;
   }
 
   const exercise = GROUNDING_EXERCISES[currentIndex];
@@ -36,25 +38,25 @@ export default function GroundingExercises() {
 
   return (
     <div style={{ background: "var(--card-bg, #ffffff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>🧘 Grounding Exercises</h2>
-      <p>Follow these exercises whenever you feel stressed, anxious, overwhelmed, or emotionally distressed.</p>
+      <h2>🧘 {t("groundingExercises.heading")}</h2>
+      <p>{t("groundingExercises.intro")}</p>
       <hr />
       <h3>{exercise.title}</h3>
-      <p><strong>Description:</strong></p>
+      <p><strong>{t("groundingExercises.descriptionLabel")}</strong></p>
       <p>{exercise.description}</p>
-      <p><strong>Duration:</strong> {exercise.duration}</p>
-      <h4>Steps</h4>
+      <p><strong>{t("groundingExercises.durationLabel")}</strong> {exercise.duration}</p>
+      <h4>{t("groundingExercises.stepsHeading")}</h4>
       <ol>{exercise.steps.map((step, index) => <li key={index} style={{ marginBottom: "10px" }}>{step}</li>)}</ol>
       <hr />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px" }}>
-        <button onClick={previousExercise} disabled={currentIndex === 0} style={{ padding: "10px 20px", cursor: currentIndex === 0 ? "not-allowed" : "pointer" }}>⬅ Previous</button>
+        <button onClick={previousExercise} disabled={currentIndex === 0} style={{ padding: "10px 20px", cursor: currentIndex === 0 ? "not-allowed" : "pointer" }}>⬅ {t("groundingExercises.previous")}</button>
         <span style={{ alignSelf: "center", fontWeight: "bold" }}>{currentIndex + 1} / {GROUNDING_EXERCISES.length}</span>
-        <button onClick={nextExercise} disabled={currentIndex === GROUNDING_EXERCISES.length - 1} style={{ padding: "10px 20px", cursor: currentIndex === GROUNDING_EXERCISES.length - 1 ? "not-allowed" : "pointer" }}>Next ➡</button>
+        <button onClick={nextExercise} disabled={currentIndex === GROUNDING_EXERCISES.length - 1} style={{ padding: "10px 20px", cursor: currentIndex === GROUNDING_EXERCISES.length - 1 ? "not-allowed" : "pointer" }}>{t("groundingExercises.next")} ➡</button>
       </div>
 
       <div style={{ marginTop: 16, textAlign: "center" }}>
         <button onClick={markDone} disabled={markedDone} style={{ padding: "10px 20px", borderRadius: 999, border: "none", background: markedDone ? "#4ade80" : "var(--accent, #d4b07a)", color: "#000", fontWeight: 700, cursor: markedDone ? "default" : "pointer" }}>
-          {markedDone ? "✓ Marked as done today" : "I did this exercise"}
+          {markedDone ? `✓ ${t("groundingExercises.markedDone")}` : t("groundingExercises.markDone")}
         </button>
       </div>
     </div>

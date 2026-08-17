@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
 export default function PersonalityQuiz() {
+  const { t } = useLanguage();
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
@@ -32,18 +34,18 @@ export default function PersonalityQuiz() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2 style={{ margin: 0 }}>🧩 {quiz?.title || "Strength Quiz"}</h2>
-      <p style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>Just for fun and reflection - not a clinical assessment.</p>
+      <h2 style={{ margin: 0 }}>🧩 {quiz?.title || t("personalityQuiz.title")}</h2>
+      <p style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>{t("personalityQuiz.subtitle")}</p>
 
       {result ? (
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <div style={{ fontSize: 44 }}>{result.emoji}</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: "#d4c5a0", marginTop: 8 }}>{result.label}</div>
           <p style={{ fontSize: 13, marginTop: 8, maxWidth: 420, margin: "8px auto", lineHeight: 1.5 }}>{result.description}</p>
-          <button onClick={retake} style={{ marginTop: 14, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 18px", borderRadius: 999, cursor: "pointer", fontSize: 12 }}>Retake quiz</button>
+          <button onClick={retake} style={{ marginTop: 14, background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 18px", borderRadius: 999, cursor: "pointer", fontSize: 12 }}>{t("personalityQuiz.retakeQuiz")}</button>
         </div>
       ) : !quiz ? (
-        <p style={{ fontSize: 13, opacity: 0.6, marginTop: 12 }}>Loading...</p>
+        <p style={{ fontSize: 13, opacity: 0.6, marginTop: 12 }}>{t("personalityQuiz.loading")}</p>
       ) : (
         <div style={{ marginTop: 16 }}>
           {quiz.questions.map((q) => (
@@ -60,7 +62,7 @@ export default function PersonalityQuiz() {
             </div>
           ))}
           <button onClick={submit} disabled={loading || Object.keys(answers).length < quiz.questions.length} style={{ background: "#d4b07a", color: "#000", border: "none", padding: "10px 20px", borderRadius: 10, fontWeight: 700, cursor: "pointer", opacity: Object.keys(answers).length < quiz.questions.length ? 0.5 : 1 }}>
-            {loading ? "Scoring..." : "See my result"}
+            {loading ? t("personalityQuiz.scoring") : t("personalityQuiz.seeMyResult")}
           </button>
         </div>
       )}

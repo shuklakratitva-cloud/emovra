@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -6,10 +7,10 @@ function authHeaders() {
 }
 
 const FIELDS = [
-  { key: "warningSigns", label: "My warning signs", placeholder: "Thoughts, feelings, or situations that tell me I'm struggling...", helper: "What tends to show up before things get hard?" },
-  { key: "copingStrategies", label: "Things that actually help me", placeholder: "Breathing exercises, music, calling someone, going outside...", helper: "Not generic advice - what genuinely works for YOU?" },
-  { key: "supportContacts", label: "People I can reach out to", placeholder: "Names and how to reach them...", helper: "Beyond your emergency contact - friends, family, anyone you trust." },
-  { key: "reasonsToLive", label: "Reasons that matter to me", placeholder: "People, goals, pets, plans, anything...", helper: "Things worth holding onto, in your own words." },
+  { key: "warningSigns", labelKey: "safetyPlan.warningSignsLabel", placeholderKey: "safetyPlan.warningSignsPlaceholder", helperKey: "safetyPlan.warningSignsHelper" },
+  { key: "copingStrategies", labelKey: "safetyPlan.copingStrategiesLabel", placeholderKey: "safetyPlan.copingStrategiesPlaceholder", helperKey: "safetyPlan.copingStrategiesHelper" },
+  { key: "supportContacts", labelKey: "safetyPlan.supportContactsLabel", placeholderKey: "safetyPlan.supportContactsPlaceholder", helperKey: "safetyPlan.supportContactsHelper" },
+  { key: "reasonsToLive", labelKey: "safetyPlan.reasonsToLiveLabel", placeholderKey: "safetyPlan.reasonsToLivePlaceholder", helperKey: "safetyPlan.reasonsToLiveHelper" },
 ];
 
 export default function SafetyPlan() {
@@ -17,6 +18,7 @@ export default function SafetyPlan() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetch(`${API}/safety-plan`, { headers: authHeaders() })
@@ -42,19 +44,19 @@ export default function SafetyPlan() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>🛟 My Safety Plan</h2>
+      <h2>🛟 {t("safetyPlan.heading")}</h2>
       <p style={{ fontSize: 12, opacity: 0.7 }}>
-        Fill this out while you're feeling okay - it's here for you on the harder days. {hasAnyContent && "This will show up if a check-in comes back RED, as a reminder written by you, for you."}
+        {t("safetyPlan.intro")} {hasAnyContent && t("safetyPlan.introExtra")}
       </p>
 
       {FIELDS.map((f) => (
         <div key={f.key} style={{ marginTop: 16 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-h)" }}>{f.label}</label>
-          <p style={{ fontSize: 11, opacity: 0.5, margin: "2px 0 6px" }}>{f.helper}</p>
+          <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-h)" }}>{t(f.labelKey)}</label>
+          <p style={{ fontSize: 11, opacity: 0.5, margin: "2px 0 6px" }}>{t(f.helperKey)}</p>
           <textarea
             value={values[f.key]}
             onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-            placeholder={f.placeholder}
+            placeholder={t(f.placeholderKey)}
             rows={3}
             style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }}
           />
@@ -62,9 +64,9 @@ export default function SafetyPlan() {
       ))}
 
       <button onClick={save} disabled={saving} style={{ marginTop: 16, padding: "10px 22px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>
-        {saving ? "Saving..." : "Save my plan"}
+        {saving ? t("safetyPlan.saving") : t("safetyPlan.savePlan")}
       </button>
-      {saved && <span style={{ marginLeft: 12, fontSize: 12, color: "#4ade80" }}>Saved ✓</span>}
+      {saved && <span style={{ marginLeft: 12, fontSize: 12, color: "#4ade80" }}>{t("safetyPlan.saved")} ✓</span>}
     </div>
   );
 }

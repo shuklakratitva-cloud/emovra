@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -14,8 +15,9 @@ function authHeaders() {
 // as "Talk to AI," just with a relationship-focused system prompt
 // (mode: "relationship").
 export default function SocialSkills() {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState([
-    { role: "assistant", text: "What's going on? Tell me about the situation - a friendship, family thing, or relationship - and I'll actually think it through with you." },
+    { role: "assistant", text: t("socialSkills.initialMessage") },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,17 +38,17 @@ export default function SocialSkills() {
         body: JSON.stringify({ messages: next, mode: "relationship" }),
       });
       const data = await res.json();
-      setMessages((m) => [...m, { role: "assistant", text: data.reply || "I'm here - go on." }]);
+      setMessages((m) => [...m, { role: "assistant", text: data.reply || t("socialSkills.fallbackReply") }]);
     } catch {
-      setMessages((m) => [...m, { role: "assistant", text: "Lost my train of thought there - try again?" }]);
+      setMessages((m) => [...m, { role: "assistant", text: t("socialSkills.errorReply") }]);
     }
     setLoading(false);
   }
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>🫂 Relationship Chat</h2>
-      <p style={{ fontSize: 12, opacity: 0.6 }}>Describe a real situation - conflict, a friendship, family, relationships. Not a therapy substitute, just someone to think it through with.</p>
+      <h2>🫂 {t("socialSkills.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6 }}>{t("socialSkills.subtitle")}</p>
 
       <div style={{ marginTop: 14, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, paddingRight: 4 }}>
         {messages.map((m, i) => (
@@ -61,7 +63,7 @@ export default function SocialSkills() {
             {m.text}
           </div>
         ))}
-        {loading && <div style={{ alignSelf: "flex-start", fontSize: 12, opacity: 0.5, padding: "4px 14px" }}>thinking...</div>}
+        {loading && <div style={{ alignSelf: "flex-start", fontSize: 12, opacity: 0.5, padding: "4px 14px" }}>{t("socialSkills.thinking")}</div>}
         <div ref={bottomRef} />
       </div>
 
@@ -70,11 +72,11 @@ export default function SocialSkills() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="What happened?"
+          placeholder={t("socialSkills.inputPlaceholder")}
           style={{ flex: 1, padding: "10px 14px", borderRadius: 999, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }}
         />
         <button onClick={send} disabled={loading} style={{ padding: "10px 20px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>
-          Send
+          {t("socialSkills.send")}
         </button>
       </div>
     </div>

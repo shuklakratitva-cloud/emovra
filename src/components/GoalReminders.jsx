@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 function authHeaders() {
@@ -10,6 +11,7 @@ function authHeaders() {
 // overclaiming "AI" for what's really just a staleness check.
 export default function GoalReminders() {
   const [stale, setStale] = useState([]);
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetch(`${API}/goals`, { headers: authHeaders() })
@@ -31,12 +33,12 @@ export default function GoalReminders() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "20px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h3 style={{ margin: 0, fontSize: 15 }}>🗺 Goals that could use a check-in</h3>
-      <p style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>No pressure - just a gentle nudge for goals you haven't touched in a while.</p>
+      <h3 style={{ margin: 0, fontSize: 15 }}>🗺 {t("goalReminders.heading")}</h3>
+      <p style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>{t("goalReminders.subtitle")}</p>
       {stale.slice(0, 4).map((g) => (
         <div key={g._id} style={{ padding: "8px 0", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
           <span>{g.title}</span>
-          <span style={{ opacity: 0.5, fontSize: 11 }}>{g.daysSince} days quiet</span>
+          <span style={{ opacity: 0.5, fontSize: 11 }}>{t("goalReminders.daysQuiet", { days: g.daysSince })}</span>
         </div>
       ))}
     </div>

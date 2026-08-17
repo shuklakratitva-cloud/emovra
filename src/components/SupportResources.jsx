@@ -1,7 +1,9 @@
 // src/components/SupportResources.jsx
 import React from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 export default function SupportResources({ level, onClose }) {
+  const { t } = useLanguage();
   const isHigh = level === 'high';
 
   return (
@@ -15,50 +17,50 @@ export default function SupportResources({ level, onClose }) {
         padding: "28px", boxShadow: "0 20px 40px rgba(0,0,0,0.2)"
       }}>
         <h2 style={{ margin: "0 0 8px 0", fontSize: "20px" }}>
-          {isHigh ? "💛 You deserve support right now" : "🌿 We're here for you"}
+          {isHigh ? t("supportResources.headingHigh") : t("supportResources.headingLow")}
         </h2>
-        
+
         <p style={{ margin: "0 0 16px 0", color: "#555", lineHeight: "1.6", fontSize: "14px" }}>
-          {isHigh 
-            ? "It sounds like you're going through a really tough time. You don't have to face this alone. Talking to someone can help."
-            : "It sounds like things feel heavy right now. Writing is a brave step. If it helps, consider reaching out to someone you trust."}
+          {isHigh
+            ? t("supportResources.bodyHigh")
+            : t("supportResources.bodyLow")}
         </p>
 
         <div style={{ background: "#f9f5ff", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
-          <h4 style={{ margin: "0 0 10px 0", fontSize: "14px" }}>🇮🇳 Immediate Help in India - Free & Confidential</h4>
-          
+          <h4 style={{ margin: "0 0 10px 0", fontSize: "14px" }}>{t("supportResources.immediateHelpIndia")}</h4>
+
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <a href="tel:14416" style={btnPrimary}>
-              📞 Call Tele MANAS: 14416 (24x7 Govt)
+              {t("supportResources.callTeleManas", { number: "14416" })}
             </a>
             <a href="tel:18005990019" style={btnSecondary}>
-              📞 Call Kiran: 1800-599-0019
+              {t("supportResources.callKiran", { number: "1800-599-0019" })}
             </a>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <a href="tel:18602662345" style={btnSmall}>Vandrevala: 1860-2662-345</a>
-              <a href="tel:9152987821" style={btnSmall}>iCall: 9152987821</a>
+              <a href="tel:18602662345" style={btnSmall}>{t("supportResources.vandrevala", { number: "1860-2662-345" })}</a>
+              <a href="tel:9152987821" style={btnSmall}>{t("supportResources.icall", { number: "9152987821" })}</a>
             </div>
           </div>
 
           <div style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            <a href="https://findahelpline.org/countries/in" target="_blank" rel="noreferrer" style={{ fontSize: "12px", color: "#aa3bff" }}>→ More helplines at findahelpline.org</a>
-            <a href="https://telemanas.mohfw.gov.in" target="_blank" rel="noreferrer" style={{ fontSize: "12px", color: "#aa3bff" }}>→ Chat on telemanas.mohfw.gov.in</a>
+            <a href="https://findahelpline.org/countries/in" target="_blank" rel="noreferrer" style={{ fontSize: "12px", color: "#aa3bff" }}>{t("supportResources.moreHelplines", { site: "findahelpline.org" })}</a>
+            <a href="https://telemanas.mohfw.gov.in" target="_blank" rel="noreferrer" style={{ fontSize: "12px", color: "#aa3bff" }}>{t("supportResources.chatTeleManas", { site: "telemanas.mohfw.gov.in" })}</a>
           </div>
         </div>
 
         <div style={{ background: "#fffbeb", borderRadius: "10px", padding: "12px", marginBottom: "18px" }}>
           <p style={{ margin: 0, fontSize: "13px", lineHeight: "1.5" }}>
-            <b>Not ready to call?</b> Try: Text a trusted friend, go for a 5-min walk, splash cold water, do box breathing (4-4-4-4), or continue journaling below. Small steps help.
+            <b>{t("supportResources.notReadyLead")}</b> {t("supportResources.notReadyText")}
           </p>
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={onClose} style={btnPrimary}>Continue Journaling</button>
-          <button onClick={onClose} style={{ ...btnSecondary, background: "#fff" }}>Close</button>
+          <button onClick={onClose} style={btnPrimary}>{t("supportResources.continueJournaling")}</button>
+          <button onClick={onClose} style={{ ...btnSecondary, background: "#fff" }}>{t("supportResources.close")}</button>
         </div>
 
         <p style={{ margin: "16px 0 0 0", fontSize: "11px", color: "#888", lineHeight: "1.4" }}>
-          Emovra does not provide diagnosis or professional counseling. This is an automated supportive message based on words you wrote, not a medical assessment. If you feel unsafe, please contact emergency services (112) or go to your nearest hospital.
+          {t("supportResources.disclaimer")}
         </p>
       </div>
     </div>

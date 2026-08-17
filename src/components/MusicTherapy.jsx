@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
@@ -160,11 +161,12 @@ function useAmbientSound() {
 
 // Virtual candle - simple CSS flicker animation, no canvas/assets needed
 function VirtualCandle() {
+  const { t } = useLanguage();
   return (
     <div style={{ textAlign: "center", padding: "10px 0" }}>
       <div style={{ fontSize: 48, animation: "emovra-flicker 1.8s ease-in-out infinite" }}>🕯️</div>
       <style>{`@keyframes emovra-flicker { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.85; transform:scale(0.97) rotate(-1deg);} 75%{opacity:0.95; transform:scale(1.02) rotate(1deg);} }`}</style>
-      <p style={{ fontSize: 11, opacity: 0.5, marginTop: 8 }}>Just something to watch for a moment.</p>
+      <p style={{ fontSize: 11, opacity: 0.5, marginTop: 8 }}>{t("musicTherapy.candleCaption")}</p>
     </div>
   );
 }
@@ -193,27 +195,28 @@ export default function MusicTherapy() {
   const [moods, setMoods] = useState(null);
   const [visual, setVisual] = useState(null); // null | "candle" | "aquarium"
   const ambient = useAmbientSound();
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetch(`${API}/profile/options`).then((r) => r.json()).then((d) => { if (d.success) setMoods(d.musicMoods); }).catch(() => {});
   }, []);
 
   const SOUNDS = [
-    { k: "rain", label: "🌧 Rain" },
-    { k: "fireplace", label: "🔥 Fireplace" },
-    { k: "forest", label: "🌲 Forest" },
-    { k: "cafe", label: "☕ Café" },
-    { k: "white-noise", label: "📻 White Noise" },
-    { k: "calm-tone", label: "🎵 Calm Drone" },
+    { k: "rain", emoji: "🌧", labelKey: "musicTherapy.soundRain" },
+    { k: "fireplace", emoji: "🔥", labelKey: "musicTherapy.soundFireplace" },
+    { k: "forest", emoji: "🌲", labelKey: "musicTherapy.soundForest" },
+    { k: "cafe", emoji: "☕", labelKey: "musicTherapy.soundCafe" },
+    { k: "white-noise", emoji: "📻", labelKey: "musicTherapy.soundWhiteNoise" },
+    { k: "calm-tone", emoji: "🎵", labelKey: "musicTherapy.soundCalmDrone" },
   ];
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2 style={{ margin: 0 }}>🎧 Relaxing Room</h2>
-      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Ambience, calming visuals, or find music that fits your mood.</p>
+      <h2 style={{ margin: 0 }}>🎧 {t("musicTherapy.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>{t("musicTherapy.subtitle")}</p>
 
       <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Ambient sounds</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("musicTherapy.ambientSoundsHeading")}</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {SOUNDS.map((s) => (
             <button
@@ -226,24 +229,24 @@ export default function MusicTherapy() {
                 color: "var(--text)",
               }}
             >
-              {ambient.playing && ambient.kind === s.k ? "⏸ " : "▶ "}{s.label}
+              {ambient.playing && ambient.kind === s.k ? "⏸ " : "▶ "}{s.emoji} {t(s.labelKey)}
             </button>
           ))}
         </div>
       </div>
 
       <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Calming visuals</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("musicTherapy.calmingVisualsHeading")}</div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => setVisual(visual === "candle" ? null : "candle")} style={{ padding: "8px 16px", borderRadius: 999, cursor: "pointer", fontSize: 13, border: visual === "candle" ? "2px solid #d4b07a" : "1px solid var(--border)", background: visual === "candle" ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}>🕯️ Candle</button>
-          <button onClick={() => setVisual(visual === "aquarium" ? null : "aquarium")} style={{ padding: "8px 16px", borderRadius: 999, cursor: "pointer", fontSize: 13, border: visual === "aquarium" ? "2px solid #d4b07a" : "1px solid var(--border)", background: visual === "aquarium" ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}>🐠 Aquarium</button>
+          <button onClick={() => setVisual(visual === "candle" ? null : "candle")} style={{ padding: "8px 16px", borderRadius: 999, cursor: "pointer", fontSize: 13, border: visual === "candle" ? "2px solid #d4b07a" : "1px solid var(--border)", background: visual === "candle" ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}>🕯️ {t("musicTherapy.candleButton")}</button>
+          <button onClick={() => setVisual(visual === "aquarium" ? null : "aquarium")} style={{ padding: "8px 16px", borderRadius: 999, cursor: "pointer", fontSize: 13, border: visual === "aquarium" ? "2px solid #d4b07a" : "1px solid var(--border)", background: visual === "aquarium" ? "rgba(212,176,122,0.15)" : "transparent", color: "var(--text)" }}>🐠 {t("musicTherapy.aquariumButton")}</button>
         </div>
         {visual === "candle" && <VirtualCandle />}
         {visual === "aquarium" && <VirtualAquarium />}
       </div>
 
       <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Find music for your mood</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("musicTherapy.findMusicHeading")}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {(moods || []).map((m) => (
             <div key={m.mood} style={{ display: "flex", alignItems: "center", border: "1px solid var(--border)", borderRadius: 999, overflow: "hidden" }}>
@@ -262,7 +265,7 @@ export default function MusicTherapy() {
               <a
                 href={`https://open.spotify.com/search/${encodeURIComponent(m.query)}`}
                 target="_blank" rel="noreferrer"
-                title={`Search "${m.query}" on Spotify`}
+                title={t("musicTherapy.searchSpotify", { query: m.query })}
                 style={{ display: "flex", alignItems: "center", padding: "8px 10px", borderLeft: "1px solid var(--border)", color: "#1DB954", textDecoration: "none", fontSize: 13 }}
               >
                 ♫
@@ -270,7 +273,7 @@ export default function MusicTherapy() {
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 10, opacity: 0.4, marginTop: 10 }}>Opens a search on YouTube or Spotify in a new tab - not affiliated, just a starting point.</p>
+        <p style={{ fontSize: 10, opacity: 0.4, marginTop: 10 }}>{t("musicTherapy.searchDisclaimer")}</p>
       </div>
     </div>
   );

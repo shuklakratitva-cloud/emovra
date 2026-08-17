@@ -73,7 +73,17 @@ app.use(
   })
 );
 
-app.use(express.json());
+// FIX: this had no size limit, so it silently fell back to Express's
+// default of 100kb. routes/profile.js accepts background images up to
+// MAX_BACKGROUND_DATA_URI_LENGTH (2,000,000 base64 chars, ~1.5MB of actual
+// image), but any request anywhere near that size was being rejected by
+// THIS middleware - before it ever reached profile.js's own size check -
+// with a 413 that the frontend's fetch calls silently swallowed (see the
+// matching fix in ThemeAvatarSettings.jsx's save()). Avatar uploads mostly
+// "worked" because the frontend resizes those to 160x160 first, keeping
+// them under 100kb by luck; background images and AI-generated images
+// never had that resize step, so they failed close to 100% of the time.
+app.use(express.json({ limit: "3mb" }));
 
 const analyzeLimiter = rateLimit({
   windowMs: 60 * 1000,

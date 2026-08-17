@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 // NOTE: "Anonymous artwork gallery" and public photo sharing from the
 // original list were deliberately NOT built as public/shared features -
@@ -13,6 +14,7 @@ function load() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
 function save(data) { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
 
 function Poetry() {
+  const { t } = useLanguage();
   const [text, setText] = useState("");
   const [saved, setSaved] = useState([]);
   useEffect(() => { setSaved(load().poems || []); }, []);
@@ -26,8 +28,8 @@ function Poetry() {
   }
   return (
     <div>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Write something. No structure required." rows={6} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)", fontFamily: "inherit" }} />
-      <button onClick={savePoem} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>Save</button>
+      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={t("creativeExpression.poetryPlaceholder")} rows={6} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)", fontFamily: "inherit" }} />
+      <button onClick={savePoem} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>{t("creativeExpression.save")}</button>
       {saved.map((p, i) => (
         <div key={i} style={{ marginTop: 14, padding: 12, borderRadius: 10, border: "1px solid var(--border)", whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.6 }}>{p.text}</div>
       ))}
@@ -36,6 +38,7 @@ function Poetry() {
 }
 
 function StickerJournal() {
+  const { t } = useLanguage();
   const STICKERS = ["😊","😌","😢","😰","😡","🥱","💭","❤️","🌧","☀️","🌙","✨","🔥","🌱","☕","🎵"];
   const [entryStickers, setEntryStickers] = useState([]);
   const [note, setNote] = useState("");
@@ -58,8 +61,8 @@ function StickerJournal() {
         ))}
       </div>
       <div style={{ marginTop: 10, minHeight: 32, fontSize: 24 }}>{entryStickers.join(" ")}</div>
-      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note..." style={{ width: "100%", marginTop: 8, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
-      <button onClick={saveEntry} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>Save entry</button>
+      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("creativeExpression.stickerNotePlaceholder")} style={{ width: "100%", marginTop: 8, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
+      <button onClick={saveEntry} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>{t("creativeExpression.saveEntry")}</button>
       {saved.slice(0, 8).map((e, i) => (
         <div key={i} style={{ marginTop: 10, fontSize: 18 }}>{e.stickers.join(" ")} {e.note && <span style={{ fontSize: 12, opacity: 0.6 }}>- {e.note}</span>}</div>
       ))}
@@ -68,6 +71,7 @@ function StickerJournal() {
 }
 
 function Scrapbook() {
+  const { t } = useLanguage();
   const STICKERS = ["🌸","⭐","🍃","🎈","💫","🌈","☀️","🌙","❤️","✨"];
   const [note, setNote] = useState("");
   const [sticker, setSticker] = useState(STICKERS[0]);
@@ -85,14 +89,14 @@ function Scrapbook() {
 
   return (
     <div>
-      <p style={{ fontSize: 12, opacity: 0.7 }}>A little page for today - a note plus a sticker to mark the mood of it.</p>
+      <p style={{ fontSize: 12, opacity: 0.7 }}>{t("creativeExpression.scrapbookIntro")}</p>
       <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
         {STICKERS.map((s) => (
           <button key={s} onClick={() => setSticker(s)} style={{ fontSize: 20, padding: 6, borderRadius: 8, cursor: "pointer", border: sticker === s ? "2px solid var(--accent)" : "1px solid var(--border)", background: "transparent" }}>{s}</button>
         ))}
       </div>
-      <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="What's this page about?" rows={3} style={{ width: "100%", marginTop: 10, padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
-      <button onClick={savePage} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>Add page</button>
+      <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("creativeExpression.scrapbookPlaceholder")} rows={3} style={{ width: "100%", marginTop: 10, padding: 10, borderRadius: 10, border: "1px solid var(--border)", background: "#0f0f11", color: "var(--text)" }} />
+      <button onClick={savePage} style={{ marginTop: 10, padding: "8px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>{t("creativeExpression.addPage")}</button>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 18 }}>
         {pages.map((p, i) => (
@@ -107,22 +111,23 @@ function Scrapbook() {
 }
 
 const TABS = [
-  { id: "poetry", label: "✍️ Poetry", Component: Poetry },
-  { id: "stickers", label: "🌈 Sticker Journal", Component: StickerJournal },
-  { id: "scrapbook", label: "📔 Scrapbook", Component: Scrapbook },
+  { id: "poetry", labelKey: "creativeExpression.tabPoetry", Component: Poetry },
+  { id: "stickers", labelKey: "creativeExpression.tabStickers", Component: StickerJournal },
+  { id: "scrapbook", labelKey: "creativeExpression.tabScrapbook", Component: Scrapbook },
 ];
 
 export default function CreativeExpression() {
+  const { t } = useLanguage();
   const [active, setActive] = useState("poetry");
-  const Active = TABS.find((t) => t.id === active)?.Component;
+  const Active = TABS.find((tab) => tab.id === active)?.Component;
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>🎨 Creative Expression</h2>
-      <p style={{ fontSize: 12, opacity: 0.6 }}>Private to you - nothing here is shared or shown to anyone else.</p>
+      <h2>{t("creativeExpression.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6 }}>{t("creativeExpression.subtitle")}</p>
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setActive(t.id)} style={{ padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer", border: active === t.id ? "1px solid var(--accent)" : "1px solid var(--border)", background: active === t.id ? "rgba(212,176,122,0.15)" : "transparent", color: active === t.id ? "var(--text-h)" : "var(--muted)", fontWeight: active === t.id ? 700 : 500 }}>
-            {t.label}
+        {TABS.map((tab) => (
+          <button key={tab.id} onClick={() => setActive(tab.id)} style={{ padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer", border: active === tab.id ? "1px solid var(--accent)" : "1px solid var(--border)", background: active === tab.id ? "rgba(212,176,122,0.15)" : "transparent", color: active === tab.id ? "var(--text-h)" : "var(--muted)", fontWeight: active === tab.id ? 700 : 500 }}>
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>

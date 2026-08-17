@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { getGreenMessage, getYellowMessage, getOrangeMessage, getRedMessage } from "../utils/motivationalMessages";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 // No more GREEN/YELLOW/ORANGE/RED badges or raw scores anywhere in this
 // card, for ANY level. Underneath, the actual risk detection, encryption,
@@ -16,6 +17,7 @@ import { getGreenMessage, getYellowMessage, getOrangeMessage, getRedMessage } fr
 // RED styling - fixed below.
 
 export default function RiskCard({ analysis, userName, emergencyPhone, safetyPlan }) {
+  const { t } = useLanguage();
   if (!analysis) return null;
   const level = String(analysis.riskLevel || analysis.risk || analysis.level || "GREEN").toUpperCase();
   const isRed = level === "RED";
@@ -32,27 +34,27 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
     if (isRed) {
       return {
         message: getRedMessage({ name: userName }),
-        icon: "🫂", accent: "#f87171", heading: "You're not alone in this",
+        icon: "🫂", accent: "#f87171", heading: t("riskCard.headingRed"),
       };
     } else if (isOrange) {
       return {
         message: getOrangeMessage({ name: userName, category, abuseType: analysis.abuseType, triggers }),
         icon: isSchoolAbuse ? "🏫" : isHomeAbuse ? "⚠" : "💛",
-        accent: "#fb923c", heading: "We hear you",
+        accent: "#fb923c", heading: t("riskCard.headingOrange"),
       };
     } else if (isYellow) {
       return {
         message: getYellowMessage({ name: userName, triggers }),
-        icon: "🌤", accent: "#eab308", heading: "Just checking in",
+        icon: "🌤", accent: "#eab308", heading: t("riskCard.headingYellow"),
       };
     } else {
       return {
         message: getGreenMessage(analysis.emotion, userName),
-        icon: "🌿", accent: "#4ade80", heading: "You're on the right path",
+        icon: "🌿", accent: "#4ade80", heading: t("riskCard.headingGreen"),
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysis]);
+  }, [analysis, t]);
 
   const isCalm = isGreen; // only GREEN gets the fully neutral border treatment
 
@@ -84,7 +86,7 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
             background: "#d4b07a", color: "#000", padding: "10px 18px",
             borderRadius: 20, textDecoration: "none", fontWeight: 700, fontSize: 13
           }}>
-            📞 Call Tele-MANAS: 14416
+            📞 {t("riskCard.callTeleManas", { number: "14416" })}
           </a>
           {isRed && (
             <a href="tel:18005990019" style={{
@@ -93,7 +95,7 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
               borderRadius: 20, textDecoration: "none", fontWeight: 600, fontSize: 13,
               border: "1px solid var(--border)"
             }}>
-              📞 Kiran: 1800-599-0019
+              📞 {t("riskCard.callKiran", { number: "1800-599-0019" })}
             </a>
           )}
           {isRed && emergencyPhone && (
@@ -103,7 +105,7 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
               borderRadius: 20, textDecoration: "none", fontWeight: 600, fontSize: 13,
               border: "1px solid var(--border)"
             }}>
-              📞 Call Your SOS: {emergencyPhone}
+              📞 {t("riskCard.callYourSos", { number: emergencyPhone })}
             </a>
           )}
         </div>
@@ -115,7 +117,7 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
           grounding parts (reasons + coping strategies), not the full plan. */}
       {isRed && safetyPlan && (safetyPlan.reasonsToLive || safetyPlan.copingStrategies) && (
         <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.2)" }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-h)", margin: "0 0 8px" }}>From your own Safety Plan:</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-h)", margin: "0 0 8px" }}>{t("riskCard.fromYourSafetyPlan")}</p>
           {safetyPlan.reasonsToLive && <p style={{ fontSize: 13, margin: "0 0 6px", lineHeight: 1.5 }}>{safetyPlan.reasonsToLive}</p>}
           {safetyPlan.copingStrategies && <p style={{ fontSize: 12, opacity: 0.75, margin: 0, lineHeight: 1.5 }}>{safetyPlan.copingStrategies}</p>}
         </div>
@@ -132,7 +134,7 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
             border: "1px solid rgba(212,197,160,0.25)", padding: "4px 12px",
             borderRadius: 20, fontSize: 11, fontWeight: 600
           }}>
-            feeling {String(analysis.emotion).toLowerCase()}
+            {t("riskCard.feelingEmotion", { emotion: String(analysis.emotion).toLowerCase() })}
           </span>
         </div>
       )}

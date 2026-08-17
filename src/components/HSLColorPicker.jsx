@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 // HWB (Hue/Whiteness/Blackness) picker - Hue picks the pure vivid color,
 // Whiteness and Blackness are two independent sliders, each starting at
@@ -61,6 +62,7 @@ function hwbToHex(h, w, b) {
 
 export default function HSLColorPicker({ value, onChange, label }) {
   const [hwb, setHwb] = useState(() => { const [r, g, b] = hexToRgb(value); return rgbToHwb(r, g, b); });
+  const { t } = useLanguage();
 
   useEffect(() => {
     const [r, g, b] = hexToRgb(value);
@@ -90,17 +92,17 @@ export default function HSLColorPicker({ value, onChange, label }) {
         <div style={{ fontSize: 11, opacity: 0.6, fontFamily: "monospace" }}>{value}</div>
       </div>
       <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: 10, opacity: 0.5 }}>Hue (pure color)</div>
+        <div style={{ fontSize: 10, opacity: 0.5 }}>{t("hslColorPicker.hue")}</div>
         <input type="range" min="0" max="360" value={hwb.h} onChange={(e) => update({ h: Number(e.target.value) })}
           style={{ width: "100%", height: 10, borderRadius: 999, background: hueGradient, appearance: "none", cursor: "pointer" }} />
       </div>
       <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: 10, opacity: 0.5 }}>Whiteness</div>
+        <div style={{ fontSize: 10, opacity: 0.5 }}>{t("hslColorPicker.whiteness")}</div>
         <input type="range" min="0" max="100" value={hwb.w} onChange={(e) => update({ w: Number(e.target.value) })}
           style={{ width: "100%", height: 10, borderRadius: 999, background: whiteGradient, appearance: "none", cursor: "pointer" }} />
       </div>
       <div>
-        <div style={{ fontSize: 10, opacity: 0.5 }}>Blackness</div>
+        <div style={{ fontSize: 10, opacity: 0.5 }}>{t("hslColorPicker.blackness")}</div>
         <input type="range" min="0" max="100" value={hwb.b} onChange={(e) => update({ b: Number(e.target.value) })}
           style={{ width: "100%", height: 10, borderRadius: 999, background: blackGradient, appearance: "none", cursor: "pointer" }} />
       </div>

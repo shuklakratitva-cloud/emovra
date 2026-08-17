@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
 export default function MentalHealthInsights() {
   const [data, setData] = useState(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -15,29 +17,29 @@ export default function MentalHealthInsights() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2 style={{ margin: 0 }}>📊 Mental Health Insights</h2>
+      <h2 style={{ margin: 0 }}>📊 {t("mentalHealthInsights.title")}</h2>
       <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>
-        A reflection tool, not a diagnosis - based on your last 30 days. Only check-ins flagged as needing attention are saved here - everyday GREEN/YELLOW check-ins are never stored, by design.
+        {t("mentalHealthInsights.description")}
       </p>
 
-      {!data ? <p style={{ fontSize: 13, opacity: 0.6, marginTop: 12 }}>Loading...</p> : (
+      {!data ? <p style={{ fontSize: 13, opacity: 0.6, marginTop: 12 }}>{t("mentalHealthInsights.loading")}</p> : (
         <>
           <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 140, background: "rgba(212,197,160,0.08)", border: "1px solid var(--border)", borderRadius: 12, padding: 14, textAlign: "center" }}>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{data.totalCheckIns}</div>
-              <div style={{ fontSize: 11, opacity: 0.6 }}>Flagged check-ins saved</div>
+              <div style={{ fontSize: 11, opacity: 0.6 }}>{t("mentalHealthInsights.flaggedCheckInsSaved")}</div>
             </div>
             {data.topEmotion && (
               <div style={{ flex: 1, minWidth: 140, background: "rgba(212,197,160,0.08)", border: "1px solid var(--border)", borderRadius: 12, padding: 14, textAlign: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 700, textTransform: "capitalize" }}>{data.topEmotion}</div>
-                <div style={{ fontSize: 11, opacity: 0.6 }}>Most common feeling</div>
+                <div style={{ fontSize: 11, opacity: 0.6 }}>{t("mentalHealthInsights.mostCommonFeeling")}</div>
               </div>
             )}
           </div>
 
           {Object.keys(data.emotionCounts || {}).length > 0 && (
             <div style={{ marginTop: 18 }}>
-              <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 8 }}>Feelings breakdown</div>
+              <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 8 }}>{t("mentalHealthInsights.feelingsBreakdown")}</div>
               {Object.entries(data.emotionCounts).sort((a, b) => b[1] - a[1]).map(([emotion, count]) => {
                 const max = Math.max(...Object.values(data.emotionCounts));
                 return (
@@ -54,7 +56,7 @@ export default function MentalHealthInsights() {
           )}
 
           {data.totalCheckIns === 0 && (
-            <p style={{ fontSize: 13, opacity: 0.6, marginTop: 16 }}>Nothing to show yet - your insights will build up as you check in over time.</p>
+            <p style={{ fontSize: 13, opacity: 0.6, marginTop: 16 }}>{t("mentalHealthInsights.emptyState")}</p>
           )}
         </>
       )}

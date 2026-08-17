@@ -1,6 +1,7 @@
 // src/components/MoodTracker.jsx
 import React from "react";
 import useMood from "../hooks/useMood";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
@@ -14,6 +15,25 @@ function pingMoodCheckin() {
 }
 
 const MOOD_ORDER = ["Happy","Calm","Neutral","Sad","Anxious","Angry","Lonely","Overwhelmed","Don't Know What To Do","Everything Fell On You At Once"];
+
+// Maps the internal English mood label (used as the stored/compared
+// identifier throughout useMood, MOOD_ORDER, etc.) to its translation key -
+// the identifier itself is left untouched so history/comparisons keep working.
+const MOOD_LABEL_KEY = {
+  "Happy": "moodTracker.moodHappy",
+  "Calm": "moodTracker.moodCalm",
+  "Neutral": "moodTracker.moodNeutral",
+  "Sad": "moodTracker.moodSad",
+  "Anxious": "moodTracker.moodAnxious",
+  "Angry": "moodTracker.moodAngry",
+  "Lonely": "moodTracker.moodLonely",
+  "Overwhelmed": "moodTracker.moodOverwhelmed",
+  "Don't Know What To Do": "moodTracker.moodDontKnow",
+  "Everything Fell On You At Once": "moodTracker.moodOverload",
+};
+function moodLabel(t, label) {
+  return t(MOOD_LABEL_KEY[label] || label);
+}
 
 // FIX: emoji replaced with the person's own uploaded stickers - "sticker"
 // key points at /public/stickers/*.png (converted to transparent PNG -
@@ -36,6 +56,7 @@ const MOODS = [
 
 // "Sticker" style tap targets - now renders an actual image instead of an emoji glyph.
 function MoodSticker({ mood, active, onClick }) {
+  const { t } = useLanguage();
   return (
     <button
       onClick={onClick}
@@ -52,8 +73,8 @@ function MoodSticker({ mood, active, onClick }) {
         transition: "transform 0.15s ease, border-color 0.15s ease",
       }}
     >
-      <img src={mood.sticker} alt={mood.label} style={{ width: 64, height: 64, objectFit: "contain" }} />
-      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", textAlign: "center", lineHeight: 1.2 }}>{mood.label}</span>
+      <img src={mood.sticker} alt={moodLabel(t, mood.label)} style={{ width: 64, height: 64, objectFit: "contain" }} />
+      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", textAlign: "center", lineHeight: 1.2 }}>{moodLabel(t, mood.label)}</span>
     </button>
   );
 }
@@ -65,6 +86,7 @@ function MoodSticker({ mood, active, onClick }) {
 // only (no icon) - the sticker images show up in the picker above and the
 // recent-trend strip below instead.
 function MoodGraph({ moodStats, moodHistory }) {
+  const { t } = useLanguage();
   const width = 600;
   const barHeight = 22;
   const gap = 10;
@@ -85,7 +107,7 @@ function MoodGraph({ moodStats, moodHistory }) {
   return (
     <div>
       {rows.length === 0 ? (
-        <p style={{ opacity: 0.6, fontSize: 13 }}>No mood data yet - tap a sticker above to log one.</p>
+        <p style={{ opacity: 0.6, fontSize: 13 }}>{t("moodTracker.noMoodData")}</p>
       ) : (
         <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: "auto", display: "block" }}>
           {rows.map((row, i) => {
@@ -94,7 +116,7 @@ function MoodGraph({ moodStats, moodHistory }) {
             return (
               <g key={row.label}>
                 <text x={0} y={y + barHeight * 0.7} fontSize="13" fill="var(--text)">
-                  {row.label}
+                  {moodLabel(t, row.label)}
                 </text>
                 <rect x={labelWidth} y={y} width={barW} height={barHeight} rx={6} fill={row.color} opacity="0.85" />
                 <text x={labelWidth + barW + 8} y={y + barHeight * 0.7} fontSize="12" fill="var(--muted)">
@@ -108,14 +130,14 @@ function MoodGraph({ moodStats, moodHistory }) {
 
       {recent.length > 1 && (
         <div style={{ marginTop: 14 }}>
-          <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 6 }}>Recent trend</div>
+          <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 6 }}>{t("moodTracker.recentTrend")}</div>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flexWrap: "wrap" }}>
             {recent.map((e, i) => (
               <img
                 key={e.id || i}
                 title={new Date(e.timestamp).toLocaleString()}
                 src={MOODS.find((m) => m.label === e.mood)?.sticker}
-                alt={e.mood}
+                alt={moodLabel(t, e.mood)}
                 style={{ width: 26, height: 26, objectFit: "contain" }}
               />
             ))}
@@ -128,11 +150,12 @@ function MoodGraph({ moodStats, moodHistory }) {
 
 export default function MoodTracker() {
   const { currentMood, moodHistory, moodStats, addMood, removeMood, clearMoodHistory } = useMood();
+  const { t } = useLanguage();
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>😊 Mood Tracker</h2>
-      <p>Select how you're feeling today.</p>
+      <h2>😊 {t("moodTracker.heading")}</h2>
+      <p>{t("moodTracker.subtitle")}</p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "20px", marginTop: "12px" }}>
         {MOODS.map((mood) => (
@@ -145,21 +168,21 @@ export default function MoodTracker() {
         ))}
       </div>
 
-      {currentMood && <p><strong>Current Mood:</strong> {currentMood}</p>}
+      {currentMood && <p><strong>{t("moodTracker.currentMood")}</strong> {moodLabel(t, currentMood)}</p>}
       <hr style={{ margin: "16px 0", borderColor: "var(--border)" }} />
 
-      <h3 style={{ marginBottom: 10 }}>Mood History</h3>
+      <h3 style={{ marginBottom: 10 }}>{t("moodTracker.historyHeading")}</h3>
       <MoodGraph moodStats={moodStats} moodHistory={moodHistory} />
 
       {moodHistory.length > 0 && (
         <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 10 }}>
           {moodHistory[0] && (
             <button onClick={() => removeMood(moodHistory[0].id)} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", cursor: "pointer" }}>
-              Undo last
+              {t("moodTracker.undoLast")}
             </button>
           )}
           <button onClick={clearMoodHistory} style={{ fontSize: 12, background: "#dc2626", color: "#fff", padding: "6px 12px", border: "none", borderRadius: 8, cursor: "pointer" }}>
-            Clear Mood History
+            {t("moodTracker.clearHistory")}
           </button>
         </div>
       )}

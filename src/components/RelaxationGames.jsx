@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 // ============================================================
 // Breathing Circle - expands/contracts on a 4-4-4 rhythm, same timing as
@@ -9,6 +10,7 @@ function BreathingCircle() {
   const [phase, setPhase] = useState("in"); // in | hold | out
   const [running, setRunning] = useState(false);
   const [seconds, setSeconds] = useState(4);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!running) return;
@@ -22,7 +24,7 @@ function BreathingCircle() {
     return () => clearInterval(t);
   }, [running]);
 
-  const label = phase === "in" ? "Breathe in" : phase === "hold" ? "Hold" : "Breathe out";
+  const label = phase === "in" ? t("relaxationGames.breatheIn") : phase === "hold" ? t("relaxationGames.hold") : t("relaxationGames.breatheOut");
   const scale = phase === "in" ? 1.4 : phase === "hold" ? 1.4 : 0.7;
 
   return (
@@ -36,11 +38,11 @@ function BreathingCircle() {
           transition: "transform 3.8s ease-in-out",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-h)" }}>{running ? label : "Ready"}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-h)" }}>{running ? label : t("relaxationGames.ready")}</span>
         </div>
       </div>
       <button onClick={() => setRunning((r) => !r)} style={{ marginTop: 16, padding: "8px 20px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>
-        {running ? "Stop" : "Start breathing"}
+        {running ? t("relaxationGames.stop") : t("relaxationGames.startBreathing")}
       </button>
     </div>
   );
@@ -52,6 +54,7 @@ function BreathingCircle() {
 function StressBall() {
   const [squished, setSquished] = useState(false);
   const [pops, setPops] = useState(0);
+  const { t } = useLanguage();
   return (
     <div style={{ textAlign: "center", padding: "20px 0" }}>
       <div
@@ -68,7 +71,7 @@ function StressBall() {
           boxShadow: squished ? "0 2px 8px rgba(0,0,0,0.3)" : "0 8px 16px rgba(0,0,0,0.25)",
         }}
       />
-      <p style={{ marginTop: 14, fontSize: 12, opacity: 0.6 }}>Click and hold to squeeze - squeezed {pops} time{pops === 1 ? "" : "s"}</p>
+      <p style={{ marginTop: 14, fontSize: 12, opacity: 0.6 }}>{t("relaxationGames.stressBallHint", { count: pops })}</p>
     </div>
   );
 }
@@ -79,6 +82,7 @@ function StressBall() {
 function BubblePop() {
   const GRID = 30;
   const [popped, setPopped] = useState(() => new Array(GRID).fill(false));
+  const { t } = useLanguage();
 
   function pop(i) {
     setPopped((arr) => {
@@ -112,29 +116,30 @@ function BubblePop() {
       </div>
       {allPopped ? (
         <button onClick={reset} style={{ marginTop: 16, padding: "8px 20px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>
-          Refill bubbles
+          {t("relaxationGames.refillBubbles")}
         </button>
       ) : (
-        <p style={{ marginTop: 14, fontSize: 12, opacity: 0.6 }}>{popped.filter(Boolean).length}/{GRID} popped</p>
+        <p style={{ marginTop: 14, fontSize: 12, opacity: 0.6 }}>{t("relaxationGames.bubblesPopped", { popped: popped.filter(Boolean).length, total: GRID })}</p>
       )}
     </div>
   );
 }
 
 const GAMES = [
-  { id: "breathe", label: "🫧 Breathing", Component: BreathingCircle },
-  { id: "ball", label: "🤏 Stress Ball", Component: StressBall },
-  { id: "pop", label: "🫧 Bubble Pop", Component: BubblePop },
+  { id: "breathe", emoji: "🫧", labelKey: "relaxationGames.breathingTab", Component: BreathingCircle },
+  { id: "ball", emoji: "🤏", labelKey: "relaxationGames.stressBallTab", Component: StressBall },
+  { id: "pop", emoji: "🫧", labelKey: "relaxationGames.bubblePopTab", Component: BubblePop },
 ];
 
 export default function RelaxationGames() {
   const [active, setActive] = useState("breathe");
+  const { t } = useLanguage();
   const ActiveGame = GAMES.find((g) => g.id === active)?.Component;
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
-      <h2>🎮 Relax</h2>
-      <p style={{ fontSize: 13, opacity: 0.7 }}>A minute of low-effort calm, whenever you need it.</p>
+      <h2>🎮 {t("relaxationGames.heading")}</h2>
+      <p style={{ fontSize: 13, opacity: 0.7 }}>{t("relaxationGames.subtitle")}</p>
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
         {GAMES.map((g) => (
           <button
@@ -148,7 +153,7 @@ export default function RelaxationGames() {
               fontWeight: active === g.id ? 700 : 500,
             }}
           >
-            {g.label}
+            {g.emoji} {t(g.labelKey)}
           </button>
         ))}
       </div>

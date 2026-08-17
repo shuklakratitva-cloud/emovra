@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
 export default function Chatbot() {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState([
-    { role: "assistant", text: "Hey - how are you doing today?" },
+    { role: "assistant", text: t("chatbot.greeting") },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,9 +31,9 @@ export default function Chatbot() {
         body: JSON.stringify({ messages: next }),
       });
       const data = await res.json();
-      setMessages((m) => [...m, { role: "assistant", text: data.reply || "I'm here, go on." }]);
+      setMessages((m) => [...m, { role: "assistant", text: data.reply || t("chatbot.fallbackReply") }]);
     } catch {
-      setMessages((m) => [...m, { role: "assistant", text: "Having trouble connecting - try again in a moment?" }]);
+      setMessages((m) => [...m, { role: "assistant", text: t("chatbot.connectionError") }]);
     }
     setLoading(false);
   }
@@ -42,8 +44,8 @@ export default function Chatbot() {
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "20px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px", display: "flex", flexDirection: "column", minHeight: 220, maxHeight: 480 }}>
-      <h2 style={{ margin: 0 }}>💬 Talk to Emovra AI</h2>
-      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Asks follow-up questions to understand you better - not a replacement for a real person or professional.</p>
+      <h2 style={{ margin: 0 }}>{t("chatbot.heading")}</h2>
+      <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>{t("chatbot.subtitle")}</p>
 
       <div style={{ overflowY: "auto", marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
         {messages.map((m, i) => (
@@ -63,7 +65,7 @@ export default function Chatbot() {
         ))}
         {loading && (
           <div style={{ alignSelf: "flex-start", fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>
-            Emovra is typing...
+            {t("chatbot.typing")}
           </div>
         )}
         <div ref={endRef} />
@@ -75,11 +77,11 @@ export default function Chatbot() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
-          placeholder="Type a message..."
+          placeholder={t("chatbot.placeholder")}
           style={{ flex: 1, resize: "none", padding: 10, borderRadius: 12, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", fontFamily: "inherit" }}
         />
         <button onClick={send} disabled={loading || !input.trim()} style={{ background: "#d4b07a", color: "#000", border: "none", padding: "0 20px", borderRadius: 12, fontWeight: 700, cursor: "pointer" }}>
-          Send
+          {t("chatbot.send")}
         </button>
       </div>
     </div>
