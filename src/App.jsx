@@ -41,8 +41,12 @@ export default function App() {
         <Route path="/app" element={<MindGuardApp />} />
 
         {/* NEW: shown right after signup/login (Auth.jsx navigates here),
-            before the person reaches the main app tabs */}
-        <Route path="/dashboard" element={
+            before the person reaches the main app tabs.
+            CHANGED: "/dashboard" -> "/dashboard/*" so Dashboard.jsx can own
+            real sub-routes (/dashboard/mood, /dashboard/rituals, etc) - each
+            sidebar button now opens an actual page with its own URL instead
+            of just flipping internal state. */}
+        <Route path="/dashboard/*" element={
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
