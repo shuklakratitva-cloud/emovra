@@ -73,16 +73,14 @@ app.use(
   })
 );
 
-// FIX: this had no size limit, so it silently fell back to Express's
-// default of 100kb. routes/profile.js accepts background images up to
-// MAX_BACKGROUND_DATA_URI_LENGTH (2,000,000 base64 chars, ~1.5MB of actual
-// image), but any request anywhere near that size was being rejected by
-// THIS middleware - before it ever reached profile.js's own size check -
-// with a 413 that the frontend's fetch calls silently swallowed (see the
-// matching fix in ThemeAvatarSettings.jsx's save()). Avatar uploads mostly
-// "worked" because the frontend resizes those to 160x160 first, keeping
-// them under 100kb by luck; background images and AI-generated images
-// never had that resize step, so they failed close to 100% of the time.
+// FIX: no size limit here meant Express silently fell back to its default
+// of 100kb for every JSON request body. A background image (even resized
+// client-side) is almost always bigger than that, so uploads were being
+// rejected before they ever reached the app's own 2MB check in
+// routes/profile.js - and since the color-extraction preview happens
+// entirely client-side (canvas, no network call), that part always
+// "worked" and looked fine, masking the fact that the actual save never
+// went through. Raised to 3mb, comfortably above the 2MB app-level check.
 app.use(express.json({ limit: "3mb" }));
 
 const analyzeLimiter = rateLimit({
@@ -144,6 +142,16 @@ if (!process.env.GEMINI_API_KEY) {
   console.warn("⚠ GEMINI_API_KEY is missing");
 } else {
   console.log("✅ GEMINI_API_KEY found");
+}
+
+// NEW: same visibility pattern for Groq - this is the fallback
+// classifier used when Gemini is down, previously had no startup check
+// at all, so a missing/invalid key here would fail silently until
+// someone actually hit the fallback path.
+if (!process.env.GROQ_API_KEY) {
+  console.warn("⚠ GROQ_API_KEY is missing - the Gemini-down fallback classifier won't work");
+} else {
+  console.log("✅ GROQ_API_KEY found");
 }
 // FIX (real risk): this used to just warn and silently fall through to a
 // hardcoded, PUBLICLY KNOWN fallback key in utils/crypto.js if this env
