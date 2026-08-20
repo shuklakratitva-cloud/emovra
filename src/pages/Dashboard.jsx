@@ -71,16 +71,19 @@ function authHeaders() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
-const Loader = () => <div style={{ padding: 12, textAlign: "center", color: "var(--text-h)", fontSize: 11 }}>Loading...</div>;
+const Loader = () => {
+  const { t } = useLanguage();
+  return <div style={{ padding: 12, textAlign: "center", color: "var(--text-h)", fontSize: 11 }}>{t("dashboard.loading")}</div>;
+};
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
-  { id: "mood", label: "Mood", icon: Smile },
-  { id: "journal", label: "Journal", icon: BookOpen },
-  { id: "creative", label: "Creative", icon: Palette },
-  { id: "companion", label: "Companion", icon: MessageCircle },
-  { id: "rituals", label: "Rituals", icon: Droplets },
-  { id: "sanctuary", label: "Sanctuary", icon: Trees },
+  { id: "dashboard", labelKey: "nav.dashboard", icon: Home },
+  { id: "mood", labelKey: "nav.mood", icon: Smile },
+  { id: "journal", labelKey: "nav.journal", icon: BookOpen },
+  { id: "creative", labelKey: "nav.creative", icon: Palette },
+  { id: "companion", labelKey: "nav.companion", icon: MessageCircle },
+  { id: "rituals", labelKey: "nav.rituals", icon: Droplets },
+  { id: "sanctuary", labelKey: "nav.sanctuary", icon: Trees },
 ];
 
 export default function Dashboard() {
@@ -142,7 +145,7 @@ export default function Dashboard() {
         }
         await loadQuiet();
       } else {
-        alert(json.message || "Could not claim");
+        alert(json.message || t("dashboard.couldNotClaim"));
       }
     } catch {}
     setClaiming(null);
@@ -159,7 +162,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif" }}>
-        Loading your dashboard...
+        {t("dashboard.loadingDashboard")}
       </div>
     );
   }
@@ -168,7 +171,7 @@ export default function Dashboard() {
   const progressPct = g ? Math.round((g.progress || 0) * 100) : 0;
   const firstName = data?.name ? data.name.split(" ")[0] : "";
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? t("dashboard.greetingMorning") : hour < 18 ? t("dashboard.greetingAfternoon") : t("dashboard.greetingEvening");
   const unclaimedCount = (data?.challenges || []).filter((c) => !c.claimed).length;
   const hasAlert = !!data?.earlyWarning?.triggered;
 
@@ -242,18 +245,18 @@ export default function Dashboard() {
             const Icon = item.icon;
             return (
               <div key={item.id} className={`ev-nav-item${activeId === item.id ? " active" : ""}`} onClick={() => goTo(item.id)}>
-                <Icon size={17} /> {item.label}
+                <Icon size={17} /> {t(item.labelKey)}
               </div>
             );
           })}
           <div className="ev-sidebar-bottom">
             {isAdmin && (
               <div className="ev-nav-item" onClick={() => navigate("/admin")}>
-                <Shield size={17} /> Admin
+                <Shield size={17} /> {t("nav.admin")}
               </div>
             )}
             <div className={`ev-nav-item${activeId === "settings" ? " active" : ""}`} onClick={() => goTo("settings")}>
-              <SettingsIcon size={17} /> Settings
+              <SettingsIcon size={17} /> {t("nav.settings")}
             </div>
           </div>
         </aside>
@@ -272,19 +275,19 @@ export default function Dashboard() {
                 {greeting}{firstName ? `, ${firstName}` : ""}
               </h1>
               {(g?.streakDays || 0) > 0 && (
-                <span className="ev-streak-pill">🔥 {g.streakDays} day streak</span>
+                <span className="ev-streak-pill">🔥 {t("dashboard.dayStreak", { n: g.streakDays })}</span>
               )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <LanguageToggle />
-              <div className="ev-bell" onClick={() => document.getElementById("ev-challenges")?.scrollIntoView({ behavior: "smooth" })} title={unclaimedCount > 0 ? `${unclaimedCount} challenge(s) waiting` : "No new notifications"}>
+              <div className="ev-bell" onClick={() => document.getElementById("ev-challenges")?.scrollIntoView({ behavior: "smooth" })} title={unclaimedCount > 0 ? t("dashboard.challengesWaiting", { n: unclaimedCount }) : t("dashboard.noNewNotifications")}>
                 <Bell size={16} />
                 {(unclaimedCount > 0 || hasAlert) && <span className="ev-dot" />}
               </div>
               <div style={{ display: "flex", gap: -4 }}>
                 <div className="ev-status-dot" style={{ background: "var(--accent)", marginLeft: 0 }} title="Emovra" />
-                <div className="ev-status-dot" style={{ background: allChallengesDone ? "#4ade80" : "rgba(74,222,128,0.25)", marginLeft: -8 }} title={allChallengesDone ? "Today fully checked off" : "Challenges still open today"} />
-                <div className="ev-status-dot" style={{ background: hasAlert ? "#fb923c" : "rgba(251,146,60,0.2)", marginLeft: -8 }} title={hasAlert ? "A gentle check-in nudge is active" : "No active nudges"} />
+                <div className="ev-status-dot" style={{ background: allChallengesDone ? "#4ade80" : "rgba(74,222,128,0.25)", marginLeft: -8 }} title={allChallengesDone ? t("dashboard.todayCheckedOff") : t("dashboard.challengesStillOpen")} />
+                <div className="ev-status-dot" style={{ background: hasAlert ? "#fb923c" : "rgba(251,146,60,0.2)", marginLeft: -8 }} title={hasAlert ? t("dashboard.nudgeActive") : t("dashboard.noActiveNudges")} />
               </div>
             </div>
           </div>
@@ -311,7 +314,7 @@ export default function Dashboard() {
 
               {/* ===== Mood this week ===== */}
               <div className="ev-card">
-                <h3 className="ev-card-title">Mood this week</h3>
+                <h3 className="ev-card-title">{t("dashboard.moodThisWeek")}</h3>
                 <svg viewBox="0 0 620 150" style={{ width: "100%", height: 150, marginTop: 10, overflow: "visible" }}>
                   <defs>
                     <linearGradient id="evMoodFill" x1="0" y1="0" x2="0" y2="1">
@@ -327,7 +330,7 @@ export default function Dashboard() {
                     }));
                     const valid = points.filter((p) => p.y != null);
                     if (valid.length === 0) {
-                      return <text x="310" y="70" textAnchor="middle" fontSize="12" fill="rgba(232,220,198,0.4)">Log a mood check-in to see your week here</text>;
+                      return <text x="310" y="70" textAnchor="middle" fontSize="12" fill="rgba(232,220,198,0.4)">{t("dashboard.logMoodPrompt")}</text>;
                     }
                     let linePath = "", areaPath = "", drawing = false, first = null, last = null;
                     points.forEach((p) => {
@@ -352,27 +355,27 @@ export default function Dashboard() {
               {/* ===== Bento row 1: Sleep / Habits / Pet ===== */}
               <div className="ev-bento-row">
                 <div className="ev-card ev-mini-card" onClick={() => goTo("journal")}>
-                  <h3 className="ev-card-title"><Moon size={14} style={{ verticalAlign: -2, marginRight: 4 }} />Sleep</h3>
+                  <h3 className="ev-card-title"><Moon size={14} style={{ verticalAlign: -2, marginRight: 4 }} />{t("dashboard.sleep")}</h3>
                   <div style={{ marginTop: 8, height: 74, borderRadius: 14, background: "linear-gradient(160deg,#1a1a3a,#2b2350)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Sparkles size={26} color="rgba(212,197,160,0.7)" />
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(232,220,198,0.6)", marginTop: 10 }}>Wind down &amp; log last night →</div>
+                  <div style={{ fontSize: 12, color: "rgba(232,220,198,0.6)", marginTop: 10 }}>{t("dashboard.windDownLink")}</div>
                 </div>
 
                 <div className="ev-card ev-mini-card" onClick={() => goTo("rituals")}>
-                  <h3 className="ev-card-title">Habit tracker</h3>
+                  <h3 className="ev-card-title">{t("dashboard.habitTracker")}</h3>
                   {data?.habits?.count > 0 ? (
                     <div style={{ marginTop: 8, fontSize: 12.5, color: "var(--text)" }}>
-                      🌱 {data.habits.dueToday} of {data.habits.count} due today
+                      🌱 {t("dashboard.dueToday", { due: data.habits.dueToday, count: data.habits.count })}
                     </div>
                   ) : (
-                    <div style={{ marginTop: 8, fontSize: 12.5, color: "rgba(232,220,198,0.5)" }}>No habits yet - tap to add one</div>
+                    <div style={{ marginTop: 8, fontSize: 12.5, color: "rgba(232,220,198,0.5)" }}>{t("dashboard.noHabitsYet")}</div>
                   )}
-                  <div style={{ fontSize: 11, color: "rgba(232,220,198,0.4)", marginTop: 10 }}>Open Rituals →</div>
+                  <div style={{ fontSize: 11, color: "rgba(232,220,198,0.4)", marginTop: 10 }}>{t("dashboard.openRituals")}</div>
                 </div>
 
                 <div className="ev-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <h3 className="ev-card-title" style={{ alignSelf: "flex-start" }}>Virtual companion pet</h3>
+                  <h3 className="ev-card-title" style={{ alignSelf: "flex-start" }}>{t("dashboard.virtualCompanionPet")}</h3>
                   <VirtualPet level={g?.level || 1} xp={g?.xp || 0} />
                 </div>
               </div>
@@ -380,19 +383,19 @@ export default function Dashboard() {
               {/* ===== Bento row 2: Zen Garden / Companion chat / Alert banner ===== */}
               <div className="ev-bento-row">
                 <div className="ev-card ev-mini-card" onClick={() => goTo("sanctuary")}>
-                  <h3 className="ev-card-title">🪨 Zen Garden</h3>
+                  <h3 className="ev-card-title">🪨 {t("dashboard.zenGarden")}</h3>
                   <div style={{ marginTop: 8, height: 74, borderRadius: 14, background: "linear-gradient(160deg,#e8dcc0,#d8c8a0)" }} />
-                  <div style={{ fontSize: 11, color: "rgba(232,220,198,0.4)", marginTop: 10 }}>Open Sanctuary →</div>
+                  <div style={{ fontSize: 11, color: "rgba(232,220,198,0.4)", marginTop: 10 }}>{t("dashboard.openSanctuary")}</div>
                 </div>
 
                 <div className="ev-card" style={{ gridColumn: "span 1", cursor: "pointer" }} onClick={() => goTo("companion")}>
-                  <h3 className="ev-card-title">💬 AI companion chat</h3>
+                  <h3 className="ev-card-title">💬 {t("dashboard.aiCompanionChat")}</h3>
                   <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ alignSelf: "flex-start", background: "rgba(212,197,160,0.1)", border: "1px solid var(--border)", borderRadius: 12, padding: "6px 10px", fontSize: 11.5, maxWidth: "85%" }}>
-                      Hey - how are you doing today?
+                      {t("dashboard.companionGreeting")}
                     </div>
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(232,220,198,0.4)", marginTop: 10 }}>Open Companion →</div>
+                  <div style={{ fontSize: 11, color: "rgba(232,220,198,0.4)", marginTop: 10 }}>{t("dashboard.openCompanion")}</div>
                 </div>
 
                 <div className="ev-card" style={{
@@ -400,10 +403,10 @@ export default function Dashboard() {
                   border: hasAlert ? "1px solid rgba(251,146,60,0.5)" : "1px solid rgba(74,222,128,0.25)",
                 }}>
                   <h3 className="ev-card-title" style={{ color: hasAlert ? "#fff" : "var(--text-h)" }}>
-                    {hasAlert ? "💛 Support notified" : "✅ All clear"}
+                    {hasAlert ? `💛 ${t("dashboard.supportNotified")}` : `✅ ${t("dashboard.allClear")}`}
                   </h3>
                   <p style={{ fontSize: 12, marginTop: 6, lineHeight: 1.5, color: hasAlert ? "rgba(255,255,255,0.9)" : "rgba(232,220,198,0.6)" }}>
-                    {hasAlert ? data.earlyWarning.message : "No active nudges right now."}
+                    {hasAlert ? data.earlyWarning.message : t("dashboard.noActiveNudgesBody")}
                   </p>
                   {hasAlert && (
                     <a href="tel:14416" style={{ display: "inline-block", marginTop: 8, background: "#fff", color: "#7c2d12", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 11, textDecoration: "none" }}>
@@ -446,7 +449,7 @@ export default function Dashboard() {
                       <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ {t("dash.done")}</span>
                     ) : (
                       <button onClick={() => claim(c.id)} disabled={claiming === c.id} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: claiming === c.id ? "default" : "pointer", opacity: claiming === c.id ? 0.7 : 1 }}>
-                        {claiming === c.id ? "Claiming..." : t("dash.claim")}
+                        {claiming === c.id ? t("dashboard.claiming") : t("dash.claim")}
                       </button>
                     )}
                   </div>
@@ -531,7 +534,7 @@ export default function Dashboard() {
             )} />
 
             {/* Unknown /dashboard/* sub-path - fall back to the index instead of a blank page */}
-            <Route path="*" element={<div style={{ padding: 20, color: "var(--muted)", fontSize: 13 }}>Page not found in dashboard.</div>} />
+            <Route path="*" element={<div style={{ padding: 20, color: "var(--muted)", fontSize: 13 }}>{t("dashboard.pageNotFound")}</div>} />
           </Routes>
 
           <Footer />
@@ -549,7 +552,7 @@ export default function Dashboard() {
               fontSize: 9, cursor: "pointer", flexShrink: 0,
             }}>
               <Icon size={16} />
-              {item.label}
+              {t(item.labelKey)}
             </button>
           );
         })}
