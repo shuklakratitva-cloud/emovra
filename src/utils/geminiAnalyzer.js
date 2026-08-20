@@ -1,23 +1,10 @@
-// FIX: this used to fetch("/api/gemini", ...) - a relative path with the
-// wrong route name. Two problems: (1) the backend route is POST /api/chat,
-// not /api/gemini, and (2) a relative fetch hits whatever origin the
-// frontend itself is served from (your Cloudflare Pages domain), not
-// https://emovra.onrender.com - so there was never a matching endpoint to
-// hit either way. This is why Journal's "Gemini AI" always silently fell
-// back to the local keyword checker. Now points at the real backend, same
-// as every other component in this app (VoiceToneAnalyzer.jsx, Auth.jsx, etc).
-
 const API = "https://emovra.onrender.com/api";
-
 export async function analyzeWithGemini(text, toneData = null) {
   const lower = text.toLowerCase().trim();
-
   const violence = ["kill","murder","stab","shoot","hurt him","hurt her","kill him","kill her","want to kill","gonna kill","i will kill","choke","beat him","slit"];
   const abuseList = [
     "fuck","fucking","motherfucker","mf","bitch","bastard","asshole","madarchod","behenchod","bhenchod","chutiya","gandu","lodu","harami","kamine","kutta","kutte","randi","saala","saali","mc","bc","lavde","bsdk","bhadwa","chud","gaand","gand","chut","lund"
   ];
-
-  // 1. VIOLENCE = RED 98
   if (violence.some(k => lower.includes(k))) {
     return {
       level: "RED", riskLevel: "RED", score: 98,
@@ -29,9 +16,7 @@ export async function analyzeWithGemini(text, toneData = null) {
       source: "force-RED-violence"
     };
   }
-
-  // 2. ABUSE = MIN 30 - 65
-  const foundAbuse = abuseList.filter(w => lower.includes(w));
+   const foundAbuse = abuseList.filter(w => lower.includes(w));
   if (foundAbuse.length > 0) {
     try {
       const res = await fetch(`${API}/chat`, {
@@ -46,7 +31,6 @@ export async function analyzeWithGemini(text, toneData = null) {
       if (finalScore >= 70) finalLevel = "RED";
       else if (finalScore >= 45) finalLevel = "ORANGE";
       else finalLevel = "ORANGE";
-
       return {
         level: finalLevel, riskLevel: finalLevel,
         score: finalScore,
@@ -68,9 +52,7 @@ export async function analyzeWithGemini(text, toneData = null) {
       };
     }
   }
-
-  // 3. Normal Gemini
-  try {
+   try {
     const res = await fetch(`${API}/chat`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text, toneData })
