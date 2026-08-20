@@ -1,6 +1,5 @@
 import { ABUSE_PATTERNS } from "../data/keywords";
 import { normalizeText, containsPhrase, getMatches } from "./helpers";
-
 export function detectAbuse(text = "") {
   const normalized = normalizeText(text);
   const lower = normalized.toLowerCase();
@@ -15,10 +14,7 @@ export function detectAbuse(text = "") {
   else if (matches.length === 1) severity = "low";
   return { abuseDetected, severity, matches, count: matches.length, isAbuse: abuseDetected, type: matches[0] || "emotional abuse", keywords: matches };
 }
-
-// single declaration - no duplicate
 export const analyzeAbuse = detectAbuse;
-
 export function detectBullying(t){ return detectAbuse(t).abuseDetected; }
 export function getAbuseMatches(t){ return detectAbuse(t).matches; }
 export function getAbuseSeverity(t){ return detectAbuse(t).severity; }
