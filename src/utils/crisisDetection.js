@@ -9,14 +9,12 @@ const passivePatterns = [
   /sleep forever/i,
   /no reason to live/i
 ];
-
 const directPatterns = [
   /kill myself/i,
   /end my life/i,
   /commit suicide/i,
   /want to die/i
 ];
-
 export function checkCrisis(text) {
   if (!text) return { level: 'none' };
   if (directPatterns.some(p => p.test(text))) return { level: 'high' };
