@@ -1,11 +1,7 @@
-// src/utils/counselor.js - MULTI-EMOTION version
 import { counselingKB } from "../data/counselingKB.js";
-
 export function getCounselingAdvice(userText, dominantEmotion, riskLevel) {
   if (!userText) return [];
   const lower = userText.toLowerCase();
-
-  // Score every technique
   const scored = counselingKB.map(entry => {
     let score = 0;
     let matchedKeywords = [];
@@ -18,10 +14,7 @@ export function getCounselingAdvice(userText, dominantEmotion, riskLevel) {
     if (entry.emotion === dominantEmotion) score += 5;
     return {...entry, score, matchedKeywords };
   }).filter(e => e.score > 0);
-
-  // Sort high to low, take top 3 unique emotions
-  scored.sort((a,b) => b.score - a.score);
-
+    scored.sort((a,b) => b.score - a.score);
   const unique = [];
   const seenEmotion = new Set();
   for (let item of scored) {
@@ -31,24 +24,17 @@ export function getCounselingAdvice(userText, dominantEmotion, riskLevel) {
     }
     if (unique.length >= 3) break;
   }
-
-  // If nothing matched, return stressed as fallback
   if (unique.length === 0) {
     return [counselingKB.find(e => e.emotion === "stressed") || counselingKB[0]];
   }
-
-  // Add RED disclaimer if needed
   if (riskLevel === "RED") {
     return unique.map(u => ({
      ...u,
       disclaimer: "You deserve immediate support. Call 14416. This is educational only, not medical diagnosis."
     }));
   }
-
   return unique;
 }
-
-// For backward compatibility
 export function getTopEmotions(userText) {
   const lower = (userText||"").toLowerCase();
   const counts = {};
