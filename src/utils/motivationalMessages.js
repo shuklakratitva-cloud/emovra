@@ -1,29 +1,10 @@
-// src/utils/motivationalMessages.js
-// Message bank for RiskCard.jsx. The UI never shows raw scores or
-// GREEN/YELLOW/ORANGE/RED badges - detection/encryption/backend saving
-// rules are unchanged, this file only controls what's displayed.
-//
-// Messages try to reference the SPECIFIC thing the person wrote (breakup,
-// exam stress, loneliness, sleep trouble, etc.) via a light trigger-keyword
-// layer, instead of only a generic per-category template.
-//
-// Tone ladder, deliberately:
-//   GREEN  - full hype/celebration energy
-//   YELLOW - warm, caring check-in - not urgent, but not blank positivity either
-//   ORANGE - honest acknowledgment + helpline visible
-//   RED    - direct, warm, never hype - helpline front and center
-// RED/ORANGE never turn into hype copy - acknowledging real pain matters
-// more than cheering, in the moment it's needed most.
-
 function pick(pool) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
-
 function firstName(name) {
   if (!name) return "";
   return String(name).trim().split(" ")[0];
 }
-
 export function getStoredUserName() {
   try {
     const u = JSON.parse(localStorage.getItem("user") || "null");
@@ -32,11 +13,6 @@ export function getStoredUserName() {
     return "";
   }
 }
-
-// Light keyword -> specific-acknowledgment layer. Matched against the
-// combined triggers/reasons array the backend already returns. Kept small
-// and additive - if nothing matches, the category-level message is used
-// as-is, nothing breaks.
 const TRIGGER_PHRASES = {
   breakup: "Breakups are genuinely hard, even when people act like they shouldn't be.",
   lonely: "Loneliness is a real, heavy feeling - not something to brush off.",
@@ -52,7 +28,6 @@ const TRIGGER_PHRASES = {
   stress: "That's a lot of pressure to be sitting with.",
   sad: "It's okay that today feels sad - that's allowed.",
 };
-
 function specificAcknowledgment(triggers = []) {
   const lower = (triggers || []).map((t) => String(t).toLowerCase());
   for (const key of Object.keys(TRIGGER_PHRASES)) {
@@ -60,10 +35,6 @@ function specificAcknowledgment(triggers = []) {
   }
   return null;
 }
-
-// ============================================================
-// GREEN - full hype/celebration energy
-// ============================================================
 const GREEN_BY_EMOTION = {
   happy: (n) => [
     `${n ? n + ", y" : "Y"}ou sound genuinely happy today - love that for you. Keep riding this.`,
@@ -76,81 +47,54 @@ const GREEN_BY_EMOTION = {
     "Calm like this is worth celebrating. Keep it up.",
   ],
   hopeful: (n) => [
-    // FIX: this used to open with "You're on the right path" - the exact
-    // same phrase as the card's static heading right above it, so GREEN +
-    // hopeful rendered as "You're on the right path / You're on the right
-    // path, {name}..." back to back. Read as a glitch/duplicate even
-    // though it was just repetitive copy. Reworded to say something new.
-    `${n ? n + ", th" : "Th"}at spark of hope is worth holding onto - keep going.`,
+     `${n ? n + ", th" : "Th"}at spark of hope is worth holding onto - keep going.`,
     "That's real hope in what you wrote. Hold onto it.",
     "Small steps forward still count as forward. You're doing it.",
   ],
   neutral: (n) => [
-    // FIX: same duplicate-heading issue as hopeful above.
-    `An even day${n ? ", " + n : ""} - nothing urgent, and that's perfectly fine. Keep checking in like this.`,
+       `An even day${n ? ", " + n : ""} - nothing urgent, and that's perfectly fine. Keep checking in like this.`,
     "An ordinary day, logged and taken care of. Nice work showing up for yourself.",
     "Nothing urgent here - just keep doing what you're doing.",
   ],
   default: (n) => [
-    // FIX: same duplicate-heading issue ("on the right track" vs the
-    // heading's "on the right path" - close enough to read as a repeat).
     `Nice and steady${n ? ", " + n : ""} - keep it up, let's go!`,
     "Showing up to write this down is already a win. Congrats on that.",
     "Steady as it goes. You're doing okay - genuinely.",
   ],
 };
-
 export function getGreenMessage(emotion, name) {
   const n = firstName(name || getStoredUserName());
   const key = (emotion || "default").toLowerCase();
   const gen = GREEN_BY_EMOTION[key] || GREEN_BY_EMOTION.default;
   return pick(gen(n));
 }
-
-// Back-compat with the previous round's export name
 export function getMotivationalMessage(emotion) {
   return getGreenMessage(emotion);
 }
-
-// ============================================================
-// YELLOW - warm check-in, not urgent, not blank positivity either
-// (some of your older client-side scoring code - analyzeRisk.js, risk.js -
-// can still emit YELLOW as a mid-tier between GREEN and ORANGE. Previously
-// RiskCard had no YELLOW branch at all, so it silently fell into the RED
-// branch - that's fixed now.)
-// ============================================================
 const YELLOW_MESSAGES = (n) => [
   `Sounds like today's a bit of a mixed one${n ? ", " + n : ""}. Nothing urgent, but worth being gentle with yourself.`,
   `A little heavier than usual today${n ? ", " + n : ""} - that's okay. Small self-care things can help: water, a short walk, a break from your screen.`,
   "Not your easiest day, and that's fine. Keep an eye on how you're doing, and be kind to yourself.",
 ];
-
 export function getYellowMessage({ name, triggers, reasons } = {}) {
   const n = firstName(name || getStoredUserName());
   const base = pick(YELLOW_MESSAGES(n));
   const specific = specificAcknowledgment([...(triggers || []), ...(reasons || [])]);
   return specific ? `${specific} ${base}` : base;
 }
-
-// ============================================================
-// ORANGE - warm but honest, always keeps the helpline visible
-// ============================================================
 const ORANGE_GENERAL = (n) => [
   `Sounds like you're carrying a lot right now${n ? ", " + n : ""}. That's real, and you don't have to sort it out alone - Tele-MANAS (14416) is free and available anytime.`,
   `It's okay to not be okay today${n ? ", " + n : ""}. If it'd help to talk it through with someone, Tele-MANAS: 14416 is there.`,
   "Things feel heavy right now, and that's worth taking seriously. Talking to someone - a friend, or Tele-MANAS at 14416 - can help more than it might seem.",
 ];
-
 const ORANGE_HOME_ABUSE = (n) => [
   `What you described isn't okay${n ? ", " + n : ""}, and it's not your fault. You deserve to feel safe. Tele-MANAS (14416) or Kiran (1800-599-0019) can help you figure out next steps.`,
   "That sounds really hard to carry. Please know you don't have to handle this by yourself - reaching out to Tele-MANAS (14416) is a real option, anytime.",
 ];
-
 const ORANGE_SCHOOL_ABUSE = (n) => [
   `It's painful when words from a teacher hurt like that${n ? ", " + n : ""}. One remark doesn't define your worth. A counselor you trust, or Tele-MANAS (14416), can be a good place to talk this through.`,
   "That kind of public put-down stays with you - it makes sense that it hurts. You're allowed to talk to someone you trust about it, or call Tele-MANAS: 14416.",
 ];
-
 export function getOrangeMessage({ name, category, abuseType, triggers, reasons } = {}) {
   const n = firstName(name || getStoredUserName());
   let base;
@@ -161,20 +105,14 @@ export function getOrangeMessage({ name, category, abuseType, triggers, reasons 
   } else {
     base = pick(ORANGE_GENERAL(n));
   }
-
   const specific = specificAcknowledgment([...(triggers || []), ...(reasons || [])]);
   return specific ? `${specific} ${base}` : base;
 }
-
-// ============================================================
-// RED - warm, direct, never hype - always keeps the helpline front and center
-// ============================================================
 const RED_MESSAGES = (n) => [
   `${n ? n + ", t" : "T"}his sounds really heavy, and I don't want you to carry it alone right now. Please call Tele-MANAS: 14416 - it's free, confidential, and someone is there right now.`,
   `What you wrote matters, and so do you${n ? ", " + n : ""}. Please reach out right now - Tele-MANAS: 14416, or Kiran: 1800-599-0019. You don't have to do this by yourself.`,
   "This is serious, and it's okay to need help with it. Call Tele-MANAS: 14416 right now, or stay with someone you trust until you can.",
 ];
-
 export function getRedMessage({ name } = {}) {
   const n = firstName(name || getStoredUserName());
   return pick(RED_MESSAGES(n));
