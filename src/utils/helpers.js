@@ -1,14 +1,11 @@
-
-// src/utils/helpers.js - FIXED for don't / dont
 export function normalizeText(text=""){
   return (text||"").toLowerCase()
-    .replace(/['’]/g, "")  // don't -> dont, i'd -> id  (remove apostrophe, don't add space)
+    .replace(/['’]/g, "")  
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-
 export function containsPhrase(text, phrases=[]){
   const n = normalizeText(text);
   if(!n) return false;
