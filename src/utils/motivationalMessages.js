@@ -76,17 +76,25 @@ const GREEN_BY_EMOTION = {
     "Calm like this is worth celebrating. Keep it up.",
   ],
   hopeful: (n) => [
-    `You're on the right path, ${n || "champ"}. Keep going - let's go!`,
+    // FIX: this used to open with "You're on the right path" - the exact
+    // same phrase as the card's static heading right above it, so GREEN +
+    // hopeful rendered as "You're on the right path / You're on the right
+    // path, {name}..." back to back. Read as a glitch/duplicate even
+    // though it was just repetitive copy. Reworded to say something new.
+    `${n ? n + ", th" : "Th"}at spark of hope is worth holding onto - keep going.`,
     "That's real hope in what you wrote. Hold onto it.",
     "Small steps forward still count as forward. You're doing it.",
   ],
   neutral: (n) => [
-    `You're on the right path${n ? ", " + n : ""}. Keep checking in like this - it matters.`,
+    // FIX: same duplicate-heading issue as hopeful above.
+    `An even day${n ? ", " + n : ""} - nothing urgent, and that's perfectly fine. Keep checking in like this.`,
     "An ordinary day, logged and taken care of. Nice work showing up for yourself.",
     "Nothing urgent here - just keep doing what you're doing.",
   ],
   default: (n) => [
-    `You're on the right track${n ? ", " + n : ""}. Keep it up - let's go!`,
+    // FIX: same duplicate-heading issue ("on the right track" vs the
+    // heading's "on the right path" - close enough to read as a repeat).
+    `Nice and steady${n ? ", " + n : ""} - keep it up, let's go!`,
     "Showing up to write this down is already a win. Congrats on that.",
     "Steady as it goes. You're doing okay - genuinely.",
   ],
