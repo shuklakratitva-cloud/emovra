@@ -9,7 +9,21 @@ export default defineConfig({
     compression({ algorithm: 'gzip', ext: '.gz', threshold: 1024 }),
     compression({ algorithm: 'brotliCompress', ext: '.br', threshold: 1024 }),
     VitePWA({
+      // Switched from the default 'generateSW' strategy to 'injectManifest'.
+      // With 'generateSW', vite-plugin-pwa writes its own sw.js from
+      // scratch at build time - which silently overwrote public/sw.js
+      // (the hand-written file with the push/notificationclick handlers
+      // push notifications rely on), since both end up at the same output
+      // path. The deployed service worker had no "push" listener at all,
+      // so a subscribed user's push notifications never showed. With
+      // 'injectManifest', vite-plugin-pwa instead takes public/sw.js as
+      // the source, injects the Workbox precache list into it, and keeps
+      // everything else - including the push handlers - intact.
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'robots.txt', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Emovra - Mental Wellness',
@@ -24,15 +38,8 @@ export default defineConfig({
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
         ]
       },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/emovra\.onrender\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'api-cache', expiration: { maxEntries: 50, maxAgeSeconds: 300 } }
-          }
-        ]
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       }
     })
   ],
