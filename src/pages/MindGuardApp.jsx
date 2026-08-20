@@ -28,15 +28,21 @@ const Chatbot = lazy(() => import("../components/Chatbot"));
 
 const API = import.meta.env.VITE_API_URL || "https://emovra.onrender.com/api";
 
-function getAdvice(level, category) {
+// NEW: takes t() as its first arg so the returned advice text matches the
+// active language - this is a module-level function (no component/hook
+// access), so it can't call useLanguage() itself.
+function getAdvice(t, level, category) {
   const lvl = String(level || "").toUpperCase();
-  if (category === "school_emotional_abuse") return "It's painful when words from a teacher hurt in front of class. Your worth isn't defined by one remark. Try 5-4-3-2-1 grounding and consider talking to a counselor you trust. You are not alone. 💛";
-  if (lvl === "GREEN") return "You're in a stable range. Maintain healthy habits. Keep smiling! 😊";
-  if (lvl === "ORANGE" || lvl === "YELLOW") return "Moderate stress detected. Please talk to a trusted friend or counselor. Try Box Breathing 4-4-4-4.";
-  return "You matter. You are not alone. Help is available if you need it.";
+  if (category === "school_emotional_abuse") return t("checkin.adviceSchoolAbuse");
+  if (lvl === "GREEN") return t("checkin.adviceGreen");
+  if (lvl === "ORANGE" || lvl === "YELLOW") return t("checkin.adviceOrange");
+  return t("checkin.adviceDefault");
 }
 
-const Loader = () => <div style={{ padding: 12, textAlign: 'center', color: 'var(--text-h)', fontSize: 11 }}>Loading...</div>;
+const Loader = () => {
+  const { t } = useLanguage();
+  return <div style={{ padding: 12, textAlign: 'center', color: 'var(--text-h)', fontSize: 11 }}>{t("dashboard.loading")}</div>;
+};
 
 // NEW: sections, organized instead of one endless stack of 20 components.
 // Nothing here was removed - everything that used to be on the page still
@@ -52,7 +58,7 @@ const TABS = [
 ];
 
 export default function MindGuardApp() {
-  const { t } = useLanguage(); // NEW
+  const { t, lang } = useLanguage(); // NEW
   const navigate = useNavigate();
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState(null);
@@ -267,9 +273,9 @@ useEffect(() => {
       const forced = {
         riskLevel: "RED", score: 98, emotion: "critical", sentiment: "needs support",
         reasons: isSchoolAbuseLocal? ["teacher_remark","public_shaming"] : isAbuseLocal? ["critical/self-harm detected", "emotional_abuse"] : ["critical/self-harm detected"],
-        advice: getAdvice("RED", cat), isCrisis: true, text: inputText,
+        advice: getAdvice(t, "RED", cat), isCrisis: true, text: inputText,
         timestamp: new Date().toISOString(), id: Date.now(),
-        counseling: getCounselingAdvice(inputText, "critical", "RED"),
+        counseling: getCounselingAdvice(inputText, "critical", "RED", lang),
         topEmotions: getTopEmotions(inputText), voiceTone: voiceData,
         isAI: false, isSafetyNet: true, category: cat, abuseType: cat, abuseSource: isSchoolAbuseLocal?"teacher": isAbuseLocal?"parent":"none"
       };
@@ -286,9 +292,9 @@ useEffect(() => {
     if (redKeys.some(k => lower.includes(k))) {
       const forced = {
         riskLevel: "RED", score: 98, emotion: "critical", sentiment: "needs support",
-        reasons: ["critical/self-harm detected"], advice: getAdvice("RED","self_harm"),
+        reasons: ["critical/self-harm detected"], advice: getAdvice(t, "RED","self_harm"),
         isCrisis: true, text: inputText, timestamp: new Date().toISOString(),
-        id: Date.now(), counseling: getCounselingAdvice(inputText, "critical", "RED"),
+        id: Date.now(), counseling: getCounselingAdvice(inputText, "critical", "RED", lang),
         topEmotions: getTopEmotions(inputText), voiceTone: voiceData, category: "self_harm", abuseType:"none", abuseSource:"none"
       };
       saveAlertToAdmin(inputText, 98, "RED", forced.reasons, "self_harm", "none", "none");
@@ -304,9 +310,9 @@ useEffect(() => {
     if (isSchoolAbuseLocal) {
       const forced = {
         riskLevel: "ORANGE", score: 85, emotion: "humiliated", sentiment: "distressed",
-        reasons: ["teacher_remark","public_shaming"], advice: getAdvice("ORANGE","school_emotional_abuse"),
+        reasons: ["teacher_remark","public_shaming"], advice: getAdvice(t, "ORANGE","school_emotional_abuse"),
         text: inputText, timestamp: new Date().toISOString(), id: Date.now(),
-        counseling: getCounselingAdvice(inputText, "humiliated", "ORANGE"),
+        counseling: getCounselingAdvice(inputText, "humiliated", "ORANGE", lang),
         topEmotions: getTopEmotions(inputText), voiceTone: voiceData,
         isAI: false, isSafetyNet: true, category: "school_emotional_abuse", abuseType:"school_emotional_abuse", abuseSource:"teacher"
       };
@@ -358,7 +364,7 @@ useEffect(() => {
 
         let backendAdvice = data.reply || data.reason || "";
         if (!backendAdvice || backendAdvice.toLowerCase().includes("error")) {
-          backendAdvice = getAdvice(riskUpper, data.category || data.abuseType);
+          backendAdvice = getAdvice(t, riskUpper, data.category || data.abuseType);
         }
 
         result = {
@@ -393,7 +399,7 @@ useEffect(() => {
           emotion: g.emotion || "neutral",
           sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : (g.sentiment || "neutral"),
           reasons: (g.reasons || ["general"]).filter(t=> t!=="error"),
-          advice: g.advice || getAdvice(lvl,"general"),
+          advice: g.advice || getAdvice(t, lvl,"general"),
           source: "gemini-frontend",
           category: "general",
           abuseType: "none",
@@ -407,12 +413,12 @@ useEffect(() => {
         const hasNegative = ["sad", "depressed", "anxious", "alone", "tired", "upset", "angry", "hate", "lonely"].some(w => lower.includes(w));
 
         if (hasPositive &&!hasNegative) {
-          result = { riskLevel: "GREEN", score: 82, emotion: "happy", sentiment: "positive", reasons: ["positive keywords detected"], advice: getAdvice("GREEN","general"), source: "fallback-positive", category: "general", abuseType:"none", abuseSource:"none", confidence: 65 };
+          result = { riskLevel: "GREEN", score: 82, emotion: "happy", sentiment: "positive", reasons: ["positive keywords detected"], advice: getAdvice(t, "GREEN","general"), source: "fallback-positive", category: "general", abuseType:"none", abuseSource:"none", confidence: 65 };
         } else if (hasPositive && hasNegative) {
-          result = { riskLevel: "ORANGE", score: 55, emotion: "mixed", sentiment: "mixed - needs attention", reasons: ["mixed emotions detected"], advice: getAdvice("ORANGE","general"), source: "fallback-mixed", category: "general", abuseType:"none", abuseSource:"none", confidence: 60 };
+          result = { riskLevel: "ORANGE", score: 55, emotion: "mixed", sentiment: "mixed - needs attention", reasons: ["mixed emotions detected"], advice: getAdvice(t, "ORANGE","general"), source: "fallback-mixed", category: "general", abuseType:"none", abuseSource:"none", confidence: 60 };
         } else {
           const lvl = (f.riskLevel || f.level || "ORANGE").toUpperCase();
-          result = {...f, riskLevel: lvl, sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : "positive", reasons:["general"], advice: getAdvice(lvl,"general"), source: "fallback", category: "general", abuseType:"none", abuseSource:"none", confidence: 50 };
+          result = {...f, riskLevel: lvl, sentiment: lvl === "RED"? "needs support" : lvl === "ORANGE"? "distressed" : "positive", reasons:["general"], advice: getAdvice(t, lvl,"general"), source: "fallback", category: "general", abuseType:"none", abuseSource:"none", confidence: 50 };
         }
       }
     }
@@ -427,7 +433,7 @@ useEffect(() => {
 
     const withTime = {
   ...result,
-      counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel),
+      counseling: getCounselingAdvice(inputText, result.emotion, result.riskLevel, lang),
       topEmotions: getTopEmotions(inputText),
       voiceTone: voiceData,
       timestamp: new Date().toISOString(),
@@ -504,7 +510,7 @@ useEffect(() => {
     );
   }
 
-  const advice = analysis?.advice || getAdvice(analysis?.riskLevel, analysis?.category);
+  const advice = analysis?.advice || getAdvice(t, analysis?.riskLevel, analysis?.category);
   const counselingArray = Array.isArray(analysis?.counseling)? analysis.counseling : [];
   const isAdmin = user.role === "admin";
 
@@ -557,16 +563,16 @@ useEffect(() => {
             <>
 
               <div style={{ padding: 20, borderRadius: 16, border: "0.5px solid rgba(212,197,160,0.18)", background: "var(--card-bg)" }}>
-                <h3 style={{ margin: "0 0 12px 0", color:'var(--text)' }}>How are you feeling today?</h3>
-                <textarea rows={5} value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" &&!e.shiftKey) { e.preventDefault(); handleAnalyze(); } }} placeholder="Type what's on your mind..." style={{ width: "100%", padding: 14, borderRadius: 12, border: "0.5px solid rgba(212,197,160,0.18)", background: "#0f0f11", color: "var(--text)", outline:'none' }} />
+                <h3 style={{ margin: "0 0 12px 0", color:'var(--text)' }}>{t("checkin.howAreYouFeeling")}</h3>
+                <textarea rows={5} value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" &&!e.shiftKey) { e.preventDefault(); handleAnalyze(); } }} placeholder={t("checkin.placeholder")} style={{ width: "100%", padding: 14, borderRadius: 12, border: "0.5px solid rgba(212,197,160,0.18)", background: "#0f0f11", color: "var(--text)", outline:'none' }} />
                 <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap:'wrap', alignItems: 'center' }}>
                   <button onClick={handleAnalyze} disabled={loading} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 800, cursor: loading ? 'default' : 'pointer', fontSize:12, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     {loading && <span style={{ width: 12, height: 12, border: "2px solid rgba(0,0,0,0.25)", borderTopColor: "#000", borderRadius: "50%", display: "inline-block", animation: "emovra-spin 0.7s linear infinite" }} />}
-                    {loading? "Analyzing..." : "✨ Analyze"}
+                    {loading? t("checkin.analyzing") : `✨ ${t("checkin.analyze")}`}
                   </button>
-                  {loading && <span style={{ fontSize: 11, opacity: 0.5 }}>This can take up to 15 seconds</span>}
-                  <button onClick={() => (listening? stopListening() : startListening())} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background:'transparent', color:'var(--text-h)', cursor:'pointer', fontSize:12 }}>🎙 {listening? "Stop" : "Speak"}</button>
-                  <button onClick={() => { setInputText(""); setAnalysis(null); }} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(255,255,255,0.12)", background:'transparent', color:'rgba(232,220,198,0.6)', cursor:'pointer', fontSize:12 }}>Clear</button>
+                  {loading && <span style={{ fontSize: 11, opacity: 0.5 }}>{t("checkin.takesTime")}</span>}
+                  <button onClick={() => (listening? stopListening() : startListening())} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background:'transparent', color:'var(--text-h)', cursor:'pointer', fontSize:12 }}>🎙 {listening? t("checkin.stop") : t("checkin.speak")}</button>
+                  <button onClick={() => { setInputText(""); setAnalysis(null); }} style={{ padding: "10px 18px", borderRadius: 999, border: "0.5px solid rgba(255,255,255,0.12)", background:'transparent', color:'rgba(232,220,198,0.6)', cursor:'pointer', fontSize:12 }}>{t("checkin.clear")}</button>
                 </div>
                 {micError && <div style={{ background: "#fee2e2", color: "#991b1b", padding: 8, borderRadius: 8, fontSize: 12, marginTop: 10 }}>{micError}</div>}
               </div>
@@ -586,8 +592,8 @@ useEffect(() => {
                     <RiskCard analysis={analysis} text={analysis.text} userName={user.name} emergencyPhone={user.emergencyPhone} safetyPlan={safetyPlan} />
                     <Suspense fallback={<Loader />}><MoodChart history={history.length? history : [analysis]} /></Suspense>
                   </div>
-                  <div style={{ marginTop: 12, padding: 14, border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 12, background: "rgba(18,18,20,0.9)", color: "var(--text)", fontSize:13 }}><b style={{ color:'var(--text-h)' }}>Advice:</b> {advice}</div>
-                  {counselingArray.length > 0 && (<div style={{ marginTop: 12 }}><h4 style={{ color:'var(--text-h)' }}>Solutions</h4>{counselingArray.map((c, i) => (<div key={i} style={{ padding: 12, border: "0.5px solid rgba(212,197,160,0.15)", background:'rgba(18,18,20,0.9)', borderRadius: 10, marginTop: 8, fontSize:13 }}><b style={{ color:'var(--text-h)' }}>{c.technique}</b><p style={{ margin:'6px 0 0 0', color:'rgba(232,220,198,0.7)' }}>{c.advice}</p></div>))}</div>)}
+                  <div style={{ marginTop: 12, padding: 14, border: "0.5px solid rgba(212,197,160,0.18)", borderRadius: 12, background: "rgba(18,18,20,0.9)", color: "var(--text)", fontSize:13 }}><b style={{ color:'var(--text-h)' }}>{t("checkin.adviceLabel")}</b> {advice}</div>
+                  {counselingArray.length > 0 && (<div style={{ marginTop: 12 }}><h4 style={{ color:'var(--text-h)' }}>{t("checkin.solutions")}</h4>{counselingArray.map((c, i) => (<div key={i} style={{ padding: 12, border: "0.5px solid rgba(212,197,160,0.15)", background:'rgba(18,18,20,0.9)', borderRadius: 10, marginTop: 8, fontSize:13 }}><b style={{ color:'var(--text-h)' }}>{c.technique}</b><p style={{ margin:'6px 0 0 0', color:'rgba(232,220,198,0.7)' }}>{c.advice}</p></div>))}</div>)}
                 </div>
               )}
             </>
@@ -620,7 +626,7 @@ useEffect(() => {
           )}
 
           <div style={{ marginTop: 20, padding: '16px', textAlign: 'center', fontSize: '11px', color: 'rgba(232,220,198,0.4)', borderTop: '0.5px solid rgba(212,197,160,0.12)' }}>
-            <span style={{ color:'var(--text-h)', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span> - Wellness support only • Not a medical diagnosis. Call 14416 in crisis.
+            <span style={{ color:'var(--text-h)', letterSpacing:'0.15em', fontWeight:700 }}>EMOVRA</span> - {t("checkin.footerDisclaimer")}
           </div>
         </main>
         <LegalCookieBanner />
