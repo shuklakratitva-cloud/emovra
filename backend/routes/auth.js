@@ -14,7 +14,7 @@ function signToken(user) {
   return jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: "20d" } // CHANGED: was 7d - longer sessions, fewer re-logins
   );
 }
 
