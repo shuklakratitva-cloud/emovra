@@ -5,7 +5,6 @@ const TYPO_MAP = {
   "worrid":"worried","hopeles":"hopeless","worthles":"worthless",
   "iam":"i am","im":"i am","i m":"i am","i'm":"i am","cant":"can't","dont":"don't"
 };
-
 export function cleanText(raw=''){
   if(!raw) return '';
   let t = raw.toLowerCase().trim();
