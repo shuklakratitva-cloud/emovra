@@ -161,7 +161,7 @@ export default function Dashboard() {
   const allChallengesDone = (data?.challenges?.length || 0) > 0 && unclaimedCount === 0;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", fontFamily: "Inter, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", backgroundImage: "var(--bg-image, none)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed", color: "var(--text)", fontFamily: "Inter, sans-serif" }}>
       <style>{`
         .ev-shell { display: flex; min-height: 100vh; }
         .ev-sidebar {
