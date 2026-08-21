@@ -54,9 +54,6 @@ async function handleSignup(req, res) {
     const hashed = await bcrypt.hash(password, 10);
 
     let role = "user";
-    if (email === "kratitvashukla14@mindguard.local" || email === "kratitvashhukla12@mindguard.local") {
-      role = "admin";
-    }
 
     const user = await User.create({
       name,
