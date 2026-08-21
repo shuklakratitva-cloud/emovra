@@ -489,7 +489,7 @@ useEffect(() => {
         button{font-family:Inter,sans-serif}
       `}</style>
 
-      <div style={{ minHeight:'100vh', background:'var(--bg)', color:'var(--text)' }}>
+      <div style={{ minHeight:'100vh', background:'var(--bg)', backgroundImage:'var(--bg-image, none)', backgroundSize:'cover', backgroundPosition:'center', backgroundAttachment:'fixed', color:'var(--text)' }}>
         <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,12,1)", backdropFilter: "blur(20px)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
           <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "var(--text-h)", letterSpacing:'0.15em', cursor: "pointer" }}>EMOVRA</div>
