@@ -64,7 +64,7 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "3mb" }));
+app.use(express.json({ limit: "4mb" }));
 
 const analyzeLimiter = rateLimit({
   windowMs: 60 * 1000,
