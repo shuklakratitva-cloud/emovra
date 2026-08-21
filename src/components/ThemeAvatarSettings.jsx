@@ -324,22 +324,37 @@ img.src = dataUri;
 }
 
 function handleBgFileUpload(e) {
-const file = e.target.files?.[0];
-if (!file) return;
-setGenError("");
-if (file.size > 6 * 1024 * 1024) {
-setGenError(t("themeAvatarSettings.bgImageTooLarge"));
-return;
+  const file = e.target.files?.[0];
+  if (!file) return;
+  setGenError("");
+  if (file.size > 6 * 1024 * 1024) {
+    setGenError(t("themeAvatarSettings.bgImageTooLarge"));
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1920;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width >= height) { height = Math.round((height / width) * maxDim); width = maxDim; }
+        else { width = Math.round((width / height) * maxDim); height = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      const dataUri = canvas.toDataURL("image/jpeg", 0.82);
+      setBgPreviewImage(dataUri);
+      runExtraction(dataUri);
+    };
+    img.onerror = () => setGenError(t("themeAvatarSettings.bgImageTooLarge"));
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
-const reader = new FileReader();
-reader.onload = () => {
-const dataUri = reader.result;
-setBgPreviewImage(dataUri);
-runExtraction(dataUri);
-};
-reader.readAsDataURL(file);
-}
-
+  
 async function generateBgImage() {
 if (!bgPrompt.trim() || generatingImage) return;
 setGeneratingImage(true);
