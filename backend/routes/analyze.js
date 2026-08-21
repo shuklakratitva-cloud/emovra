@@ -3,6 +3,7 @@ import express from 'express';
 import crypto from 'crypto';
 import Otp from '../models/otp.js';
 import optionalAuth from '../middleware/optionalAuth.js';
+import { protect as auth } from '../middleware/auth.js';
 import { saveAnalysis } from '../utils/saveAnalysis.js';
 import { localRiskFallback } from '../utils/localRiskFallback.js';
 import { alertGeminiDown } from '../utils/alertEmail.js';
@@ -60,7 +61,7 @@ async function tryGroqClassification(text) {
 
 const schoolAbusePatterns = /\b(teacher|sir|ma'?am|madam)\b[^.!?\n]{0,40}\b(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|insult(ed)?|beizzati|daant(a|i)?|target(s|ed)?|shout(s|ed|ing)?|compar(es|ed|ing)|makes? fun|public(ly)?)\b|\b(sabke samne|class me|public(ly)?)\b[^.!?\n]{0,40}\b(daant|beizzati|insult|shame|humiliat)/i;
 
-router.post('/otp/send', async (req, res) => {
+router.post('/otp/send', auth, async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ msg: "Phone required" });
@@ -78,7 +79,7 @@ router.post('/otp/send', async (req, res) => {
   }
 });
 
-router.post('/otp/verify', async (req, res) => {
+router.post('/otp/verify', auth, async (req, res) => {
   try {
     const { phone, otp } = req.body;
 
@@ -98,7 +99,7 @@ router.post('/otp/verify', async (req, res) => {
     try {
       const mongoose = (await import("mongoose")).default;
       if (mongoose.models.User) {
-        await mongoose.models.User.updateOne({ phone }, { $set: { phoneVerified: true, phone } });
+        await mongoose.models.User.updateOne({ _id: req.userId }, { $set: { phoneVerified: true, phone } });
       }
     } catch {}
 
