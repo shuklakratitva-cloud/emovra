@@ -61,5 +61,5 @@ entrySchema.methods.getDecryptedText = function() {
 // number of seconds - no cron job, no manual cleanup script, this just
 // happens on its own once the index exists.
 entrySchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
-
+entrySchema.index({ userId: 1, createdAt: -1 });
 export default mongoose.model("Entry", entrySchema);
