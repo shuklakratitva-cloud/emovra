@@ -121,7 +121,7 @@ router.patch("/settings", auth, async (req, res) => {
     if (birthdayMonth && birthdayMonth >= 1 && birthdayMonth <= 12) update.birthdayMonth = birthdayMonth;
     if (birthdayDay && birthdayDay >= 1 && birthdayDay <= 31) update.birthdayDay = birthdayDay;
 
-    const user = await User.findByIdAndUpdate(req.user.id, update, { new: true })
+      const user = await User.findByIdAndUpdate(req.user.id, update, { returnDocument: "after" })
       .select("themePreference customTheme avatar avatarType avatarImage avatarAccessory backgroundImage level birthdayMonth birthdayDay");
 
     res.json({
