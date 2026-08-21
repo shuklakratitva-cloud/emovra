@@ -1,5 +1,3 @@
-// backend/data/badges.js - badge catalog. Adding a new badge is just
-// adding an entry here + a check in utils/gamification.js.
 export const BADGES = {
   first_entry:   { id: "first_entry",   name: "First Steps",       emoji: "🌱", description: "Wrote your first journal entry" },
   streak_3:      { id: "streak_3",      name: "Building Momentum", emoji: "🔥", description: "3-day check-in streak" },

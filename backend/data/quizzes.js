@@ -1,12 +1,3 @@
-// backend/data/quizzes.js - simple, non-clinical strength/personality quiz.
-// This is NOT a diagnostic instrument - framed purely as a lighthearted,
-// self-reflection prompt, never presented as psychological assessment.
-//
-// _hi fields are the Hindi counterparts of the field with the same name
-// (title/title_hi, text/text_hi, label/label_hi, description/description_hi).
-// The API returns both - the frontend (PersonalityQuiz.jsx) picks whichever
-// matches the active language, falling back to English if a _hi field is
-// ever missing.
 export const STRENGTH_QUIZ = {
   id: "core-strength",
   title: "What's your core strength?",
@@ -82,7 +73,7 @@ export const STRENGTH_QUIZ = {
 };
 
 export function scoreQuiz(answers) {
-  // answers: { q1: "empath", q2: "fixer", ... }
+
   const tally = {};
   Object.values(answers || {}).forEach((key) => { tally[key] = (tally[key] || 0) + 1; });
   let top = "empath", topCount = -1;

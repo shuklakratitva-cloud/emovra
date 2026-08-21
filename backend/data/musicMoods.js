@@ -1,12 +1,3 @@
-// backend/data/musicMoods.js
-// Deliberately NOT hardcoding specific playlist/video IDs (I can't verify a
-// specific track/playlist still exists or is licensed correctly, and
-// copying real song titles/lyrics isn't something this app does anywhere
-// else either). Instead: mood -> a YouTube SEARCH query URL, which is
-// always valid and lets the person pick what actually resonates, plus a
-// fully original, license-free ambient soundscape generator (see
-// frontend MusicTherapy.jsx) built with the Web Audio API - no copyrighted
-// audio involved at all.
 export const MUSIC_MOODS = [
   { mood: "calm",     label: "Calm & Grounded",   emoji: "🌊", query: "calm ambient music for relaxation" },
   { mood: "sad",      label: "Sit With It",        emoji: "🌧", query: "gentle sad piano music for processing emotions" },
