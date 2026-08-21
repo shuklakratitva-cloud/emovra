@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
-
 const API = "https://emovra.onrender.com/api";
-
 export default function PersonalityQuiz() {
   const { t, lang } = useLanguage();
   const isHi = lang === "hi";
@@ -10,11 +8,9 @@ export default function PersonalityQuiz() {
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-
   useEffect(() => {
     fetch(`${API}/quiz/strength`).then((r) => r.json()).then((d) => { if (d.success) setQuiz(d.quiz); });
   }, []);
-
   async function submit() {
     if (!quiz || Object.keys(answers).length < quiz.questions.length) return;
     setLoading(true);
@@ -30,18 +26,14 @@ export default function PersonalityQuiz() {
     } catch {}
     setLoading(false);
   }
-
   function retake() { setResult(null); setAnswers({}); }
-
   const quizTitle = quiz ? (isHi && quiz.title_hi ? quiz.title_hi : quiz.title) : null;
   const resultLabel = result ? (isHi && result.label_hi ? result.label_hi : result.label) : null;
   const resultDescription = result ? (isHi && result.description_hi ? result.description_hi : result.description) : null;
-
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
       <h2 style={{ margin: 0 }}>🧩 {quizTitle || t("personalityQuiz.title")}</h2>
       <p style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>{t("personalityQuiz.subtitle")}</p>
-
       {result ? (
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <div style={{ fontSize: 44 }}>{result.emoji}</div>
