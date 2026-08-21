@@ -1,10 +1,5 @@
 import { useNavigate } from "react-router-dom";
 
-// NEW: replaces the previous behavior of silently redirecting any
-// unmatched URL straight to the homepage with zero explanation - a typo'd
-// link or an old bookmark just looked like nothing happened. This tells
-// the person what happened and gives them a real way back, while keeping
-// crisis resources visible, same principle as ErrorBoundary's fallback.
 export default function NotFound() {
   const navigate = useNavigate();
 

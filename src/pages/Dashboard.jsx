@@ -7,32 +7,10 @@ import {
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import Footer from "../components/Footer.jsx";
-import VirtualPet from "../components/VirtualPet.jsx"; // NEW: tiny, no need to lazy-load
-import GoalReminders from "../components/GoalReminders.jsx"; // NEW: tiny, no need to lazy-load
+import VirtualPet from "../components/VirtualPet.jsx";
+import GoalReminders from "../components/GoalReminders.jsx";
 import { loadMoodHistory } from "../utils/storage.js";
 
-// ============================================================
-// Every component that used to live under the old pill-tab system
-// (SUB_TABS: overview / habits-goals / insights / relax / mind / creative /
-// reflect / settings) is STILL HERE, still lazy-loaded exactly as before.
-// Nothing was deleted - the tabs were just relabeled + regrouped to match
-// the sidebar in the reference design. Mapping, for the record:
-//
-//   dashboard  = overview     (level/xp/streak, bento cards, challenges, badges)
-//   mood       = insights     (MentalHealthInsights, WellnessCalendar, PersonalityQuiz)
-//   journal    = reflect      (Journal, SleepAssistant, SocialSkills, LifeTimeline,
-//                               ScheduledLetters, DailyAffirmation, SafetyPlan)
-//   creative   = creative     (unchanged)
-//   companion  = mind         (CBTTools, MindGames, DigitalTimeMachine) + live Chatbot
-//   rituals    = habits-goals (HabitTracker, GoalPlanner, GoalReminders)
-//   sanctuary  = relax        (RelaxationGames, ZenGarden, MusicTherapy, SelfCareTools)
-//   admin      = links out to the existing /admin route (admins only, same
-//                guard as App.jsx's AdminRoute)
-//
-// Settings (ThemeAvatarSettings) has no slot in the reference design's 8
-// sidebar items, so it got its own small gear icon at the bottom instead
-// of being dropped.
-// ============================================================
 const HabitTracker = lazy(() => import("../components/HabitTracker"));
 const GoalPlanner = lazy(() => import("../components/GoalPlanner"));
 const MentalHealthInsights = lazy(() => import("../components/MentalHealthInsights"));
@@ -57,11 +35,7 @@ const DailyAffirmation = lazy(() => import("../components/DailyAffirmation"));
 const SafetyPlan = lazy(() => import("../components/SafetyPlan"));
 const ComplimentGenerator = lazy(() => import("../components/ComplimentGenerator"));
 const Chatbot = lazy(() => import("../components/Chatbot"));
-// NOTE: Journal.jsx wasn't among the files I was given, so I can't confirm
-// its export shape - it's referenced here on the assumption it lives at
-// src/components/Journal.jsx like everything else. If it actually lives
-// somewhere else, just adjust this one import path (same situation App.jsx
-// already flagged for Admin.jsx).
+
 const Journal = lazy(() => import("../components/Journal"));
 
 const API = "https://emovra.onrender.com/api";
@@ -95,13 +69,6 @@ export default function Dashboard() {
   const [toast, setToast] = useState(null);
   const location = useLocation();
 
-  // Real routes now, not internal state: App.jsx mounts this component at
-  // "/dashboard/*" so each sidebar item is an actual URL - /dashboard/mood,
-  // /dashboard/journal, /dashboard/rituals, etc - rendered below via
-  // <Routes>/<Route>, exactly one at a time. That means: back/forward and
-  // page refresh both work correctly, and every button genuinely opens its
-  // own page inside the dashboard instead of just toggling some state.
-  // activeId is just "which route are we on" for highlighting the sidebar.
   const activeId = location.pathname === "/dashboard" ? "dashboard" : (location.pathname.split("/")[2] || "dashboard");
   const goTo = (id) => navigate(id === "dashboard" ? "/dashboard" : `/dashboard/${id}`);
 
@@ -175,9 +142,6 @@ export default function Dashboard() {
   const unclaimedCount = (data?.challenges || []).filter((c) => !c.claimed).length;
   const hasAlert = !!data?.earlyWarning?.triggered;
 
-  // 7-day mood trend, same real local mood history the Voice & Mood tab
-  // writes to - unchanged data source from the original dashboard, only
-  // the chart rendering below is restyled.
   const MOOD_SCALE = { "Happy": 5, "Calm": 4, "Neutral": 3, "Sad": 2, "Anxious": 2, "Angry": 1, "Lonely": 1, "Overwhelmed": 1, "Don't Know What To Do": 2, "Everything Fell On You At Once": 1 };
   const moodHistory = loadMoodHistory();
   const moodChartData = (() => {
@@ -194,9 +158,6 @@ export default function Dashboard() {
     return days;
   })();
 
-  // Three status dots in the header - real signals, not decoration:
-  // accent = always on (brand), green = today fully checked off, orange = an
-  // early-warning nudge is currently active.
   const allChallengesDone = (data?.challenges?.length || 0) > 0 && unclaimedCount === 0;
 
   return (
@@ -268,8 +229,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ===== Top bar: greeting + streak + bell + status dots ===== */}
-          <div className="ev-topbar">
+                    <div className="ev-topbar">
             <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
               <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>
                 {greeting}{firstName ? `, ${firstName}` : ""}
@@ -295,8 +255,7 @@ export default function Dashboard() {
           <Routes>
             <Route index element={(
             <>
-              {/* Level / XP / streak - unchanged core logic from the original dashboard */}
-              <div className="ev-card" style={{ marginBottom: 14 }}>
+                            <div className="ev-card" style={{ marginBottom: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-h)" }}>{t("dash.level", { n: g?.level || 1 })}</div>
@@ -312,8 +271,7 @@ export default function Dashboard() {
                 <div style={{ fontSize: 10, color: "rgba(232,220,198,0.4)", marginTop: 6 }}>{t("dash.progressToLevel", { pct: progressPct, n: (g?.level || 1) + 1 })}</div>
               </div>
 
-              {/* ===== Mood this week ===== */}
-              <div className="ev-card">
+                            <div className="ev-card">
                 <h3 className="ev-card-title">{t("dashboard.moodThisWeek")}</h3>
                 <svg viewBox="0 0 620 150" style={{ width: "100%", height: 150, marginTop: 10, overflow: "visible" }}>
                   <defs>
@@ -352,8 +310,7 @@ export default function Dashboard() {
                 </svg>
               </div>
 
-              {/* ===== Bento row 1: Sleep / Habits / Pet ===== */}
-              <div className="ev-bento-row">
+                            <div className="ev-bento-row">
                 <div className="ev-card ev-mini-card" onClick={() => goTo("journal")}>
                   <h3 className="ev-card-title"><Moon size={14} style={{ verticalAlign: -2, marginRight: 4 }} />{t("dashboard.sleep")}</h3>
                   <div style={{ marginTop: 8, height: 74, borderRadius: 14, background: "linear-gradient(160deg,#1a1a3a,#2b2350)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -380,8 +337,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* ===== Bento row 2: Zen Garden / Companion chat / Alert banner ===== */}
-              <div className="ev-bento-row">
+                            <div className="ev-bento-row">
                 <div className="ev-card ev-mini-card" onClick={() => goTo("sanctuary")}>
                   <h3 className="ev-card-title">🪨 {t("dashboard.zenGarden")}</h3>
                   <div style={{ marginTop: 8, height: 74, borderRadius: 14, background: "linear-gradient(160deg,#e8dcc0,#d8c8a0)" }} />
@@ -433,8 +389,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Daily challenges - unchanged logic */}
-              <div id="ev-challenges" className="ev-card" style={{ marginTop: 14 }}>
+                            <div id="ev-challenges" className="ev-card" style={{ marginTop: 14 }}>
                 <h3 className="ev-card-title" style={{ marginBottom: 10 }}>🎯 {t("dash.todaysChallenges")}</h3>
                 {data?.challenges?.map((c) => (
                   <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg)", border: "0.5px solid rgba(212,197,160,0.15)", borderRadius: 16, padding: "12px 16px", marginBottom: 8 }}>
@@ -533,16 +488,14 @@ export default function Dashboard() {
               </Suspense>
             )} />
 
-            {/* Unknown /dashboard/* sub-path - fall back to the index instead of a blank page */}
-            <Route path="*" element={<div style={{ padding: 20, color: "var(--muted)", fontSize: 13 }}>{t("dashboard.pageNotFound")}</div>} />
+                        <Route path="*" element={<div style={{ padding: 20, color: "var(--muted)", fontSize: 13 }}>{t("dashboard.pageNotFound")}</div>} />
           </Routes>
 
           <Footer />
         </div>
       </div>
 
-      {/* Mobile fallback nav - sidebar hides under 640px via CSS above */}
-      <div className="ev-mobile-nav">
+            <div className="ev-mobile-nav">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           return (

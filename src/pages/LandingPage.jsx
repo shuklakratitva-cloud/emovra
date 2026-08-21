@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import LegalCookieBanner from "../components/LegalCookieBanner";
-import LanguageToggle from "../components/LanguageToggle"; // NEW
-import { useLanguage } from "../i18n/LanguageContext.jsx"; // NEW
+import LanguageToggle from "../components/LanguageToggle";
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const ZEN_IMAGE = "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=800&auto=format&fit=crop";
 const EMOVRA_LOGO = "/emovra-logo.png";
 
 export default function LandingPage() {
-  const { t, lang } = useLanguage(); // NEW
+  const { t, lang } = useLanguage();
   const goApp = () => (window.location.href = "/app");
   const goTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   const scrollTo = (id) => {

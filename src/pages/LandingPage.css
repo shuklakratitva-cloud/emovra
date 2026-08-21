@@ -1,7 +1,3 @@
-/* -------------------- */
-/* GOOGLE FONT */
-/* -------------------- */
-
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
 
 *{
@@ -20,11 +16,6 @@ body{
     color:white;
 }
 
-
-/* -------------------- */
-/* BACKGROUND */
-/* -------------------- */
-
 .landing{
     min-height:100vh;
     overflow-x:hidden;
@@ -35,9 +26,6 @@ body{
         radial-gradient(circle at 80% 80%,rgba(170,85,255,.18),transparent 35%),
         #090b16;
 }
-
-
-/* Floating blurred circles */
 
 .landing::before{
     content:"";
@@ -64,11 +52,6 @@ body{
     right:-100px;
     bottom:-120px;
 }
-
-
-/* -------------------- */
-/* NAVBAR */
-/* -------------------- */
 
 .navbar{
 
@@ -146,11 +129,6 @@ body{
     box-shadow:0 20px 45px rgba(114,94,255,.5);
 
 }
-
-
-/* -------------------- */
-/* HERO */
-/* -------------------- */
 
 .hero{
 
@@ -282,11 +260,6 @@ body{
 
 }
 
-
-/* -------------------- */
-/* RIGHT IMAGE */
-/* -------------------- */
-
 .right{
 
     flex:1;
@@ -366,11 +339,6 @@ body{
 
 }
 
-
-/* -------------------- */
-/* FEATURES */
-/* -------------------- */
-
 .features{
 
     width:92%;
@@ -427,11 +395,6 @@ body{
     line-height:1.8;
 
 }
-
-
-/* -------------------- */
-/* RESPONSIVE */
-/* -------------------- */
 
 @media(max-width:1000px){
 

@@ -1,9 +1,5 @@
 import { useNavigate } from "react-router-dom";
 
-// NEW: real Terms of Service - Privacy Policy covered what data is
-// collected and how it's handled; this covers the separate question of
-// what using the service actually means - account responsibilities,
-// what Emovra is and isn't, and the basic terms of using it.
 export default function TermsOfService() {
   const navigate = useNavigate();
   const Section = ({ title, children }) => (

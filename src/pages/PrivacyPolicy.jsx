@@ -1,11 +1,5 @@
 import { useNavigate } from "react-router-dom";
 
-// NEW: real, hosted privacy policy page - was previously only a short
-// liability-disclaimer sentence shown in a cookie banner, with no actual
-// standalone page or public URL. Needed for Google OAuth's app publishing
-// step (Google checks for an actual privacy policy URL), and honestly
-// just needed regardless of that - it describes what the app really does
-// with data, not generic boilerplate.
 export default function PrivacyPolicy() {
   const navigate = useNavigate();
   const Section = ({ title, children }) => (

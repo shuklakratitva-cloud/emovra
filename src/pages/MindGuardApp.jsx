@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from "../i18n/LanguageContext.jsx"; // NEW
-import LanguageToggle from "../components/LanguageToggle.jsx"; // NEW
+import { useLanguage } from "../i18n/LanguageContext.jsx";
+import LanguageToggle from "../components/LanguageToggle.jsx";
 import RiskCard from "../components/RiskCard";
 import MoodTracker from "../components/MoodTracker";
 import { getCounselingAdvice, getTopEmotions } from "../utils/counselor.js";
@@ -10,7 +10,7 @@ import useSpeechRecognition from "../hooks/useSpeechRecognition";
 import { analyzeWithGemini } from "../utils/geminiAnalyzer.js";
 import { analyzeRisk } from "../utils/analyzeRisk.js";
 import Auth from "../components/Auth.jsx";
-import OnboardingWalkthrough from "../components/OnboardingWalkthrough.jsx"; // NEW
+import OnboardingWalkthrough from "../components/OnboardingWalkthrough.jsx";
 import LegalCookieBanner from "../components/LegalCookieBanner.jsx";
 import '../App.css';
 
@@ -20,17 +20,10 @@ const GroundingExercises = lazy(() => import("../components/GroundingExercises")
 const TeleManas = lazy(() => import("../components/TeleManas"));
 const VoiceToneAnalyzer = lazy(() => import("../components/VoiceToneAnalyzer.jsx"));
 
-// NEW: this round's features, all lazy-loaded the same way as the rest
-// NEW: only the chatbot lives in the main app now - habit tracker, goals,
-// insights, calendar, sleep, creative corner, music therapy, quiz, and
-// theme settings all moved to Dashboard.jsx per your request.
 const Chatbot = lazy(() => import("../components/Chatbot"));
 
 const API = import.meta.env.VITE_API_URL || "https://emovra.onrender.com/api";
 
-// NEW: takes t() as its first arg so the returned advice text matches the
-// active language - this is a module-level function (no component/hook
-// access), so it can't call useLanguage() itself.
 function getAdvice(t, level, category) {
   const lvl = String(level || "").toUpperCase();
   if (category === "school_emotional_abuse") return t("checkin.adviceSchoolAbuse");
@@ -44,11 +37,6 @@ const Loader = () => {
   return <div style={{ padding: 12, textAlign: 'center', color: 'var(--text-h)', fontSize: 11 }}>{t("dashboard.loading")}</div>;
 };
 
-// NEW: sections, organized instead of one endless stack of 20 components.
-// Nothing here was removed - everything that used to be on the page still
-// is, just grouped under tabs so it's actually navigable.
-// NEW: only the original features + AI chat live here now. Habits &
-// Goals, Insights, Wellness Tools, and Settings moved to Dashboard.jsx.
 const TABS = [
   { id: "checkin", labelKey: "apptab.checkin" },
   { id: "voice-mood", labelKey: "apptab.voiceMood" },
@@ -58,7 +46,7 @@ const TABS = [
 ];
 
 export default function MindGuardApp() {
-  const { t, lang } = useLanguage(); // NEW
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState(null);
@@ -68,19 +56,13 @@ export default function MindGuardApp() {
   });
   const [voiceData, setVoiceData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState("checkin"); // NEW
+  const [tab, setTab] = useState("checkin");
   const [history, setHistory] = useState(() => {
     try {
       const s = localStorage.getItem('emovra_history');
       return s? JSON.parse(s) : [];
     } catch { return []; }
   });
-
-  // --- OTP PHONE VERIFICATION STATES ---
-  // NOTE: phone "Verify Phone Number" OTP state was removed - that
-  // feature never sent real SMS (no gateway wired up), so it wasn't
-  // providing any real verification. See routes/auth.js for the
-  // replacement: forgot-password now uses real email OTP instead.
 
   const token = localStorage.getItem('token');
   const { transcript, listening, error: micError, startListening, stopListening } = useSpeechRecognition();
@@ -171,11 +153,7 @@ useEffect(() => {
   .then(r => { if (!r.ok) throw new Error('no data'); return r.json(); })
   .then(d => {
     if (!Array.isArray(d) || !d.length) return;
-    // Merge server entries (RED/ORANGE only, by design) into the existing
-    // local history instead of replacing it - the local history includes
-    // GREEN/YELLOW moods that were never sent to the server, and blindly
-    // overwriting with server-only data was silently discarding those on
-    // every page load, which is the exact bug this fixes.
+
     setHistory(h => {
       const existingKeys = new Set(h.map(e => `${e.text}|${e.timestamp}`));
       const merged = [...h];
@@ -197,7 +175,7 @@ useEffect(() => {
   }, [history]);
 
   async function saveToBackend(entry) {
-    // PRIVACY: Only RED/ORANGE to backend, GREEN/YELLOW only local
+
     if (entry.riskLevel!== "RED" && entry.riskLevel!== "ORANGE") {
       console.log("Privacy: GREEN not saved to backend, only local");
       return;
@@ -213,7 +191,7 @@ useEffect(() => {
   }
 
   async function saveAlertToAdmin(text, score, riskLevel, reasons, category, abuseType, abuseSource) {
-    // alerts = ONLY emotional abuse in classrooms
+
     if (category!== "school_emotional_abuse") {
       console.log(`Skipped alerts - category is ${category}, only school_emotional_abuse allowed`);
       return;
@@ -260,13 +238,6 @@ useEffect(() => {
     const wantsToDie = lower.includes("i want to die") || lower.includes("mujhe marna hai") || lower.includes("marna hai mujhe");
     const isAbuseLocal = abuseKeys.some(k => lower.includes(k));
     const isSchoolAbuseLocal = schoolAbuseKeys.some(k => rawLower.includes(k)) || /teacher.*(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|beizzati|daanta)/i.test(rawLower);
-
-    // NOTE on the three branches below (wantsToDie / redKeys / isSchoolAbuseLocal):
-    // these are computed entirely client-side and NEVER reach the backend's
-    // /api/analyze (which has its own, server-side saving via saveAnalysis()).
-    // So calling saveToBackend()/saveAlertToAdmin() here is correct and NOT
-    // redundant - this is the only place these particular messages get saved
-    // at all.
 
     if (wantsToDie &&!hasNegation) {
       const cat = isSchoolAbuseLocal? "school_emotional_abuse" : isAbuseLocal? "emotional_abuse" : "self_harm";
@@ -386,10 +357,7 @@ useEffect(() => {
       }
     } catch (e) {
       console.warn("Backend analyze failed:", e.message);
-      // NOTE: everything in this catch block (Gemini-frontend, and the
-      // final keyword fallback) never reached the backend at all, so
-      // alreadySavedServerSide correctly stays false - these DO still need
-      // the explicit saveToBackend()/saveAlertToAdmin() calls below.
+
       try {
         const g = await analyzeWithGemini(inputText, voiceData);
         const lvl = (g.level || "GREEN").toUpperCase();
@@ -423,8 +391,6 @@ useEffect(() => {
       }
     }
 
-    // FIX: only save here when the result did NOT already get saved
-    // server-side inside /api/analyze (see alreadySavedServerSide above).
     if (!alreadySavedServerSide) {
       if (result.riskLevel === "RED" || result.riskLevel === "ORANGE") {
         saveAlertToAdmin(inputText, result.score, result.riskLevel, result.reasons, result.category, result.abuseType, result.abuseSource);
@@ -449,7 +415,7 @@ useEffect(() => {
     });
     try { saveAnalysis(withTime); } catch {}
     if (!alreadySavedServerSide) {
-      saveToBackend(withTime); // FIX: skipped when /api/analyze already saved it
+      saveToBackend(withTime);
     }
     setInputText("");
     setLoading(false);
@@ -528,8 +494,7 @@ useEffect(() => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "14px 20px", maxWidth: 900, margin: "0 auto", borderBottom: "0.5px solid rgba(212,197,160,0.15)" }}>
           <div onClick={() => navigate("/")} style={{ fontWeight: 800, fontSize: 18, color: "var(--text-h)", letterSpacing:'0.15em', cursor: "pointer" }}>EMOVRA</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* NEW: quick link back to the personalized dashboard */}
-            <LanguageToggle style={{ color: "#a78bfa", borderColor: "rgba(167,139,250,0.4)" }} />
+                        <LanguageToggle style={{ color: "#a78bfa", borderColor: "rgba(167,139,250,0.4)" }} />
             <button onClick={() => navigate("/dashboard")} style={{ padding: "6px 12px", borderRadius: 999, border: "0.5px solid rgba(212,197,160,0.3)", background: "transparent", color: "var(--text-h)", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>📊 {t("app.dashboardBtn")}</button>
             {avatarProfile.avatarType === "custom" && avatarProfile.avatarImage
               ? <img src={avatarProfile.avatarImage} alt="avatar" style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }} />
@@ -540,9 +505,7 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* NEW: tab bar - organizes everything that used to be one long
-            stacked page. Nothing below was removed, just grouped. */}
-        <div style={{ maxWidth: 900, margin: "0 auto", padding: "10px 16px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ maxWidth: 900, margin: "0 auto", padding: "10px 16px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
           {TABS.map((tb) => (
             <button key={tb.id} onClick={() => setTab(tb.id)} style={{
               padding: "8px 14px", borderRadius: 999, fontSize: 12, cursor: "pointer",
@@ -579,16 +542,7 @@ useEffect(() => {
 
               {analysis && (
                 <div style={{ marginTop: 16 }}>
-                  {/* FIX: this used to have two entire legacy risk-display
-                      blocks here (one for RED, one for ORANGE) from before
-                      RiskCard.jsx was redesigned - they were never removed,
-                      so they rendered ABOVE the new RiskCard, duplicating
-                      it and leaking raw badge text like "ORANGE - Moderate
-                      Stress" that the redesign was specifically meant to
-                      eliminate. The RED block's SOS-call-your-own-contact
-                      button was real, useful functionality though - moved
-                      into RiskCard.jsx itself instead of deleted. */}
-                  <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:8 }}>
+                                    <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:8 }}>
                     <RiskCard analysis={analysis} text={analysis.text} userName={user.name} emergencyPhone={user.emergencyPhone} safetyPlan={safetyPlan} />
                     <Suspense fallback={<Loader />}><MoodChart history={history.length? history : [analysis]} /></Suspense>
                   </div>

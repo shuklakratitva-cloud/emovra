@@ -5,7 +5,7 @@ export default function Admin() {
   const [reds, setReds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState("all"); // NEW: all | self_harm | emotional_abuse | RED | ORANGE
+  const [filter, setFilter] = useState("all");
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
@@ -64,8 +64,7 @@ export default function Admin() {
       <h1 style={{ color: "#d4c5a0" }}>Admin Panel - {filter === "emotional_abuse" ? "EMOTIONAL ABUSE" : filter === "self_harm" ? "SELF-HARM" : "ALL ALERTS"} ({filteredReds.length})</h1>
       <p style={{ color: "#666" }}>Abuse cases show full message content for review. Regular RED/ORANGE alerts show user info only - message content stays private. Sorted by most recent first.</p>
 
-      {/* === NEW: TABS FOR SEPARATE SECTIONS === */}
-      <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
         <button onClick={() => setFilter("all")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #d4c5a0", background: filter === "all" ? "#d4c5a0" : "transparent", color: filter === "all" ? "#000" : "#d4c5a0", cursor: "pointer", fontWeight: 700 }}>All ({counts.all})</button>
         <button onClick={() => setFilter("self_harm")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #ef4444", background: filter === "self_harm" ? "#ef4444" : "transparent", color: filter === "self_harm" ? "#fff" : "#fca5a5", cursor: "pointer", fontWeight: 700 }}>🚨 Self-Harm ({counts.RED})</button>
         <button onClick={() => setFilter("emotional_abuse")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #fb923c", background: filter === "emotional_abuse" ? "#fb923c" : "transparent", color: filter === "emotional_abuse" ? "#000" : "#fb923c", cursor: "pointer", fontWeight: 700 }}>⚠️ Emotional Abuse ({counts.emotional_abuse})</button>
@@ -89,10 +88,7 @@ export default function Admin() {
         const age = userData.age || entry.age || "";
         const category = entry.category || (triggers.includes("emotional_abuse") ? "emotional_abuse" : "self_harm");
         const riskLevel = (entry.riskLevel || entry.risk || "RED").toUpperCase();
-        // FIX: use the backend's isAbuseCase flag (school_emotional_abuse OR
-        // emoAbuseDetected OR home_abuse) instead of re-deriving it loosely
-        // from category text - matches which entries actually have their
-        // message text decrypted server-side.
+
         const isAbuse = entry.isAbuseCase === true || category === "emotional_abuse";
         const cleanPhoneWA = getCleanPhoneForWhatsApp(phone);
 
@@ -105,7 +101,7 @@ export default function Admin() {
                 <span style={{ background: riskLevel === "RED" ? "#fee2e2" : "#fef3c7", color: riskLevel === "RED" ? "#dc2626" : "#d97706", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: "bold" }}>{riskLevel} - {level}%</span>
               </div>
             </div>
-            
+
             <div style={{ fontSize: 13, color: "#999", marginTop: 4 }}>
               📧 {email} | 🕒 {date} {countryCode ? `| 🌍 ${countryCode}` : ""} | Cat: {category}
             </div>

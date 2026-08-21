@@ -7,7 +7,7 @@ export default function AdminPanel(){
 
   useEffect(()=>{
     const token = localStorage.getItem('token');
-    fetch(`${API}/alerts/all`, { 
+    fetch(`${API}/alerts/all`, {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(r=>r.json())
