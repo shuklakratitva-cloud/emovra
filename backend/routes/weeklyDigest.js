@@ -7,27 +7,6 @@ import { todayIST } from "../utils/istDate.js";
 
 const router = express.Router();
 
-// ============================================================
-// WEEKLY REFLECTION EMAIL
-//
-// IMPORTANT DESIGN DECISION: this email only ever includes privacy-safe
-// AGGREGATE COUNTS - journal entry count, habit completions, streak days,
-// XP. It never includes actual check-in text, mood/emotion labels, or
-// risk level, even in summary form. Email is not a secure-enough channel
-// for anything that sensitive, regardless of how the rest of the app
-// encrypts data at rest.
-//
-// This isn't triggered by Render itself - Render's free tier has no
-// built-in cron scheduler. Instead, this route is meant to be called
-// weekly by a free external cron service (e.g. cron-job.org or
-// UptimeRobot's monitor-as-a-trigger), protected by a shared secret so
-// the public can't trigger it.
-//
-// REQUIRED ENV VAR: CRON_SECRET (any random string you choose - this is
-// NOT a service you sign up for, just a password you invent yourself and
-// put in both Render's env vars and the cron service's request headers).
-// ============================================================
-
 router.post("/send-weekly", async (req, res) => {
   try {
     const providedSecret = req.headers["x-cron-secret"];
@@ -38,7 +17,6 @@ router.post("/send-weekly", async (req, res) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const todayStr = todayIST();
 
-    // Only users who haven't gotten one in the last 7 days
     const users = await User.find({
       $or: [
         { lastWeeklyDigestSent: "" },
@@ -57,7 +35,6 @@ router.post("/send-weekly", async (req, res) => {
       const challengesThisWeek = (user.claimedChallenges || []).filter((c) => new Date(c.claimedAt || c.date) >= sevenDaysAgo).length;
       const habitTotal = habitCompletions[0]?.total || 0;
 
-      // Skip sending to genuinely inactive accounts - a "you did nothing" email helps no one
       if (journalCount === 0 && habitTotal === 0 && challengesThisWeek === 0) {
         continue;
       }

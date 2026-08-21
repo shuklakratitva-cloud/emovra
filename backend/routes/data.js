@@ -5,7 +5,6 @@ import { awardXP } from "../utils/gamification.js";
 
 const router = express.Router();
 
-// Save entry - encrypted + fixed ORANGE/RED logic + emo abuse flag
 router.post('/save', auth, async (req, res) => {
   try {
     const { text, score, emotion, reasons } = req.body;
@@ -21,7 +20,6 @@ router.post('/save', auth, async (req, res) => {
     entry._plainText = text;
     await entry.save();
 
-    // NEW: XP for journaling - first entry ever also unlocks a badge
     const totalEntries = await Entry.countDocuments({ userId: req.user.id });
     const gam = await awardXP(req.user.id, 10, { firstJournalEntry: totalEntries === 1 });
 
@@ -39,7 +37,6 @@ router.post('/save', auth, async (req, res) => {
   }
 });
 
-// User sees ONLY his own entries - decrypted for him (secure because auth)
 router.get('/my', auth, async (req, res) => {
   try {
     const entries = await Entry.find({ userId: req.user.id }).sort({ timestamp: -1 }).limit(50);

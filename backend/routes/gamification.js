@@ -5,7 +5,6 @@ import User from "../models/User.js";
 
 const router = express.Router();
 
-// GET /api/gamification/me - xp/level/streak/badges for the dashboard
 router.get("/me", auth, async (req, res) => {
   try {
     const profile = await getGamificationProfile(req.user.id);
@@ -17,14 +16,9 @@ router.get("/me", auth, async (req, res) => {
   }
 });
 
-// POST /api/gamification/checkin - simple daily "I showed up today" - small
-// XP, mainly exists to bump the streak even on days you don't do anything
-// else trackable.
 router.post("/checkin", auth, async (req, res) => {
   try {
-    // FIX (vulnerability): this had NO guard - calling this endpoint
-    // repeatedly awarded 5 XP every single time, with no limit. Now only
-    // awards once per calendar day, same as it was always intended to.
+
     const today = todayStr();
     const user = await User.findById(req.user.id).select("lastActiveDate xp level streakDays");
     if (user?.lastActiveDate === today) {

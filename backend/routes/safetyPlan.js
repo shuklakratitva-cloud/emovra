@@ -27,7 +27,6 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
-// PUT /api/safety-plan - create or update (one plan per person, upsert)
 router.put("/", auth, async (req, res) => {
   try {
     const { warningSigns, copingStrategies, supportContacts, reasonsToLive } = req.body;

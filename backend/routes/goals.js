@@ -52,8 +52,7 @@ router.post("/:id/milestone/:index/toggle", auth, async (req, res) => {
     } else if (!allDone && goal.completed) {
       goal.completed = false;
       goal.completedAt = null;
-      // NOTE: xpAwarded is deliberately NOT reset here - the XP was earned
-      // and stays earned even if milestones get unchecked later.
+
     }
     await goal.save();
 

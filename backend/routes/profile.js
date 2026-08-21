@@ -8,8 +8,6 @@ const router = express.Router();
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
-// NEW: avatar accessories - unlockable emoji badges based on existing
-// level data, no new progression system needed
 const ACCESSORIES = [
   { emoji: "🎩", minLevel: 3, name: "Top Hat" },
   { emoji: "🕶️", minLevel: 5, name: "Sunglasses" },
@@ -18,21 +16,13 @@ const ACCESSORIES = [
   { emoji: "✨", minLevel: 16, name: "Sparkle" },
 ];
 
-// NEW: max size for an uploaded avatar image, as a base64 data URI string.
-// ~280,000 chars is roughly 200KB of actual image data after base64
-// overhead - plenty for a small square avatar, and keeps User documents
-// well clear of MongoDB's 16MB document limit even with everything else
-// on the User model. The frontend also resizes the image before sending
-// it, so this is a safety net, not the primary size control.
 const MAX_AVATAR_DATA_URI_LENGTH = 280000;
-const MAX_BACKGROUND_DATA_URI_LENGTH = 2000000; // NEW: background images need to be higher-res than a 60px avatar
+const MAX_BACKGROUND_DATA_URI_LENGTH = 2000000;
 
-// GET /api/profile/options - catalogs for the settings screen
 router.get("/options", (req, res) => {
   res.json({ success: true, themes: Object.values(THEMES), avatars: AVATARS, musicMoods: MUSIC_MOODS, accessories: ACCESSORIES });
 });
 
-// GET /api/profile/me - current settings + birthday-today check
 router.get("/me", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("name themePreference customTheme avatar avatarType avatarImage avatarAccessory backgroundImage level birthdayMonth birthdayDay personalityResult");
@@ -63,16 +53,11 @@ router.get("/me", auth, async (req, res) => {
   }
 });
 
-// PATCH /api/profile/settings - update theme/avatar/birthday/custom colors
-// (never touches core account fields like email/password - that stays in
-// routes/auth.js)
 router.patch("/settings", auth, async (req, res) => {
   try {
     const { themePreference, avatar, avatarImage, avatarAccessory, birthdayMonth, birthdayDay, customTheme, backgroundImage, removeBackgroundImage } = req.body;
     const update = {};
 
-    // custom color picker - validates each value is a real hex color
-    // before ever saving it, so a bad value can't corrupt someone's theme.
     if (customTheme && typeof customTheme === "object") {
       const c = {};
       if (customTheme.bg && HEX_RE.test(customTheme.bg)) c.bg = customTheme.bg;
@@ -88,8 +73,6 @@ router.patch("/settings", auth, async (req, res) => {
       update.themePreference = themePreference;
     }
 
-    // NEW: uploaded avatar image - validated as a real image data URI and
-    // capped in size before ever being saved.
     if (avatarImage && typeof avatarImage === "string") {
       const isDataUri = /^data:image\/(png|jpe?g|webp);base64,/.test(avatarImage);
       if (!isDataUri) {
@@ -101,13 +84,11 @@ router.patch("/settings", auth, async (req, res) => {
       update.avatarImage = avatarImage;
       update.avatarType = "custom";
     } else if (avatar && AVATARS.includes(avatar)) {
-      // picking an emoji avatar switches back away from a custom image
+
       update.avatar = avatar;
       update.avatarType = "emoji";
     }
 
-    // NEW: background image - uploaded by the person or AI-generated,
-    // same validation pattern as avatarImage above.
     if (backgroundImage && typeof backgroundImage === "string") {
       const isDataUri = /^data:image\/(png|jpe?g|webp);base64,/.test(backgroundImage);
       if (!isDataUri) {

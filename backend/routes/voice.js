@@ -11,8 +11,6 @@ import { SYSTEM_PROMPT } from "./analyze.js";
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// FIX: was gemini-1.5-flash - a RETIRED model (confirmed 404 in your
-// Render logs). Updated to the current model, see analyze.js for details.
 const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 const VOICE_PROMPT = `
@@ -34,9 +32,6 @@ Rules:
 - happy, fine, okay = GREEN <40
 `;
 
-// Saves (or correctly skips, per the privacy rule) and responds - shared
-// by both the Gemini path and the Groq-fallback path below, so the
-// privacy gate and logging can't drift out of sync between the two.
 async function finishAndRespond(req, res, analysis, source) {
   const riskLevel = String(analysis.riskLevel || "GREEN").toUpperCase();
 
@@ -63,7 +58,6 @@ async function finishAndRespond(req, res, analysis, source) {
 router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
   if (!req.file) return res.status(400).json({ msg: "Audio file required" });
 
-  // TIER 1: Gemini (multimodal - transcribes + classifies in one call)
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
@@ -81,10 +75,6 @@ router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
     console.error("Voice Gemini tier failed, falling back to Groq Whisper:", geminiErr.message);
   }
 
-  // TIER 2: Groq Whisper transcription + Groq text classification - NEW.
-  // Voice analysis previously had zero redundancy (Gemini-only); this
-  // gives it a real fallback using the same free Groq tier the text
-  // pipeline already relies on.
   try {
     const transcript = await transcribeWithGroqWhisper(req.file.buffer, req.file.mimetype);
     if (!transcript) throw new Error("Groq Whisper returned no transcript");
@@ -94,7 +84,6 @@ router.post('/analyze', auth, upload.single('audio'), async (req, res) => {
       return await finishAndRespond(req, res, { ...groqResult, transcript }, "groq-whisper");
     }
 
-    // TIER 3: final-resort local keyword classifier on the Groq transcript
     const fallback = localRiskFallback(transcript);
     return await finishAndRespond(req, res, { ...fallback, transcript }, "local-fallback");
   } catch (fallbackErr) {

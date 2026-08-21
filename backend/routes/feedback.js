@@ -5,13 +5,6 @@ import { sendEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 
-// NEW: in-app feedback/bug reporting. Previously the only way an issue
-// got noticed was a screenshot or catching it directly - this gives any
-// logged-in user a real way to flag something, emailed straight to the
-// developer via the same Resend setup already used for other mail.
-// Deliberately simple: no new database model, no admin UI to build and
-// maintain - just a real, working "send a message" that actually reaches
-// someone, which is the part that matters most.
 router.post("/", auth, async (req, res) => {
   try {
     const { message, page } = req.body;
@@ -33,10 +26,6 @@ router.post("/", auth, async (req, res) => {
       text: `From: ${user.name || "(no name)"} <${user.email}>\nPage: ${page || "(not specified)"}\n\n${message.trim()}`,
     });
 
-    // Even if email sending isn't configured (BREVO_API_KEY missing) or
-    // fails for some reason, still tell the person their feedback was
-    // received rather than showing an error for something outside their
-    // control - it's logged either way, so nothing is silently lost.
     if (!sent) {
       console.log(`[FEEDBACK - email not sent] ${user.email}: ${message.trim()}`);
     }

@@ -6,7 +6,6 @@ import { isAdmin } from "../middleware/isAdmin.js";
 
 const router = express.Router();
 
-// GET /api/admin/reds - Admin sees all RED critical alerts
 router.get("/reds", auth, isAdmin, async (req, res) => {
   try {
     const reds = await Entry.find({
@@ -23,7 +22,7 @@ router.get("/reds", auth, isAdmin, async (req, res) => {
       const obj = e.toObject();
       return {
         _id: obj._id,
-        user: obj.userId, // populated user info
+        user: obj.userId,
         riskLevel: obj.riskLevel,
         score: obj.score,
         emotion: obj.emotion,
@@ -46,21 +45,6 @@ router.get("/reds", auth, isAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/alerts - RED + ORANGE + Abuse - Main admin view of ENTRIES
-// (all RED/ORANGE messages, not just school abuse - matches your requirement
-// that RED/ORANGE always shows user info here, while the separate `alerts`
-// collection stays classroom-abuse-only per the privacy rule)
-//
-// FIX (privacy, per request): message TEXT is now only decrypted and shown
-// for abuse cases (school_emotional_abuse or emoAbuseDetected) - these are
-// the ones that actually need a trusted admin to read the specifics and
-// potentially act. Regular RED/ORANGE entries (someone just going through
-// a hard time, no abuse involved) show user info + risk level + timestamp
-// so you can still see who might need a check-in, but the message content
-// itself stays marked as encrypted/hidden rather than casually readable -
-// there's a real difference between "someone may need support" and "here's
-// exactly what they wrote," and only the abuse case clearly warrants the
-// second one.
 router.get("/alerts", auth, isAdmin, async (req, res) => {
   try {
     const alerts = await Entry.find({
@@ -188,12 +172,5 @@ router.get("/abuse-only", auth, isAdmin, async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 });
-
-// FIX (privacy): /api/admin/users used to return EVERY user's name/email/
-// age/emergency contact, completely unscoped by risk level - the admin
-// frontend never even called it, but it existed and was reachable. Removed
-// entirely. The admin panel is only supposed to surface people who have
-// an actual RED/ORANGE entry, via /alerts and /reds below - never a full
-// user directory.
 
 export default router;

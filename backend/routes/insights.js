@@ -6,8 +6,6 @@ import { toISTDateStr } from "../utils/istDate.js";
 
 const router = express.Router();
 
-// GET /api/insights/summary - the mental health insights dashboard.
-// Framed supportively throughout - this is reflection, not diagnosis.
 router.get("/summary", auth, async (req, res) => {
   try {
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -32,8 +30,8 @@ router.get("/summary", auth, async (req, res) => {
       totalCheckIns: entries.length,
       emotionCounts,
       topEmotion,
-      riskCounts, // note: GREEN entries aren't saved at all per the privacy rule, so this only ever reflects RED/ORANGE history
-      earlyWarning, // null if nothing concerning, otherwise { message, ... } for a supportive banner
+      riskCounts,
+      earlyWarning,
     });
   } catch (err) {
     console.error("Insights error:", err);
@@ -41,13 +39,9 @@ router.get("/summary", auth, async (req, res) => {
   }
 });
 
-// GET /api/insights/calendar?month=2026-07 - monthly wellness calendar:
-// one entry per day that had a saved (RED/ORANGE) entry. Content stays
-// encrypted/private - this only returns counts and risk levels per day,
-// never the actual text.
 router.get("/calendar", auth, async (req, res) => {
   try {
-    const month = req.query.month || new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const month = req.query.month || new Date().toISOString().slice(0, 7);
     const start = new Date(`${month}-01T00:00:00Z`);
     const end = new Date(start);
     end.setUTCMonth(end.getUTCMonth() + 1);

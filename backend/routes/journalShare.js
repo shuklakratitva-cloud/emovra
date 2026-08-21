@@ -8,8 +8,8 @@ import { awardXP } from "../utils/gamification.js";
 const router = express.Router();
 
 function generateInviteCode() {
-  // short, shareable, not easily guessable
-  return crypto.randomBytes(4).toString("hex").toUpperCase(); // e.g. "A1B2C3D4"
+
+  return crypto.randomBytes(4).toString("hex").toUpperCase();
 }
 
 function hasAccess(journal, userId) {
@@ -36,12 +36,11 @@ function serialize(journal) {
   };
 }
 
-// POST /api/journal-share/create - start a new shared journal, get an invite code back
 router.post("/create", auth, async (req, res) => {
   try {
     const { title } = req.body;
     let inviteCode = generateInviteCode();
-    // extremely unlikely, but guard against collision
+
     let existing = await SharedJournal.findOne({ inviteCode });
     while (existing) {
       inviteCode = generateInviteCode();
@@ -56,10 +55,6 @@ router.post("/create", auth, async (req, res) => {
       entries: [],
     });
 
-    // FIX (vulnerability): previously awarded XP on every single call to
-    // this endpoint with no limit - a script could loop this and farm
-    // unlimited XP. Now only pays out for the person's first-ever shared
-    // journal (whether owned or joined).
     const priorCount = await SharedJournal.countDocuments({
       $or: [{ ownerId: req.user.id }, { "collaborators.userId": req.user.id }],
     });
@@ -74,7 +69,6 @@ router.post("/create", auth, async (req, res) => {
   }
 });
 
-// POST /api/journal-share/join - join someone else's journal with their invite code
 router.post("/join", auth, async (req, res) => {
   try {
     const { inviteCode, name } = req.body;
@@ -101,7 +95,6 @@ router.post("/join", auth, async (req, res) => {
   }
 });
 
-// GET /api/journal-share/mine - every shared journal you own or collaborate on
 router.get("/mine", auth, async (req, res) => {
   try {
     const journals = await SharedJournal.find({
@@ -115,7 +108,6 @@ router.get("/mine", auth, async (req, res) => {
   }
 });
 
-// GET /api/journal-share/:id - full thread (owner or collaborator only)
 router.get("/:id", auth, async (req, res) => {
   try {
     const journal = await SharedJournal.findById(req.params.id);
@@ -129,7 +121,6 @@ router.get("/:id", auth, async (req, res) => {
   }
 });
 
-// POST /api/journal-share/:id/entry - add an entry (owner or collaborator only)
 router.post("/:id/entry", auth, async (req, res) => {
   try {
     const { text, authorName } = req.body;
@@ -156,7 +147,6 @@ router.post("/:id/entry", auth, async (req, res) => {
   }
 });
 
-// DELETE /api/journal-share/:id/leave - collaborator leaves (owner cannot leave, only delete - not implemented, keep it simple/safe)
 router.post("/:id/leave", auth, async (req, res) => {
   try {
     const journal = await SharedJournal.findById(req.params.id);

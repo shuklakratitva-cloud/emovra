@@ -12,8 +12,6 @@ import { istDayBounds, toISTDateStr } from "../utils/istDate.js";
 
 const router = express.Router();
 
-// GET /api/challenges/today - today's 3 challenges + which ones this user
-// has already claimed
 router.get("/today", auth, async (req, res) => {
   try {
     const date = todayStr();
@@ -36,10 +34,6 @@ router.get("/today", auth, async (req, res) => {
   }
 });
 
-// FIX: this used to just trust the client and hand out XP for ANY
-// challenge id with no verification the person actually did anything -
-// meaning every challenge was claimable the moment the page loaded. Each
-// challenge type now checks real data for today before allowing the claim.
 async function didComplete(challengeId, userId, date) {
   const { start: startOfDay, end: endOfDay } = istDayBounds(date);
 
@@ -91,8 +85,6 @@ async function didComplete(challengeId, userId, date) {
   }
 }
 
-// POST /api/challenges/:id/claim - claim today's reward, ONLY if the
-// backend can actually verify the underlying action happened today.
 router.post("/:id/claim", auth, async (req, res) => {
   try {
     const date = todayStr();
@@ -101,11 +93,7 @@ router.post("/:id/claim", auth, async (req, res) => {
     if (!challenge) return res.status(400).json({ success: false, message: "Not one of today's challenges" });
 
     const user = await User.findById(req.user.id);
-    // FIX: crashed with "Cannot read properties of null" if the account
-    // was deleted but the browser still had an old, not-yet-expired login
-    // token (deleting an account doesn't invalidate existing JWTs - they
-    // just expire naturally on their own schedule). Now fails clean
-    // instead of crashing the request.
+
     if (!user) {
       return res.status(401).json({ success: false, message: "Your account no longer exists - please log in again." });
     }

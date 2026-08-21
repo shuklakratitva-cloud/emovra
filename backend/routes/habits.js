@@ -38,7 +38,6 @@ router.post("/:id/complete", auth, async (req, res) => {
 
     habit.completions.push(today);
 
-    // streak logic for this specific habit
     const yesterday = toISTDateStr(Date.now() - 86400000);
     if (habit.lastCompletedDate === yesterday) habit.streak += 1;
     else habit.streak = 1;

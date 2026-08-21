@@ -5,8 +5,6 @@ import { chatWithGroq } from "../utils/groqFallback.js";
 
 const router = express.Router();
 
-// FIX: was "gemini-3.5-flash-lite" already here but standardizing explicitly
-// alongside analyze.js/gemini.js/voice.js so all four AI routes agree.
 const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 router.post("/analyze", async (req, res) => {
@@ -62,8 +60,6 @@ router.post("/analyze", async (req, res) => {
         console.error("Gemini analyze failed, trying Groq:", geminiErr.message);
       }
 
-      // NEW: Groq tier - only reached if Gemini failed above. Reuses the
-      // same prompt/schema this route already defines.
       try {
         const raw = await chatWithGroq(prompt, "Respond with the JSON now.");
         if (raw) {
@@ -84,7 +80,6 @@ router.post("/analyze", async (req, res) => {
       }
     }
 
-    // --- Fallback: keyword logic ---
     const low = text.toLowerCase();
     let result = {
       color: "GREEN",

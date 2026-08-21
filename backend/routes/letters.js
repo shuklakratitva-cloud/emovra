@@ -8,10 +8,6 @@ import { todayIST } from "../utils/istDate.js";
 
 const router = express.Router();
 
-// GET /api/letters - your own scheduled letters (not-yet-delivered ones
-// show a locked preview, delivered ones show the full text - this is a
-// "write it and forget it" feature, not something to keep re-reading
-// before its date)
 router.get("/", auth, async (req, res) => {
   try {
     const letters = await ScheduledLetter.find({ userId: req.user.id }).sort({ deliverOn: 1 });
@@ -29,7 +25,6 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
-// POST /api/letters - write one, pick a future date
 router.post("/", auth, async (req, res) => {
   try {
     const { text, deliverOn } = req.body;
@@ -60,9 +55,6 @@ router.delete("/:id", auth, async (req, res) => {
   }
 });
 
-// POST /api/letters/deliver-due - triggered by the same external free
-// cron pattern as the weekly digest / push reminder. Emails any letter
-// whose deliverOn date has arrived, and marks it delivered.
 router.post("/deliver-due", async (req, res) => {
   try {
     const providedSecret = req.headers["x-cron-secret"];

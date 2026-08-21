@@ -12,10 +12,6 @@ import { decrypt } from "../utils/crypto.js";
 
 const router = express.Router();
 
-// GET /api/account/export - everything this account owns, decrypted for
-// its own owner, as a single downloadable JSON file. This is what
-// PrivacyPolicy.jsx promises people can request - now self-serve instead
-// of a manual email.
 router.get("/export", auth, async (req, res) => {
   try {
     const uid = req.user.id;
@@ -56,11 +52,6 @@ router.get("/export", auth, async (req, res) => {
   }
 });
 
-// DELETE /api/account - permanently removes the account and everything it
-// owns. Does NOT remove this person's posts inside a friend's shared
-// journal (that journal belongs to the friend too) - it strips their
-// authorship info from those specific posts instead of deleting a shared
-// space out from under someone else.
 router.delete("/", auth, async (req, res) => {
   try {
     const uid = req.user.id;
@@ -72,11 +63,11 @@ router.delete("/", auth, async (req, res) => {
       Habit.deleteMany({ userId: uid }),
       Goal.deleteMany({ userId: uid }),
       SleepLog.deleteMany({ userId: uid }),
-      SharedJournal.deleteMany({ ownerId: uid }), // journals THEY own get fully removed
+      SharedJournal.deleteMany({ ownerId: uid }),
       SharedJournal.updateMany(
         { "collaborators.userId": uid },
         { $pull: { collaborators: { userId: uid } } }
-      ), // just leave journals owned by someone else
+      ),
     ]);
 
     await User.findByIdAndDelete(uid);

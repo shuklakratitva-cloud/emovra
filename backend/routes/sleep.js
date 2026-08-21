@@ -19,9 +19,6 @@ router.post("/", auth, async (req, res) => {
     const { bedtime, wakeTime, hoursSlept, quality, notes } = req.body;
     const date = todayStr();
 
-    // FIX (vulnerability): check for an existing log BEFORE the upsert -
-    // previously awardXP ran unconditionally on every call, so repeatedly
-    // re-saving/editing today's log farmed unlimited XP.
     const existed = await SleepLog.exists({ userId: req.user.id, date });
 
     const log = await SleepLog.findOneAndUpdate(

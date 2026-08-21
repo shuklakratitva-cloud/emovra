@@ -106,9 +106,7 @@ router.post('/send-verify-otp', async (req, res) => {
 router.post('/verify-phone', async (req, res) => {
   try {
     const { phone, otp } = req.body;
-    // FIX (NoSQL injection): otp previously went straight into the query
-    // with no type check - {"otp": {"$ne": null}} would bypass
-    // verification by matching any existing OTP for the phone.
+
     if (typeof phone !== "string" || typeof otp !== "string" || !phone || !otp) {
       return res.status(400).json({ verified: false, msg: "Phone and OTP required" });
     }

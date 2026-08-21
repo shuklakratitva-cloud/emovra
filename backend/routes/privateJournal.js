@@ -5,12 +5,6 @@ import { encrypt, decrypt } from "../utils/crypto.js";
 
 const router = express.Router();
 
-// IMPORTANT: nothing in this file calls Gemini, Claude, Groq, or the
-// keyword risk-checker, and nothing here writes to Entry/Alert. This is
-// intentionally the one place in the app where what someone writes is
-// never analyzed, categorized, or shown to an admin - only encrypted and
-// stored for the person who wrote it.
-
 function serialize(doc) {
   return {
     _id: doc._id,
@@ -20,7 +14,6 @@ function serialize(doc) {
   };
 }
 
-// GET /api/private-journal - your own entries, decrypted for you only
 router.get("/", auth, async (req, res) => {
   try {
     const entries = await PrivateJournal.find({ userId: req.user.id }).sort({ createdAt: -1 }).limit(200);
@@ -31,7 +24,6 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
-// POST /api/private-journal - save a new entry
 router.post("/", auth, async (req, res) => {
   try {
     const { text } = req.body;
@@ -48,7 +40,6 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-// PATCH /api/private-journal/:id - edit your own entry
 router.patch("/:id", auth, async (req, res) => {
   try {
     const { text } = req.body;
@@ -66,7 +57,6 @@ router.patch("/:id", auth, async (req, res) => {
   }
 });
 
-// DELETE /api/private-journal/:id
 router.delete("/:id", auth, async (req, res) => {
   try {
     await PrivateJournal.deleteOne({ _id: req.params.id, userId: req.user.id });
@@ -76,7 +66,6 @@ router.delete("/:id", auth, async (req, res) => {
   }
 });
 
-// DELETE /api/private-journal - clear all of your own entries
 router.delete("/", auth, async (req, res) => {
   try {
     await PrivateJournal.deleteMany({ userId: req.user.id });

@@ -7,12 +7,10 @@ import { todayIST, toISTDateStr } from "../utils/istDate.js";
 
 const router = express.Router();
 
-// GET /api/quiz/strength - the quiz questions
 router.get("/strength", (req, res) => {
   res.json({ success: true, quiz: { id: STRENGTH_QUIZ.id, title: STRENGTH_QUIZ.title, questions: STRENGTH_QUIZ.questions } });
 });
 
-// POST /api/quiz/strength/submit - { answers: { q1: "empath", ... } }
 router.post("/strength/submit", auth, async (req, res) => {
   try {
     const { answers } = req.body;
@@ -21,9 +19,6 @@ router.post("/strength/submit", auth, async (req, res) => {
     const resultKey = scoreQuiz(answers);
     const result = STRENGTH_QUIZ.results[resultKey];
 
-    // FIX (vulnerability): check BEFORE updating, so repeated submits in
-    // the same day don't farm XP - previously this awarded 10 XP on every
-    // single submit with no limit.
     const existing = await User.findById(req.user.id).select("personalityResult");
     const today = todayIST();
     const alreadyToday = existing?.personalityResult?.takenAt &&

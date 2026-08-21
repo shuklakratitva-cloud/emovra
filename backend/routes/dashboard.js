@@ -12,12 +12,6 @@ import { resolveTheme } from "../data/themes.js";
 
 const router = express.Router();
 
-// GET /api/dashboard - one call for everything the post-login dashboard
-// screen needs: level/xp/streak/badges, today's challenges, habits summary,
-// a preview of the most recent thing a friend wrote in a shared journal,
-// a birthday banner if it's today, and a supportive early-warning nudge if
-// the last week has trended notably worse than the week before (never an
-// automated alert to anyone else - see utils/earlyWarning.js).
 router.get("/", auth, async (req, res) => {
   try {
     const [profile, user, habits, sharedJournals, recentEntries] = await Promise.all([

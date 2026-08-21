@@ -11,20 +11,8 @@ import { classifyWithGroq } from '../utils/groqFallback.js';
 
 const router = express.Router();
 
-// UPDATE (confirmed via your Render logs): the real, root-cause problem
-// this whole time was that "gemini-1.5-flash" is a RETIRED model - every
-// call was getting a 404 "model not found", not a quota error. Standardized
-// on "gemini-3.5-flash-lite" instead - Google's current low-latency,
-// high-volume classification model as of when this was fixed (July 2026).
-// If Gemini calls start failing again in the future, check
-// https://ai.google.dev/gemini-api/docs/changelog first for a newer
-// deprecation before assuming it's a code bug - Google retires models on
-// its own schedule, sometimes with only a few months' notice.
 const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
-// Simple cooldown so a quota outage doesn't retry Gemini on every single
-// request (each one still failing) - after 2 back-to-back failures we stop
-// calling Gemini for 2 minutes and go straight to the local fallback.
 let geminiFailStreak = 0;
 let geminiCooldownUntil = 0;
 
@@ -70,18 +58,8 @@ async function tryGroqClassification(text) {
   return { ...groqResult, isAI: true, source: "groq-fallback" };
 }
 
-// FIX: tightened so "teacher" appearing anywhere far from a demeaning word
-// no longer matches. Requires the demeaning word within ~40 chars of the
-// teacher/sir/ma'am mention, in the same clause. This was previously
-// something like /teacher.*useless|teacher.*fail|.../ which - because `.`
-// matches almost anything - could match "teacher" and "fail" appearing
-// anywhere at all in a long message, even about unrelated things.
 const schoolAbusePatterns = /\b(teacher|sir|ma'?am|madam)\b[^.!?\n]{0,40}\b(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|insult(ed)?|beizzati|daant(a|i)?|target(s|ed)?|shout(s|ed|ing)?|compar(es|ed|ing)|makes? fun|public(ly)?)\b|\b(sabke samne|class me|public(ly)?)\b[^.!?\n]{0,40}\b(daant|beizzati|insult|shame|humiliat)/i;
 
-// --- OTP/TOP VERIFICATION SYSTEM - Random every time ---
-// (Note: routes/otp.js at /api/otp/* is the canonical, hardened OTP flow -
-// this one is kept only for backward compatibility with anything already
-// calling /api/analyze/otp/*.)
 router.post('/otp/send', async (req, res) => {
   try {
     const { phone } = req.body;
@@ -103,11 +81,7 @@ router.post('/otp/send', async (req, res) => {
 router.post('/otp/verify', async (req, res) => {
   try {
     const { phone, otp } = req.body;
-    // FIX (NoSQL injection): phone/otp previously went directly into
-    // Otp.findOne({ phone, otp }) with no type check. Sending
-    // {"otp": {"$ne": null}} instead of a string would make MongoDB treat
-    // it as a query operator - matching ANY existing OTP for that phone,
-    // completely bypassing verification. Reject non-strings outright.
+
     if (typeof phone !== "string" || typeof otp !== "string" || !phone || !otp) {
       return res.status(400).json({ msg: "Phone and OTP required" });
     }
@@ -145,33 +119,12 @@ router.post('/', optionalAuth, async (req, res) => {
 
   const lower = text.toLowerCase();
 
-  // === QUICK SAFETY NETS - NO GEMINI NEEDED ===
-  // NEW: expanded beyond English/Hindi - this instant check is the
-  // fastest, most reliable path in the whole pipeline (runs before any AI
-  // call, works even if both AI providers are down), so it was the one
-  // part of the system with no coverage for the many other languages
-  // spoken across India. Added clear, well-established self-harm phrases
-  // for Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam,
-  // Punjabi, and Urdu - the most widely spoken languages after Hindi.
-  // Honest note: unlike the English/Hindi phrases (refined over real
-  // production testing), these have not been validated against real
-  // usage in each language - worth a native-speaker review before fully
-  // relying on them, same as any safety-critical keyword list should get.
   const isDirectRed = /(mujhe marna hai|i want to die|kill myself|end my life|mar jaunga|mar jaungi|khudkushi karunga|khatam karna hai.*khud ko|நான் செத்துவிட வேண்டும்|எனக்கு சாக வேண்டும்|నేను చావాలి|আমি মরে যেতে চাই|मला मरायचे आहे|મારે મરવું છે|ನಾನು ಸಾಯಬೇಕು|എനിക്ക് മരിക്കണം|ਮੈਂ ਮਰਨਾ ਚਾਹੁੰਦਾ ਹਾਂ|میں مرنا چاہتا ہوں)/i.test(lower);
   const hasNegation = /(nahi|nahin|don't|do not|not|never|matlab nahi)/i.test(lower) &&!lower.includes("nahi jee paunga");
   const isSchoolAbuse = schoolAbusePatterns.test(lower);
   const abusePatterns = /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|toxic relationship|gaslighting|worthless bolta|kutta jaise|blackmail karta|slaps me)/i;
   const isAbuse = abusePatterns.test(lower);
-  // FIX: this used to also match "low", "sad", "upset", and "alone" -
-  // words that show up constantly in completely mundane sentences
-  // ("battery is low", "I was alone at home", "a bit sad about the
-  // movie ending"). Any match here short-circuits straight to a
-  // hardcoded ORANGE 68 WITHOUT ever calling the AI - meaning YELLOW
-  // could never be reached for any message containing these common
-  // words, no matter how mild. Narrowed to genuinely concerning terms
-  // only; milder/ambiguous language now correctly falls through to the
-  // AI, where the YELLOW band actually exists and can be judged with
-  // real context instead of a blunt keyword match.
+
   const isAnxious = /(anxious|anxiety|panic|lonely|akela|depressed|depression|\bstress\b|overwhelm|neend nahi|nervous|scared|worried|tension|bechain)/i.test(lower);
 
   if (isDirectRed &&!hasNegation) {
@@ -201,16 +154,13 @@ router.post('/', optionalAuth, async (req, res) => {
     return res.json({ risk: "ORANGE", score: 68, reason: "Anxiety/distress keyword", triggers, category: "general", abuseType:"none", abuseSource:"none", isAI: false, isSafetyNet: true });
   }
 
-  // === GEMINI ===
   const inCooldown = Date.now() < geminiCooldownUntil;
 
   if (!inCooldown) {
     try {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-      // NEW: self-throttles if near GEMINI_MAX_RPM, retries once for
-      // transient (non-quota) errors before giving up - reduces how often
-      // we fall back without ever removing the fallback itself.
+
       const result = await callGeminiResilient(() =>
         model.generateContent(SYSTEM_PROMPT + "\n\nText: \"" + text + "\"")
       );
@@ -232,7 +182,6 @@ router.post('/', optionalAuth, async (req, res) => {
         return res.json({...parsed, isAI: true });
       }
 
-      // Gemini responded but not with parseable JSON - try Groq before local fallback
       const groqFb1 = await tryGroqClassification(text);
       if (groqFb1) {
         await saveAnalysis({ userId, text, risk: groqFb1.risk, score: groqFb1.score, category: groqFb1.category, abuseType: groqFb1.abuseType, abuseSource: groqFb1.abuseSource, triggers: groqFb1.triggers, phone: userPhone });
@@ -248,16 +197,13 @@ router.post('/', optionalAuth, async (req, res) => {
       const wasSelfThrottled = e.message?.includes("Self-throttled");
       geminiFailStreak += 1;
       if (e.message?.includes("429") || e.message?.toLowerCase().includes("quota")) {
-        geminiCooldownUntil = Date.now() + 2 * 60 * 1000; // 2 min cooldown on quota errors
-        alertGeminiDown(e.message?.slice(0, 200)); // NEW: page the admin instead of taking the site down
+        geminiCooldownUntil = Date.now() + 2 * 60 * 1000;
+        alertGeminiDown(e.message?.slice(0, 200));
       } else if (geminiFailStreak >= 3 && !wasSelfThrottled) {
         geminiCooldownUntil = Date.now() + 60 * 1000;
         alertGeminiDown(e.message?.slice(0, 200));
       }
-      // FIX: this used to unconditionally return { risk: "GREEN", score: 20 }
-      // here, meaning ANY Gemini failure (including the quota-exceeded
-      // errors visible in your Render logs) made every message look safe.
-      // Chain is now: Gemini fails -> try Groq -> only THEN local fallback.
+
       const groqFb2 = await tryGroqClassification(text);
       if (groqFb2) {
         await saveAnalysis({ userId, text, risk: groqFb2.risk, score: groqFb2.score, category: groqFb2.category, abuseType: groqFb2.abuseType, abuseSource: groqFb2.abuseSource, triggers: groqFb2.triggers, phone: userPhone });
@@ -269,9 +215,7 @@ router.post('/', optionalAuth, async (req, res) => {
       return res.json(fb);
     }
   } else {
-    // In cooldown - Gemini is skipped entirely, but Groq is unaffected by
-    // Gemini's cooldown (different provider), so still worth trying before
-    // dropping all the way to the local fallback.
+
     const groqFb3 = await tryGroqClassification(text);
     if (groqFb3) {
       await saveAnalysis({ userId, text, risk: groqFb3.risk, score: groqFb3.score, category: groqFb3.category, abuseType: groqFb3.abuseType, abuseSource: groqFb3.abuseSource, triggers: groqFb3.triggers, phone: userPhone });

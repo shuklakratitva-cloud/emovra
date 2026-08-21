@@ -14,7 +14,7 @@ function signToken(user) {
   return jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: "20d" } // CHANGED: was 7d - longer sessions, fewer re-logins
+    { expiresIn: "20d" }
   );
 }
 
@@ -42,12 +42,7 @@ async function handleSignup(req, res) {
     if (!emergencyPhone) {
       return res.status(400).json({ msg: "Emergency phone is compulsory" });
     }
-    // FIX: was only checking "is this 7-15 digits" - now validates against
-    // real phone number patterns for the selected country (catches things
-    // like "1234567890" or a number with the wrong length for that
-    // country's format). Doesn't confirm the number is real/reachable -
-    // that needs actual SMS/call verification, see the note at the top of
-    // this file's Google Sign-In section for why that's not built here.
+
     const cleanEmergencyPhone = emergencyPhone.replace(/\D/g, "");
     if (!isPlausiblePhoneNumber(countryCode, cleanEmergencyPhone)) {
       return res.status(400).json({ msg: "That doesn't look like a valid phone number for the selected country - please double check it." });
@@ -87,12 +82,6 @@ async function handleSignup(req, res) {
     const token = signToken(user);
     res.status(201).json({ token, user: publicUser(user) });
 
-    // NEW: fire off an email verification code, best-effort. Deliberately
-    // AFTER the response is already sent - signup succeeds regardless of
-    // whether this email goes through, given the real-world email
-    // deliverability issues already hit during development (self-send
-    // blocking, missing env vars, etc.) - verification is soft, not a
-    // gate on using the app.
     (async () => {
       try {
         const verifyOtp = crypto.randomInt(100000, 999999).toString();
@@ -141,18 +130,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ============================================================
-// GOOGLE SIGN-IN
-// Doubles as an account-recovery path: if you forget your password but
-// your account email matches a Google account, you can sign in via Google
-// instead of resetting anything. Also works for brand-new signups.
-//
-// REQUIRED ENV VAR: GOOGLE_CLIENT_ID (free - create at
-// https://console.cloud.google.com/apis/credentials, "OAuth client ID",
-// type "Web application". No billing/payment step involved at all - this
-// is a different, free part of Google Cloud Console from the Gemini API
-// billing screen.)
-// ============================================================
 const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
 router.post("/google", async (req, res) => {
@@ -182,7 +159,7 @@ router.post("/google", async (req, res) => {
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
 
     if (user) {
-      // existing account - link the Google id if not already linked, then log in
+
       if (!user.googleId) {
         user.googleId = googleId;
         await user.save();
@@ -191,10 +168,6 @@ router.post("/google", async (req, res) => {
       return res.json({ token, user: publicUser(user) });
     }
 
-    // No account yet. Google only gives us name/email - this app requires
-    // age + emergency contact for its safety features, so if those weren't
-    // sent, ask the frontend to collect them and resubmit with the SAME
-    // credential rather than creating an incomplete account.
     if (!age || !emergencyPhone) {
       return res.json({
         success: true,
@@ -208,18 +181,12 @@ router.post("/google", async (req, res) => {
       return res.status(400).json({ msg: "You must accept Privacy Policy and Terms" });
     }
 
-    // FIX: same real phone format validation as regular signup - was
-    // completely unvalidated here before.
     const cleanEmergencyPhone = String(emergencyPhone).replace(/\D/g, "");
     const googleCountryCode = countryCode?.trim() || "+91";
     if (!isPlausiblePhoneNumber(googleCountryCode, cleanEmergencyPhone)) {
       return res.status(400).json({ msg: "That doesn't look like a valid phone number for the selected country - please double check it." });
     }
 
-    // Google-only accounts still need SOME password on the schema - a
-    // long random one that's never shown or used, since login always goes
-    // through Google for this account (they can also set a real one later
-    // via forgot-password if they ever want a password login too).
     const randomPassword = crypto.randomBytes(32).toString("hex");
     const hashed = await bcrypt.hash(randomPassword, 10);
 
@@ -253,24 +220,6 @@ router.post("/google", async (req, res) => {
   }
 });
 
-// ============================================================
-// FORGOT PASSWORD - now via EMAIL OTP, not phone.
-//
-// FIX: phone-based OTP (the old /send-verify-otp, /verify-phone,
-// /forgot-password/* routes) never actually sent a real SMS - there's no
-// SMS gateway wired up (that needs a paid provider + DLT registration for
-// Indian numbers, a real regulatory hurdle, not something this codebase
-// can route around). Every "OTP sent" response was just the code being
-// echoed back in the API response, and the phone "Verify Phone Number"
-// card never provided any real verification. That phone-verification UI
-// has been removed from the frontend.
-//
-// Password reset specifically has been rebuilt around EMAIL OTP instead,
-// using the same free Gmail-based sending already built for the
-// Gemini-down admin alert (utils/mailer.js). This is genuinely delivered,
-// not just logged/echoed.
-// ============================================================
-
 router.post('/forgot-password/send', async (req, res) => {
   try {
     const { email } = req.body;
@@ -280,8 +229,7 @@ router.post('/forgot-password/send', async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
 
     const user = await User.findOne({ email: cleanEmail });
-    // Don't reveal whether an account exists - same response either way,
-    // avoids leaking which emails are registered.
+
     if (!user) {
       return res.json({ success: true, message: "If an account exists for that email, a code has been sent." });
     }
@@ -301,10 +249,6 @@ router.post('/forgot-password/send', async (req, res) => {
       return res.json({ success: true, message: "If an account exists for that email, a code has been sent." });
     }
 
-    // Mailer isn't configured (EMAIL_USER/EMAIL_APP_PASSWORD unset) -
-    // fall back to returning the code directly so this still works during
-    // setup/testing, same safety net pattern as the rest of this app's AI
-    // fallbacks. Clearly logged so it's obvious this is the degraded path.
     console.warn(`[RESET-OTP-EMAIL] Mailer not configured - returning code in response for ${cleanEmail}: ${otp}`);
     return res.json({ success: true, message: "Email sending isn't configured yet - here's your code directly.", otp, devMode: true });
 
@@ -347,13 +291,6 @@ router.post('/forgot-password/reset', async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 });
-
-// ============================================================
-// EMAIL VERIFICATION - soft verification, doesn't block login/signup.
-// Fired automatically on signup (see handleSignup above); these two
-// routes let the frontend resend the code and confirm it. Uses the same
-// email infra as forgot-password (utils/mailer.js).
-// ============================================================
 
 router.post('/verify-email/send', async (req, res) => {
   try {

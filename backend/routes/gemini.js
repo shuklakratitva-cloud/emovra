@@ -8,16 +8,8 @@ import { callGeminiResilient } from "../utils/geminiThrottle.js";
 
 const router = express.Router();
 
-// Standardized model - was gemini-1.5-flash, which turned out to be a
-// RETIRED model (404 on every call, confirmed via Render logs). See
-// analyze.js for the full note.
 const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
-// --- CHAT ROUTE ---
-// This is the endpoint the frontend's Journal (via utils/geminiAnalyzer.js)
-// should call. NOTE: the frontend was previously calling the relative path
-// "/api/gemini" - this route is mounted at POST /api/chat, so it always
-// 404'd. See the frontend fix notes for geminiAnalyzer.js.
 router.post('/chat', optionalAuth, async (req, res) => {
   try {
     const { message, userId: bodyUserId } = req.body;
@@ -108,7 +100,7 @@ IMPORTANT: reply must be warm, supportive, wellness only, not medical diagnosis.
     // threw on every single call and was silently swallowed. It also saved
     // every RED/ORANGE to `alerts`, not just school abuse, contradicting
     // the "alerts = classroom abuse only" rule. saveAnalysis() now handles
-    // both correctly and consistently with analyze.js.
+
     await saveAnalysis({
       userId,
       text: message,

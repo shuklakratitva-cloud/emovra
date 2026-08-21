@@ -28,11 +28,6 @@ Rules:
   Tele-MANAS (14416) - but keep it natural, not a canned disclaimer.
 `;
 
-// NEW: relationship/social-skills coach mode - used by the Relationship
-// Chat feature (replaced the old static tip list in what used to be
-// SocialSkills.jsx). Same safety net, same Groq/Gemini fallback chain,
-// just a different system prompt - reuses all the existing chatbot
-// infrastructure instead of duplicating it.
 const RELATIONSHIP_SYSTEM_PROMPT = `
 You are Emovra AI, talking to someone about a real situation - a
 friendship, family relationship, or romantic relationship - and helping
@@ -88,15 +83,9 @@ Rules:
   adult - don't just treat it as a normal relationship disagreement.
 `;
 
-// This route ALSO silently runs the same keyword-based risk check every
-// other entry point in this app uses (see utils/localRiskFallback.js), and
-// saves RED/ORANGE the same way analyze.js does. Without this, a chatbot
-// conversation would be a blind spot where someone could disclose something
-// serious and it would never reach the crisis-detection pipeline at all -
-// that's not acceptable for this app, chatbot or not.
 router.post("/", optionalAuth, async (req, res) => {
   try {
-    const { messages, mode } = req.body; // mode: undefined (default) | "relationship"
+    const { messages, mode } = req.body;
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ success: false, message: "messages array required" });
     }
@@ -105,8 +94,6 @@ router.post("/", optionalAuth, async (req, res) => {
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     const userId = req.user?.id || req.body.userId || "anonymous";
 
-    // 1. Safety net - runs on every message, regardless of what the
-    // conversational reply below says.
     if (lastUserMsg?.text) {
       const risk = localRiskFallback(lastUserMsg.text);
       if (risk.risk === "RED" || risk.risk === "ORANGE") {
@@ -123,12 +110,9 @@ router.post("/", optionalAuth, async (req, res) => {
       }
     }
 
-    // 2. Conversational reply - Groq first (free, fast), Gemini as backup
-    // if Groq fails or isn't configured, generic supportive line only if
-    // both are unavailable.
     let reply = "I'm here. Tell me a bit more about what's going on?";
     const transcript = messages
-      .slice(-10) // keep prompt small
+      .slice(-10)
       .map((m) => `${m.role === "user" ? "Person" : "Emovra"}: ${m.text}`)
       .join("\n");
 
@@ -140,7 +124,6 @@ router.post("/", optionalAuth, async (req, res) => {
       gotReply = true;
     }
 
-    // Gemini backup - only tried when Groq failed or GROQ_API_KEY isn't set.
     if (!gotReply && process.env.GEMINI_API_KEY) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -157,8 +140,6 @@ router.post("/", optionalAuth, async (req, res) => {
       reply = "I'm having a little trouble thinking right now, but I'm still here - go on, I'm listening.";
     }
 
-    // 3. XP for a real conversation (awarded once, right as it crosses the
-    // threshold - not every message).
     const userTurns = messages.filter((m) => m.role === "user").length;
     let gam = null;
     if (req.user?.id && userTurns === 3) {
