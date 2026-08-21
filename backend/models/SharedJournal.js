@@ -1,11 +1,5 @@
 import mongoose from "mongoose";
 
-// Deliberately separate from models/Entry.js - that collection exists for
-// the private, AI-risk-classified, self-harm/abuse detection pipeline.
-// A shared journal is a different thing: the person explicitly invites
-// someone else to read/write in it, so it should never be mixed with the
-// crisis-detection data model.
-
 const sharedJournalEntrySchema = new mongoose.Schema({
   authorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   authorName: { type: String, default: "" },

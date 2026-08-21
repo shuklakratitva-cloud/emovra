@@ -7,7 +7,7 @@ const habitSchema = new mongoose.Schema({
   streak: { type: Number, default: 0 },
   longestStreak: { type: Number, default: 0 },
   lastCompletedDate: { type: String, default: "" }, // "YYYY-MM-DD"
-  completions: [{ type: String }], // array of "YYYY-MM-DD" dates completed
+  completions: [{ type: String }],
   archived: { type: Boolean, default: false },
 }, { timestamps: true });
 

@@ -10,7 +10,7 @@ const goalSchema = new mongoose.Schema({
   }],
   completed: { type: Boolean, default: false },
   completedAt: { type: Date, default: null },
-  xpAwarded: { type: Boolean, default: false }, // NEW: set once, never reset - prevents re-farming XP by un-completing and re-completing a goal
+  xpAwarded: { type: Boolean, default: false },
 }, { timestamps: true });
 
 export default mongoose.model("Goal", goalSchema);

@@ -1,14 +1,12 @@
 import mongoose from "mongoose";
 import { encrypt, decrypt } from "../utils/crypto.js";
 
-// re-export so existing imports like `import Entry, { decrypt } from "../models/Entry.js"` keep working
 export { encrypt, decrypt };
 
 const entrySchema = new mongoose.Schema({
-  // Real logged-in user, when available. Optional now - AI-classification
-  // calls (analyze.js/gemini.js) aren't always authenticated.
+
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false, default: null },
-  // Fallback label (e.g. "anonymous" or an email) when there's no real user id.
+
   anonId: { type: String, default: "" },
 
   text_encrypted: { type: String, default: "" },
@@ -32,21 +30,12 @@ const entrySchema = new mongoose.Schema({
   collection: 'entries'
 });
 
-// Virtual field to hold plain text temporarily (won't be saved to DB) -
-// used by the manual journal-save flow (data.js / voice.js), which sets
-// entry._plainText = text before calling .save().
 entrySchema.virtual('_plainText').get(function() {
   return this.__plainText;
 }).set(function(v) {
   this.__plainText = v;
 });
 
-// Pre-save: ONLY runs the auto-detect logic when raw plaintext was actually
-// provided via the virtual (the manual-save flow). The AI-classification
-// flow (saveAnalysis.js) already computes riskLevel/emoAbuseDetected/etc
-// itself and passes text_encrypted directly - this used to get silently
-// overwritten by this hook recalculating against an empty string. Guarding
-// on `raw` fixes that.
 entrySchema.pre('save', function() {
   const raw = this.__plainText || this._plainText || "";
 
