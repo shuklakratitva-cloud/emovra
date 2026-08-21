@@ -192,11 +192,11 @@ export default function Dashboard() {
         @media (max-width: 980px) { .ev-bento-row { grid-template-columns: 1fr 1fr; } }
         @media (max-width: 640px) {
           .ev-sidebar { display: none; }
-          .ev-main { padding: 18px 14px 100px; }
+          .ev-main { padding: 18px 14px 120px; }
           .ev-bento-row { grid-template-columns: 1fr; }
           .ev-mobile-nav { display: flex !important; }
         }
-        .ev-mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-top: 0.5px solid rgba(212,197,160,0.18); padding: 8px 6px; justify-content: space-between; z-index: 50; overflow-x: auto; }
+        .ev-mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-top: 0.5px solid rgba(212,197,160,0.18); padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); justify-content: space-between; z-index: 50; overflow-x: auto; }
       `}</style>
 
       <div className="ev-shell">
@@ -240,6 +240,9 @@ export default function Dashboard() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <LanguageToggle />
+            <div className="ev-bell" onClick={() => goTo("settings")} title={t("nav.settings")}>
+              <SettingsIcon size={16} />
+            </div>
               <div className="ev-bell" onClick={() => document.getElementById("ev-challenges")?.scrollIntoView({ behavior: "smooth" })} title={unclaimedCount > 0 ? t("dashboard.challengesWaiting", { n: unclaimedCount }) : t("dashboard.noNewNotifications")}>
                 <Bell size={16} />
                 {(unclaimedCount > 0 || hasAlert) && <span className="ev-dot" />}
