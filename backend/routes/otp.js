@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import Otp from '../models/otp.js';
 import mongoose from 'mongoose';
+import { protect as auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ const getUserModel = () => {
   catch { return null; }
 }
 
-router.post('/send', async (req, res) => {
+router.post('/send', auth, async (req, res) => {
   try {
     const { phone, purpose } = req.body;
     const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
@@ -37,7 +38,7 @@ router.post('/send', async (req, res) => {
   }
 });
 
-router.post('/resend', async (req, res) => {
+router.post('/resend', auth, async (req, res) => {
   try {
     const { phone, purpose } = req.body;
     const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
@@ -53,9 +54,9 @@ router.post('/resend', async (req, res) => {
   }
 });
 
-router.post('/verify', async (req, res) => {
+router.post('/verify', auth, async (req, res) => {
   try {
-    const { phone, otp, purpose, email, userId } = req.body;
+    const { phone, otp, purpose } = req.body;
     const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
     if (!cleanPhone || !otp) return res.status(400).json({ verified: false, msg: "Phone + OTP required" });
     const otpPurpose = purpose || 'verify';
@@ -79,8 +80,7 @@ router.post('/verify', async (req, res) => {
     try {
       const User = getUserModel();
       if (User) {
-        if (userId) await User.findByIdAndUpdate(userId, { phone: cleanPhone, phoneVerified: true, emergencyPhone: cleanPhone });
-        else if (email) await User.findOneAndUpdate({ email: email.toLowerCase() }, { phone: cleanPhone, phoneVerified: true });
+        await User.findByIdAndUpdate(req.userId, { phone: cleanPhone, phoneVerified: true, emergencyPhone: cleanPhone });
       }
     } catch (e) { console.log("User phone update skip:", e.message); }
     console.log(`[OTP VERIFIED] ${cleanPhone} Purpose:${otpPurpose}`);
@@ -91,7 +91,7 @@ router.post('/verify', async (req, res) => {
   }
 });
 
-router.post('/send-verify-otp', async (req, res) => {
+router.post('/send-verify-otp', auth, async (req, res) => {
   try {
     const { phone } = req.body;
     const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
@@ -103,7 +103,7 @@ router.post('/send-verify-otp', async (req, res) => {
   } catch(e){ res.status(500).json({ msg: e.message }) }
 });
 
-router.post('/verify-phone', async (req, res) => {
+router.post('/verify-phone', auth, async (req, res) => {
   try {
     const { phone, otp } = req.body;
 
