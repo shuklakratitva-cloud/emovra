@@ -27,7 +27,7 @@ export function encrypt(text) {
 
 export function decrypt(encText) {
   try {
-    if (!encText || !encText.includes(":")) return encText || "";
+    if (!encText || !/^[0-9a-f]{32}:[0-9a-f]+$/i.test(encText)) return encText || "";
     const [ivHex, encrypted] = encText.split(":");
     const decipher = crypto.createDecipheriv(
       ALGO,
