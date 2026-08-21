@@ -39,7 +39,7 @@ router.put("/", auth, async (req, res) => {
     const plan = await SafetyPlan.findOneAndUpdate(
       { userId: req.user.id },
       update,
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
     res.json({ success: true, plan: serialize(plan) });
   } catch (err) {
