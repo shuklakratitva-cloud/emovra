@@ -1,4 +1,3 @@
-// src/components/TeleManas.jsx - FIXED DARK MODE
 import React from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
@@ -27,8 +26,7 @@ export default function TeleManas() {
         <strong>Tele-MANAS</strong> {t("teleManas.introRest")}
       </p>
 
-      {/* FIXED BOX - was white, now uses theme */}
-      <div className="helpline-box" style={{ background: "var(--card-bg)", border:"1px solid var(--border)", padding: "16px", borderRadius: "12px", margin: "20px 0" }}>
+            <div className="helpline-box" style={{ background: "var(--card-bg)", border:"1px solid var(--border)", padding: "16px", borderRadius: "12px", margin: "20px 0" }}>
         <h3 style={{color:"var(--text)", margin:"0 0 8px 0"}}>{t("teleManas.helplineNumbersHeading")}</h3>
         <p style={{color:"var(--muted)", margin:"4px 0"}}><strong style={{color:"var(--text)"}}>{t("teleManas.primaryLabel")}</strong> {phoneNumber}</p>
         <p style={{color:"var(--muted)", margin:"4px 0 12px 0"}}><strong style={{color:"var(--text)"}}>{t("teleManas.tollFreeLabel")}</strong> {alternateNumber}</p>

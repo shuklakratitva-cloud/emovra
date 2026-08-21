@@ -3,15 +3,6 @@ import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
-// Original ambient soundscape generator using the Web Audio API - no
-// licensed/copyrighted audio files anywhere. Layered oscillators +
-// filtered noise, similar in spirit to a white-noise machine.
-//
-// NEW: added fireplace, forest, and café - same synthesis approach as the
-// original rain/white-noise/drone, just different filter bands and, for
-// fireplace/forest, randomly-timed short bursts layered on top (crackle,
-// chirps). These are stylized abstractions of the real sounds, not actual
-// recordings - genuinely original audio, same as everything else here.
 function useAmbientSound() {
   const ctxRef = useRef(null);
   const nodesRef = useRef([]);
@@ -35,7 +26,6 @@ function useAmbientSound() {
     return buffer;
   }
 
-  // A single short burst of filtered noise - used for fireplace crackle
   function burst(ctx, master, freq, dur) {
     const buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -51,7 +41,6 @@ function useAmbientSound() {
     src.start();
   }
 
-  // A single short chirp tone - used for forest birds
   function chirp(ctx, master) {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
@@ -66,9 +55,6 @@ function useAmbientSound() {
     osc.stop(now + 0.2);
   }
 
-  // A single short percussive "clink" - used for café cup/spoon sounds,
-  // deliberately a noise burst (not a tone like the forest chirp) so the
-  // two ambiences are audibly distinct, not just differently-filtered noise
   function clink(ctx, master) {
     const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -99,16 +85,12 @@ function useAmbientSound() {
       const filter = ctx.createBiquadFilter();
       if (soundKind === "rain") { filter.type = "highpass"; filter.frequency.value = 800; }
       else if (soundKind === "white-noise") { filter.type = "lowpass"; filter.frequency.value = 2000; }
-      else if (soundKind === "forest") { filter.type = "bandpass"; filter.frequency.value = 900; filter.Q.value = 0.5; } // higher, airier - wind through leaves
-      else { filter.type = "bandpass"; filter.frequency.value = 220; filter.Q.value = 1.1; } // cafe - much lower, muffled murmur band, distinct from forest
+      else if (soundKind === "forest") { filter.type = "bandpass"; filter.frequency.value = 900; filter.Q.value = 0.5; }
+      else { filter.type = "bandpass"; filter.frequency.value = 220; filter.Q.value = 1.1; }
       noise.connect(filter);
 
       if (soundKind === "cafe") {
-        // slow amplitude wobble (LFO) so the murmur ebbs and flows like
-        // background conversation, instead of a flat noise bed - this,
-        // combined with the much lower filter band and clink sounds
-        // instead of chirps, is what makes café audibly different from
-        // forest now, not just a different filter frequency
+
         const lfo = ctx.createOscillator();
         const lfoGain = ctx.createGain();
         lfo.type = "sine"; lfo.frequency.value = 0.15;
@@ -133,7 +115,7 @@ function useAmbientSound() {
         intervalsRef.current = [id];
       }
     } else if (soundKind === "fireplace") {
-      // low rumble bed + random crackle bursts on top
+
       const osc = ctx.createOscillator();
       osc.type = "sine"; osc.frequency.value = 90;
       const g = ctx.createGain(); g.gain.value = 0.3;
@@ -143,7 +125,7 @@ function useAmbientSound() {
       const id = setInterval(() => burst(ctx, master, 2000 + Math.random() * 2000, 0.05 + Math.random() * 0.05), 220);
       intervalsRef.current = [id];
     } else {
-      // "calm-tone" - two slowly detuned sine waves, a gentle drone
+
       const osc1 = ctx.createOscillator();
       const osc2 = ctx.createOscillator();
       osc1.type = "sine"; osc2.type = "sine";
@@ -159,7 +141,6 @@ function useAmbientSound() {
   return { playing, kind, start, stop };
 }
 
-// Virtual candle - simple CSS flicker animation, no canvas/assets needed
 function VirtualCandle() {
   const { t } = useLanguage();
   return (
@@ -171,7 +152,6 @@ function VirtualCandle() {
   );
 }
 
-// Virtual aquarium - a few CSS-animated fish drifting across
 function VirtualAquarium() {
   const FISH = ["🐟", "🐠", "🐡"];
   return (
@@ -193,7 +173,7 @@ function VirtualAquarium() {
 
 export default function MusicTherapy() {
   const [moods, setMoods] = useState(null);
-  const [visual, setVisual] = useState(null); // null | "candle" | "aquarium"
+  const [visual, setVisual] = useState(null);
   const ambient = useAmbientSound();
   const { t } = useLanguage();
 
@@ -257,12 +237,7 @@ export default function MusicTherapy() {
               >
                 {m.emoji} {m.label}
               </a>
-              {/* NEW: Spotify search link - no account linking/OAuth (Spotify
-                  caps new developer apps at 5 total users as of 2026 unless
-                  you qualify for extended quota, which needs 250k+ MAU to
-                  even apply - not viable here. This is just a search URL,
-                  works for anyone, no limits, no Premium requirement). */}
-              <a
+                            <a
                 href={`https://open.spotify.com/search/${encodeURIComponent(m.query)}`}
                 target="_blank" rel="noreferrer"
                 title={t("musicTherapy.searchSpotify", { query: m.query })}

@@ -47,7 +47,7 @@ export default function ScheduledLetters() {
     load();
   }
 
-  const minDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10); // tomorrow at earliest
+  const minDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
   return (
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>

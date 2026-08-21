@@ -1,10 +1,6 @@
 import React, { useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-// ============================================================
-// "Choose your coping strategy" - pick how you're feeling, get a menu of
-// concrete things to try right now
-// ============================================================
 function CopingStrategy() {
   const [feeling, setFeeling] = useState(null);
   const { t } = useLanguage();
@@ -39,9 +35,6 @@ function CopingStrategy() {
   );
 }
 
-// ============================================================
-// Spin-the-wheel self-care activity
-// ============================================================
 function SelfCareWheel() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
@@ -80,10 +73,6 @@ function SelfCareWheel() {
   );
 }
 
-// ============================================================
-// Photography challenges - prompts to go DO, not a photo upload/gallery
-// feature (kept deliberately simple, no new storage/moderation needed)
-// ============================================================
 function PhotoChallenge() {
   const { t } = useLanguage();
   const PHOTO_PROMPTS = [

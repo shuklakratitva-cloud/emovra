@@ -7,13 +7,6 @@ function authHeaders() {
   return { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
-// FIX: replaced the old static tip-list (conflict resolution / communication
-// / social anxiety / healthy relationships as fixed text to read) with an
-// actual listening chatbot - describe a real situation, get a reply that
-// engages with the specifics and honestly points out patterns worth
-// noticing, not generic advice. Reuses the same chatbot backend/safety net
-// as "Talk to AI," just with a relationship-focused system prompt
-// (mode: "relationship").
 export default function SocialSkills() {
   const { t } = useLanguage();
   const [messages, setMessages] = useState([

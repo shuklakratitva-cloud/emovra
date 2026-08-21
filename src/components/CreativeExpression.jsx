@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-// NOTE: "Anonymous artwork gallery" and public photo sharing from the
-// original list were deliberately NOT built as public/shared features -
-// unmoderated user-generated content visible to other users is a real
-// safety risk for a youth mental health app, and moderation
-// infrastructure is a much bigger undertaking than this pass. Everything
-// here is private to the person who made it, same trust model as the
-// Personal Journal.
-
 const LS_KEY = "emovra_creative_data";
 function load() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } }
 function save(data) { localStorage.setItem(LS_KEY, JSON.stringify(data)); }

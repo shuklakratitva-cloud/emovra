@@ -1,13 +1,9 @@
-// src/components/MoodTracker.jsx
 import React from "react";
 import useMood from "../hooks/useMood";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
-// NEW: fire-and-forget ping to the backend, ONLY so the "log your mood"
-// daily challenge can verify this actually happened today - no mood data
-// is sent, mood tracking itself stays exactly as it was (local only).
 function pingMoodCheckin() {
   const token = localStorage.getItem("token");
   if (!token) return;
@@ -16,9 +12,6 @@ function pingMoodCheckin() {
 
 const MOOD_ORDER = ["Happy","Calm","Neutral","Sad","Anxious","Angry","Lonely","Overwhelmed","Don't Know What To Do","Everything Fell On You At Once"];
 
-// Maps the internal English mood label (used as the stored/compared
-// identifier throughout useMood, MOOD_ORDER, etc.) to its translation key -
-// the identifier itself is left untouched so history/comparisons keep working.
 const MOOD_LABEL_KEY = {
   "Happy": "moodTracker.moodHappy",
   "Calm": "moodTracker.moodCalm",
@@ -35,12 +28,6 @@ function moodLabel(t, label) {
   return t(MOOD_LABEL_KEY[label] || label);
 }
 
-// FIX: emoji replaced with the person's own uploaded stickers - "sticker"
-// key points at /public/stickers/*.png (converted to transparent PNG -
-// original .jpg backgrounds removed), served directly by Vite at that
-// path. Two new moods added per request ("Don't Know What To Do",
-// "Everything Fell On You At Once") - label text is kept for all of them, only the
-// icon changed.
 const MOODS = [
   { label: "Happy", sticker: "/stickers/happy.png", color: "#4ade80" },
   { label: "Calm", sticker: "/stickers/calm.png", color: "#60a5fa" },
@@ -54,7 +41,6 @@ const MOODS = [
   { label: "Everything Fell On You At Once", sticker: "/stickers/everything-at-once.png", color: "#f97316" },
 ];
 
-// "Sticker" style tap targets - now renders an actual image instead of an emoji glyph.
 function MoodSticker({ mood, active, onClick }) {
   const { t } = useLanguage();
   return (
@@ -79,12 +65,6 @@ function MoodSticker({ mood, active, onClick }) {
   );
 }
 
-// Compact SVG bar graph replacing the old text list + growing card
-// history - same information (frequency per mood + a recent trend), far
-// less vertical space. Note: SVG <text> can't embed the sticker images the
-// same way HTML can, so this view uses the label text + color-coded bar
-// only (no icon) - the sticker images show up in the picker above and the
-// recent-trend strip below instead.
 function MoodGraph({ moodStats, moodHistory }) {
   const { t } = useLanguage();
   const width = 600;
@@ -101,7 +81,6 @@ function MoodGraph({ moodStats, moodHistory }) {
 
   const height = Math.max(1, rows.length) * (barHeight + gap);
 
-  // recent trend strip - last 14 entries, oldest to newest
   const recent = [...moodHistory].slice(0, 14).reverse();
 
   return (

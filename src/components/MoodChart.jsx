@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-// ✅ NEW: Safe converter for all cases (string, object, null)
 function toStr(v){
   if(v==null) return 'GREEN';
   if(typeof v==='string') return v.toUpperCase();
@@ -20,7 +19,7 @@ export default function MoodChart({ history = [] }) {
   const { t } = useLanguage();
 
   useEffect(() => {
-    // ✅ NEW: Clean history on load - fixes old object entries
+
     const cleaned = (history||[]).map(h=>({
      ...h,
       riskLevel: toStr(h.riskLevel),
@@ -40,7 +39,7 @@ export default function MoodChart({ history = [] }) {
   }
 
   const levelToNum = (lvl) => {
-    const L = toStr(lvl); // ✅ FIXED: always string now
+    const L = toStr(lvl);
     if(L==="GREEN") return 1;
     if(L==="YELLOW") return 2;
     if(L==="ORANGE") return 3;
@@ -49,7 +48,7 @@ export default function MoodChart({ history = [] }) {
   };
 
   const getColor = (lvl) => {
-    const L = toStr(lvl); // ✅ FIXED
+    const L = toStr(lvl);
     if(L==="GREEN") return "#22c55e";
     if(L==="YELLOW") return "#eab308";
     if(L==="ORANGE") return "#f97316";
@@ -80,7 +79,7 @@ export default function MoodChart({ history = [] }) {
           {data.map((h,i)=>{
             const x = padding + i * stepX;
             const y = height - padding - (levelToNum(h.riskLevel)/maxScore)*(height-padding*2);
-            const color = getColor(h.riskLevel); // ✅ FIXED: uses safe getColor
+            const color = getColor(h.riskLevel);
             return <circle key={h.id||i} cx={x} cy={y} r="6" fill={color} stroke="white" strokeWidth="2"/>
           })}
         </svg>
@@ -88,8 +87,8 @@ export default function MoodChart({ history = [] }) {
 
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:12}}>
         {data.slice(-10).map((h,i)=>{
-          const emo = toEmotion(h.emotion); // ✅ FIXED
-          const level = toStr(h.riskLevel); // ✅ FIXED
+          const emo = toEmotion(h.emotion);
+          const level = toStr(h.riskLevel);
           const bg = level==="RED"? "#fecaca" : level==="ORANGE"? "#ffedd5" : level==="YELLOW"? "#fef3c7" : "#dcfce7";
           const border = level==="RED"? "#fca5a5" : level==="ORANGE"? "#fdba74" : level==="YELLOW"? "#fde68a" : "#bbf7d0";
           const dot = getColor(level);

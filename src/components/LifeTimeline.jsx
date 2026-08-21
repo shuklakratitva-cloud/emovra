@@ -8,7 +8,7 @@ function load() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return [];
     try { return JSON.parse(decryptLocal(raw)) || []; }
-    catch { return JSON.parse(raw) || []; } // migrate: might be old, pre-encryption plain data
+    catch { return JSON.parse(raw) || []; }
   } catch { return []; }
 }
 function save(events) { localStorage.setItem(LS_KEY, encryptLocal(JSON.stringify(events))); }

@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-// ============================================================
-// Gratitude Bingo - check off prompts, aim for a full row
-// ============================================================
 function GratitudeBingo() {
   const { t } = useLanguage();
   const PROMPT_KEYS = ["mindGames.prompt0", "mindGames.prompt1", "mindGames.prompt2", "mindGames.prompt3", "mindGames.prompt4", "mindGames.prompt5", "mindGames.prompt6", "mindGames.prompt7", "mindGames.prompt8"];
@@ -23,9 +20,6 @@ function GratitudeBingo() {
   );
 }
 
-// ============================================================
-// Positivity Scavenger Hunt - find/do small real-world things
-// ============================================================
 function ScavengerHunt() {
   const { t } = useLanguage();
   const ITEM_KEYS = ["mindGames.item0", "mindGames.item1", "mindGames.item2", "mindGames.item3", "mindGames.item4", "mindGames.item5", "mindGames.item6", "mindGames.item7"];

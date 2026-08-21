@@ -1,18 +1,7 @@
 import React from "react";
-import * as Sentry from "@sentry/react"; // NEW: error monitoring
+import * as Sentry from "@sentry/react";
 import { translations } from "../i18n/translations.js";
 
-// FIX: rewrote the fallback UI - the old version said "Check console (F12)
-// for details," which is developer language, not something a distressed
-// person mid-crisis should be looking at. This is the absolute last-resort
-// screen for the whole app, so it now also keeps the crisis helplines
-// visible even when everything else has broken - the one thing that
-// should never disappear, no matter what crashed.
-//
-// NOTE: this is a class component (React error boundaries must be classes),
-// so it can't use the useLanguage() hook. Instead it reads the stored
-// language preference directly from localStorage and does the same
-// lookup/fallback the LanguageContext does, without needing the provider.
 function errT(key) {
   let lang = "en";
   try {
@@ -33,7 +22,7 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error("App crashed:", error, info);
-    if (import.meta.env.VITE_SENTRY_DSN) Sentry.captureException(error, { extra: info }); // NEW
+    if (import.meta.env.VITE_SENTRY_DSN) Sentry.captureException(error, { extra: info });
   }
 
   render() {

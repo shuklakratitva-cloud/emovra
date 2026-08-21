@@ -15,10 +15,6 @@ const CANVAS_BG = "#0f0f11";
 const SWATCHES = ["#d4b07a", "#f87171", "#4ade80", "#60a5fa", "#e8dcc6", "#ffffff"];
 const BRUSH_SIZES = [{ label: "S", size: 2 }, { label: "M", size: 5 }, { label: "L", size: 10 }, { label: "XL", size: 18 }];
 
-// FIX: pure circular hue wheel - click anywhere on it to pick a hue,
-// computed from the angle relative to the wheel's center. Paired with a
-// simple lightness slider so any final shade is reachable, not just the
-// fully-saturated ring color.
 function ColorWheel({ onPick }) {
   const { t } = useLanguage();
   const wheelRef = useRef(null);
@@ -29,12 +25,9 @@ function ColorWheel({ onPick }) {
     const dx = e.clientX - cx, dy = e.clientY - cy;
     const dist = Math.hypot(dx, dy);
     const radius = rect.width / 2;
-    if (dist > radius) return; // clicked outside the wheel
+    if (dist > radius) return;
     let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    // FIX: atan2's 0deg points right, increasing clockwise. The wheel's
-    // conic-gradient draws its 0deg pointing up (top), also increasing
-    // clockwise - a 90deg mismatch between where you click and what color
-    // that position actually shows. Rotating to align the two.
+
     angle = (angle + 90 + 360) % 360;
     const sat = Math.min(100, Math.round((dist / radius) * 100));
     onPick(angle, sat);
@@ -94,7 +87,7 @@ export default function CreativeCorner() {
 
   function pushUndo() {
     undoStack.current.push(snapshot());
-    if (undoStack.current.length > 30) undoStack.current.shift(); // cap memory use
+    if (undoStack.current.length > 30) undoStack.current.shift();
     redoStack.current = [];
     setCanUndo(true);
     setCanRedo(false);
@@ -122,11 +115,6 @@ export default function CreativeCorner() {
     setCanRedo(redoStack.current.length > 0);
   }
 
-  // FIX (the actual reported bug): the canvas's real pixel resolution
-  // (600x280, set via the width/height attributes) is different from its
-  // displayed CSS size (100% wide x 220px tall) - drawing coordinates need
-  // to be scaled by the ratio between the two, or the stroke lands in the
-  // wrong place relative to the cursor. This was missing entirely before.
   function pos(e) {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();

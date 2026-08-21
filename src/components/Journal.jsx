@@ -1,4 +1,3 @@
-// src/components/Journal.jsx - private, encrypted, unanalyzed personal journal + voice notes + shared journal
 import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
@@ -9,10 +8,6 @@ function authHeaders() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
-// ============================================================
-// Voice note recorder for journal entries (unchanged from before -
-// session-only playback, doesn't persist across a refresh yet)
-// ============================================================
 function VoiceNoteRecorder({ onRecorded }) {
   const [recording, setRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
@@ -78,9 +73,6 @@ function VoiceNoteRecorder({ onRecorded }) {
   );
 }
 
-// ============================================================
-// Invite-a-friend shared journal (unchanged from before)
-// ============================================================
 function SharedJournalPanel() {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const [journals, setJournals] = useState([]);
@@ -204,15 +196,6 @@ function SharedJournalPanel() {
   );
 }
 
-// ============================================================
-// Personal Journal - genuinely private now: no AI analysis, no risk
-// detection, no crisis popups. Encrypted on the backend
-// (routes/privateJournal.js), never visible to admin, never touched by
-// Gemini/Claude/Groq/the keyword checker. If you're going through
-// something urgent, the "Check-in" tab is still the place that actively
-// looks out for you - this tab deliberately isn't, on purpose, so there's
-// one truly unmonitored space to just write.
-// ============================================================
 export default function Journal() {
   const [journalText, setJournalText] = useState("");
   const [entries, setEntries] = useState([]);

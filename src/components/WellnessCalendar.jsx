@@ -24,20 +24,10 @@ export default function WellnessCalendar() {
   }, [monthStr]);
 
   const firstOfMonth = new Date(`${monthStr}-01T00:00:00Z`);
-  // FIX: was `new Date(year, month, 0).getUTCDate()` - the 3-arg Date
-  // constructor always interprets its arguments in LOCAL time, never UTC,
-  // regardless of which method you call on the result afterward. Mixing
-  // that with .getUTCDate() silently dropped the last day of the month
-  // for any timezone ahead of UTC (like IST). Computed directly in UTC
-  // terms instead, with no local-time step in between.
-  const daysInMonth = new Date(Date.UTC(firstOfMonth.getUTCFullYear(), firstOfMonth.getUTCMonth() + 1, 0)).getUTCDate();
-  const startWeekday = firstOfMonth.getUTCDay(); // 0=Sun
 
-  // NEW: "today" highlighting - didn't exist before. Built from local date
-  // components (not UTC) since this runs in the person's own browser,
-  // already in their own timezone - using UTC here would risk the exact
-  // same class of bug just fixed above, lagging behind their actual day
-  // for hours near midnight IST.
+  const daysInMonth = new Date(Date.UTC(firstOfMonth.getUTCFullYear(), firstOfMonth.getUTCMonth() + 1, 0)).getUTCDate();
+  const startWeekday = firstOfMonth.getUTCDay();
+
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 

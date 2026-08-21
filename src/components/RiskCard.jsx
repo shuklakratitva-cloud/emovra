@@ -2,20 +2,6 @@ import React, { useMemo } from "react";
 import { getGreenMessage, getYellowMessage, getOrangeMessage, getRedMessage } from "../utils/motivationalMessages";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-// No more GREEN/YELLOW/ORANGE/RED badges or raw scores anywhere in this
-// card, for ANY level. Underneath, the actual risk detection, encryption,
-// and backend saving rules are 100% unchanged - this file only controls
-// what's displayed, not what's detected or stored.
-//
-// Tone ladder (see utils/motivationalMessages.js for the full reasoning):
-//   GREEN  - full hype/celebration energy
-//   YELLOW - warm check-in, gentle self-care nudge, not urgent
-//   ORANGE - honest acknowledgment + helpline visible
-//   RED    - direct, warm, never hype - helpline front and center
-//
-// YELLOW previously had no branch at all here and silently fell into the
-// RED styling - fixed below.
-
 export default function RiskCard({ analysis, userName, emergencyPhone, safetyPlan }) {
   const { t } = useLanguage();
   if (!analysis) return null;
@@ -23,7 +9,7 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
   const isRed = level === "RED";
   const isOrange = level === "ORANGE";
   const isYellow = level === "YELLOW";
-  const isGreen = level === "GREEN" || (!isRed && !isOrange && !isYellow); // safe default
+  const isGreen = level === "GREEN" || (!isRed && !isOrange && !isYellow);
 
   const category = analysis.category || analysis.abuseType || "general";
   const isSchoolAbuse = category === "school_emotional_abuse" || analysis.abuseType === "school_emotional_abuse";
@@ -56,7 +42,7 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysis, t]);
 
-  const isCalm = isGreen; // only GREEN gets the fully neutral border treatment
+  const isCalm = isGreen;
 
   return (
     <div style={{
@@ -76,10 +62,7 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
         {message}
       </p>
 
-      {/* Always-visible, always-tappable help for RED/ORANGE - kept
-          regardless of styling changes, this is the safety function of
-          the card, not decoration. */}
-      {(isRed || isOrange) && (
+            {(isRed || isOrange) && (
         <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <a href="tel:14416" style={{
             display: "inline-flex", alignItems: "center", gap: 6,
@@ -111,21 +94,13 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
         </div>
       )}
 
-      {/* NEW: if the person has filled out a Safety Plan while calm, remind
-          them of it during a RED moment - their own words, not generic
-          advice. Only shows what they actually wrote, and only the
-          grounding parts (reasons + coping strategies), not the full plan. */}
-      {isRed && safetyPlan && (safetyPlan.reasonsToLive || safetyPlan.copingStrategies) && (
+            {isRed && safetyPlan && (safetyPlan.reasonsToLive || safetyPlan.copingStrategies) && (
         <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.2)" }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-h)", margin: "0 0 8px" }}>{t("riskCard.fromYourSafetyPlan")}</p>
           {safetyPlan.reasonsToLive && <p style={{ fontSize: 13, margin: "0 0 6px", lineHeight: 1.5 }}>{safetyPlan.reasonsToLive}</p>}
           {safetyPlan.copingStrategies && <p style={{ fontSize: 12, opacity: 0.75, margin: 0, lineHeight: 1.5 }}>{safetyPlan.copingStrategies}</p>}
         </div>
       )}
-
-      {/* FIX: per request, GREEN and YELLOW no longer show any helpline
-          link at all - only RED/ORANGE do. The warm "Just checking in"
-          message above still applies to YELLOW, just without the link. */}
 
       {analysis.emotion && (
         <div style={{ marginTop: 12 }}>

@@ -8,7 +8,7 @@ function authHeaders() {
 
 function BreathingTimer() {
   const { t } = useLanguage();
-  const [phase, setPhase] = useState("idle"); // idle | inhale | hold | exhale
+  const [phase, setPhase] = useState("idle");
   const [running, setRunning] = useState(false);
   const timerRef = useRef(null);
 

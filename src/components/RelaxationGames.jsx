@@ -1,13 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-// ============================================================
-// Breathing Circle - expands/contracts on a 4-4-4 rhythm, same timing as
-// the breathing exercise already in SleepAssistant, but as a dedicated
-// full-size visual here instead of a small inline timer.
-// ============================================================
 function BreathingCircle() {
-  const [phase, setPhase] = useState("in"); // in | hold | out
+  const [phase, setPhase] = useState("in");
   const [running, setRunning] = useState(false);
   const [seconds, setSeconds] = useState(4);
   const { t } = useLanguage();
@@ -48,9 +43,6 @@ function BreathingCircle() {
   );
 }
 
-// ============================================================
-// Virtual Stress Ball - click and hold to squish, releases back
-// ============================================================
 function StressBall() {
   const [squished, setSquished] = useState(false);
   const [pops, setPops] = useState(0);
@@ -76,9 +68,6 @@ function StressBall() {
   );
 }
 
-// ============================================================
-// Bubble Pop - grid of poppable bubbles, resets when all popped
-// ============================================================
 function BubblePop() {
   const GRID = 30;
   const [popped, setPopped] = useState(() => new Array(GRID).fill(false));

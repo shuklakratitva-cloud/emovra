@@ -36,7 +36,7 @@ export default function ZenGarden() {
     const ctx = canvasRef.current.getContext("2d");
     const dx = to.x - from.x, dy = to.y - from.y;
     const len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len; // perpendicular, for prong offsets
+    const nx = -dy / len, ny = dx / len;
 
     ctx.strokeStyle = "rgba(120,100,60,0.35)";
     ctx.lineWidth = 1.4;

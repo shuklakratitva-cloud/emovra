@@ -6,9 +6,6 @@ function authHeaders() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` };
 }
 
-// NOTE: this is a simple heuristic (days since last update), not actual
-// machine-learning prediction - being upfront about that rather than
-// overclaiming "AI" for what's really just a staleness check.
 export default function GoalReminders() {
   const [stale, setStale] = useState([]);
   const { t } = useLanguage();

@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-// Uses the SAME local mood history the Mood Tracker already writes to -
-// no new storage, no AI, just a simple this-period-vs-last-period count
-// comparison. Purely a heuristic tally, not a prediction of anything.
 export default function DigitalTimeMachine() {
   const { t } = useLanguage();
   const [thisMonth, setThisMonth] = useState({});

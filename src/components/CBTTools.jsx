@@ -8,7 +8,7 @@ function load() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return {};
     try { return JSON.parse(decryptLocal(raw)) || {}; }
-    catch { return JSON.parse(raw) || {}; } // migrate: might be old, pre-encryption plain data
+    catch { return JSON.parse(raw) || {}; }
   } catch { return {}; }
 }
 function save(data) { localStorage.setItem(LS_KEY, encryptLocal(JSON.stringify(data))); }
@@ -24,9 +24,6 @@ const DISTORTIONS = [
 
 const VALUES_LIST = ["Honesty", "Family", "Growth", "Creativity", "Independence", "Connection", "Kindness", "Achievement", "Adventure", "Stability", "Justice", "Curiosity", "Health", "Loyalty", "Freedom", "Balance"];
 
-// Maps the raw English strength strings (used as the persisted/storage
-// value, unchanged) to a translation key slug for display only - the
-// stored value stays exactly as it was before i18n was added.
 const STRENGTH_KEYS = {
   Persistence: "persistence",
   Empathy: "empathy",

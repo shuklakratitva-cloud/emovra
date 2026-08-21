@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import LegalCookieBanner from "./LegalCookieBanner";
-import { useLanguage } from "../i18n/LanguageContext.jsx"; // NEW
-import LanguageToggle from "./LanguageToggle.jsx"; // NEW
+import { useLanguage } from "../i18n/LanguageContext.jsx";
+import LanguageToggle from "./LanguageToggle.jsx";
 
 const getConsent = () => {
   try {
@@ -21,18 +21,10 @@ const getConsent = () => {
 
 const BASE_URL = "https://emovra.onrender.com/api/auth";
 
-// NEW: Google Sign-In. This value is NOT secret (client IDs are meant to
-// be public, unlike API keys) - paste your real one here once you've
-// created it. Get one free at:
-// https://console.cloud.google.com/apis/credentials -> "Create Credentials"
-// -> "OAuth client ID" -> type "Web application" -> add your site's URL
-// (e.g. https://emovra.pages.dev) under "Authorized JavaScript origins".
-// No billing/payment step involved - this is a different, free part of
-// Google Cloud Console from the Gemini API billing screen.
 const GOOGLE_CLIENT_ID = "992525447470-niu0jm6nnqoqdam751qe2pa6ge6slpsq.apps.googleusercontent.com";
 
 export default function Auth({ onAuth }) {
-  const { t } = useLanguage(); // NEW
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(true);
   const [form, setForm] = useState({
@@ -111,8 +103,8 @@ export default function Auth({ onAuth }) {
   // Silently does nothing if GOOGLE_CLIENT_ID hasn't been filled in yet,
   // rather than showing a broken button.
   useEffect(() => {
-    if (GOOGLE_CLIENT_ID.includes("YOUR_GOOGLE_CLIENT_ID_HERE")) return; // not configured yet
-    if (needsGoogleSignup) return; // don't render the button on the "complete your profile" screen
+    if (GOOGLE_CLIENT_ID.includes("YOUR_GOOGLE_CLIENT_ID_HERE")) return;
+    if (needsGoogleSignup) return;
 
     const existing = document.getElementById("google-identity-script");
     function init() {
@@ -182,7 +174,6 @@ export default function Auth({ onAuth }) {
     } finally { setLoading(false); }
   };
 
-  // --- Forgot-password handlers (now email-based) ---
   const handleSendResetOtp = async (e) => {
     e.preventDefault();
     setForgotMsg("");
@@ -218,9 +209,6 @@ export default function Auth({ onAuth }) {
 
   const inputStyle = { padding: "10px", borderRadius: "8px", color: "black" };
 
-  // --- Google Sign-In: "complete your profile" screen (shown when a
-  // Google account has no matching Emovra account yet - collects the
-  // extra required fields Google doesn't provide) ---
   if (needsGoogleSignup) {
     return (
       <div style={{ maxWidth: "420px", margin: "50px auto", padding: "25px", background: "var(--card-bg, #1e1e2f)", borderRadius: "12px", color: "white" }}>
@@ -258,7 +246,6 @@ export default function Auth({ onAuth }) {
     );
   }
 
-  // --- Forgot-password screens ---
   if (forgotMode === "request") {
     return (
       <div style={{ maxWidth: "420px", margin: "50px auto", padding: "25px", background: "var(--card-bg, #1e1e2f)", borderRadius: "12px", color: "white" }}>
@@ -338,8 +325,7 @@ export default function Auth({ onAuth }) {
         </button>
       </form>
 
-      {/* NEW: Google Sign-In button - renders itself once GOOGLE_CLIENT_ID is filled in */}
-      <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
         <div ref={googleBtnRef} />
       </div>
       {googleLoading && <p style={{ fontSize: 12, textAlign: "center", color: "#a78bfa", marginTop: 8 }}>{t("auth.signingInGoogle")}</p>}

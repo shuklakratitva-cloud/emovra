@@ -14,23 +14,18 @@ const { t } = useLanguage();
 const [options, setOptions] = useState(null);
 const [current, setCurrent] = useState(null);
 const [saved, setSaved] = useState(false);
-// NEW: avatar upload state
+
 const [uploading, setUploading] = useState(false);
 const [uploadError, setUploadError] = useState("");
 // FIX: neither fetch below had error handling - if either one failed
 // for ANY reason (expired token, network hiccup, server hiccup), this
 // component silently rendered nothing, forever, with zero indication
 // anything was wrong. This is what "Settings tab disappeared" actually
-// was. Now shows a real error state with a retry button instead.
+
 const [loadError, setLoadError] = useState("");
 // FIX: save() used to swallow every failure silently (empty catch, and
 // it never checked res.ok). That's the actual cause of "background image
-// isn't uploading" - the color extraction happens entirely client-side in
-// the browser (canvas, no network call), so that part always "worked" and
-// showed a preview, but the actual PATCH to /profile/settings was
-// failing - most often a 413 from the server, since it was sending the
-// full-size image with no size limit on the receiving end (see the
-// matching fix in server.js) - and nothing on screen ever said so.
+
 const [saveError, setSaveError] = useState("");
 // NEW: data export + account deletion state
 const [exporting, setExporting] = useState(false);
@@ -40,10 +35,9 @@ const [customBg, setCustomBg] = useState("#0a0a0c");
 const [customCard, setCustomCard] = useState("#121214");
 const [customAccent, setCustomAccent] = useState("#d4b07a");
 const [savingCustom, setSavingCustom] = useState(false);
-// NEW: background image - upload or AI-generate, then auto-extract
-// matching colors before applying.
-const [bgPreviewImage, setBgPreviewImage] = useState(null); // pending, not yet saved
-const [bgExtracted, setBgExtracted] = useState(null); // {bg, card, accent} from extraction
+
+const [bgPreviewImage, setBgPreviewImage] = useState(null);
+const [bgExtracted, setBgExtracted] = useState(null);
 const [bgPrompt, setBgPrompt] = useState("");
 const [generatingImage, setGeneratingImage] = useState(false);
 const [genError, setGenError] = useState("");
@@ -70,12 +64,10 @@ backgroundImage: current.backgroundImage,
 }, 120);
 }
 const [deleting, setDeleting] = useState(false);
-// NEW: in-app feedback/bug reporting state
+
 const [feedbackText, setFeedbackText] = useState("");
 const [feedbackStatus, setFeedbackStatus] = useState(""); // "", "sending", "sent", "error"
-// NEW: accessibility settings - font size + high contrast, applied
-// immediately via CSS custom property + a body class, saved locally
-// (device preference, doesn't need backend sync)
+
 const [fontScale, setFontScale] = useState(() => localStorage.getItem("emovra_font_scale") || "100");
 const [highContrast, setHighContrast] = useState(() => localStorage.getItem("emovra_high_contrast") === "true");
 
@@ -99,12 +91,6 @@ return !h;
 });
 }
 
-// NEW: logout - the app previously had no self-serve way to log out at
-// all. A dead/expired token (see loadError below) left people stuck on
-// a "session expired" screen with only a "Try again" button, which just
-// re-sends the same request with the same invalid token forever. This
-// clears the stored token/user and sends them back to the landing page,
-// where they can sign in again - same effect a real logout should have.
 function logout() {
 localStorage.removeItem("token");
 localStorage.removeItem("user");
@@ -117,9 +103,6 @@ Anxious: "#fb923c", Angry: "#f87171", Lonely: "#a78bfa", Overwhelmed: "#f472b6",
 "Don't Know What To Do": "#fbbf24", "Everything Fell On You At Once": "#f97316",
 };
 
-// NEW: mood-themed avatar - the avatar's ring color reflects your most
-// recently logged mood, reusing the same MOOD_COLORS map as the mood
-// wallpaper feature above
 function moodRingColor() {
 try {
 const history = JSON.parse(localStorage.getItem("mental_health_mood_history") || "[]");
@@ -130,7 +113,6 @@ return null;
 }
 }
 
-// NEW: push notifications
 const [pushSubscribed, setPushSubscribed] = useState(false);
 const [pushLoading, setPushLoading] = useState(false);
 const [pushMsg, setPushMsg] = useState("");
@@ -239,9 +221,6 @@ setDeleting(false);
 }
 }
 
-// NEW: in-app feedback/bug reporting - sends straight to the developer's
-// email via the backend, so there's a real way to flag something beyond
-// a screenshot or catching it directly.
 async function submitFeedback() {
 if (!feedbackText.trim()) return;
 setFeedbackStatus("sending");
@@ -274,9 +253,7 @@ fetch(`${API}/profile/me`, { headers: authHeaders() }).then((r) => { if (!r.ok) 
 if (optionsData.success) setOptions(optionsData);
 if (profileData.success) {
 setCurrent(profileData);
-// Sync the custom-picker sliders from whatever theme is
-// actually active right now (preset or custom) - not just from
-// a previously-saved custom theme, which may not exist at all.
+
 setCustomBg(profileData.customTheme?.bg || profileData.theme?.bg || "#0a0a0c");
 setCustomCard(profileData.customTheme?.card || profileData.theme?.card || "#121214");
 setCustomAccent(profileData.customTheme?.accent || profileData.theme?.accent || "#d4b07a");
@@ -302,14 +279,7 @@ async function save(update) {
 setSaveError("");
 try {
 const res = await fetch(`${API}/profile/settings`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(update) });
-// FIX: a non-2xx response (e.g. 413 Payload Too Large from a big
-// background image, or a 401 from an expired token) used to fall
-// through to `res.json()` and either throw (caught and silently
-// discarded below) or parse an error body that was never checked
-// for `.success`. Either way the person saw nothing happen - the
-// image preview and extracted colors were already showing from the
-// earlier, purely-client-side step, so it looked like it "worked"
-// right up until nothing was actually saved.
+
 if (!res.ok) {
 if (res.status === 413) {
 setSaveError(t("themeAvatarSettings.imageTooLargeServer"));
@@ -323,10 +293,10 @@ return false;
 const data = await res.json();
 if (data.success) {
 setCurrent((c) => ({ ...c, ...data }));
-if (data.theme) applyThemeVars(data.theme); // instant visual feedback, not just saved silently
+if (data.theme) applyThemeVars(data.theme);
 setSaved(true);
 setTimeout(() => setSaved(false), 2000);
-onProfileUpdate?.(); // NEW: tell Dashboard's header (and anything else outside Settings) to refresh too
+onProfileUpdate?.();
 return true;
 }
 setSaveError(data.message || t("themeAvatarSettings.saveFailedDefault"));
@@ -337,20 +307,17 @@ return false;
 }
 }
 
-// Only called once, on Save - not on every slider drag. Matches the
-// exact same pattern preset themes already use reliably.
 async function saveCustomTheme() {
 setSavingCustom(true);
 await save({ customTheme: { bg: customBg, card: customCard, accent: customAccent } });
 setSavingCustom(false);
 }
 
-// NEW: runs color extraction on whatever image is currently in preview
 function runExtraction(dataUri) {
 const img = new Image();
 img.onload = () => {
 const colors = extractThemeFromImage(img);
-setBgExtracted(colors); // null if extraction failed - UI handles that
+setBgExtracted(colors);
 };
 img.onerror = () => setBgExtracted(null);
 img.src = dataUri;
@@ -402,16 +369,12 @@ setApplyingBg(true);
 const payload = { backgroundImage: bgPreviewImage };
 if (bgExtracted) {
 payload.customTheme = bgExtracted;
-// also mirror into the picker's own state so it stays in sync if
-// the person opens "Or make your own" afterward
+
 setCustomBg(bgExtracted.bg);
 setCustomCard(bgExtracted.card);
 setCustomAccent(bgExtracted.accent);
 }
-// FIX: only clear the preview/prompt on an actual confirmed save. It
-// used to clear unconditionally, so a failed save (see save() above)
-// silently threw away the image the person just picked, with no error
-// shown and nothing left on screen to retry from.
+
 const ok = await save(payload);
 if (ok) {
 setBgPreviewImage(null);
@@ -456,7 +419,7 @@ const canvas = document.createElement("canvas");
 canvas.width = size;
 canvas.height = size;
 const ctx = canvas.getContext("2d");
-// cover-crop to a square so the avatar isn't stretched
+
 const scale = Math.max(size / img.width, size / img.height);
 const w = img.width * scale, h = img.height * scale;
 ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
@@ -475,16 +438,12 @@ if (loadError) {
 return (
 <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", marginTop: "20px", textAlign: "center" }}>
 <p style={{ fontSize: 13, color: "#f87171" }}>{loadError}</p>
-{/* NEW: a session that's actually expired can never recover via
-"Try again" - it just re-sends the same dead token and gets the
-same error forever. Log out is the only real way out of this
-screen, so it's offered right alongside the retry. */}
 <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 10, flexWrap: "wrap" }}>
 <button onClick={loadProfile} style={{ padding: "8px 18px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12 }}>
 {t("themeAvatarSettings.tryAgain")}
 </button>
 <button onClick={logout} style={{ padding: "8px 18px", borderRadius: 999, border: "1px solid #f87171", background: "transparent", color: "#f87171", cursor: "pointer", fontSize: 12 }}>
-Log out
+{t("themeAvatarSettings.logoutButton")}
 </button>
 </div>
 </div>
@@ -507,11 +466,8 @@ return (
 <h2 style={{ margin: 0 }}>🎨 {t("themeAvatarSettings.heading")}</h2>
 <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>{t("themeAvatarSettings.subtitle")}</p>
 </div>
-{/* NEW: the app had no self-serve logout anywhere - the only way out
-was letting the token expire (7/20 days) or clearing browser
-storage by hand. This is a normal, always-available logout. */}
 <button onClick={logout} style={{ padding: "8px 16px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" }}>
-🚪 Log out
+🚪 {t("themeAvatarSettings.logoutButton")}
 </button>
 </div>
 
@@ -550,7 +506,6 @@ background: "transparent", outline: "none",
 </button>
 </div>
 
-{/* NEW: Background image - upload your own or generate one with AI */}
 <div style={{ marginTop: 20, padding: 16, borderRadius: 12, border: "1px solid var(--border)" }}>
 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🖼️ {t("themeAvatarSettings.backgroundImageHeading")}</div>
 <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 12px" }}>{t("themeAvatarSettings.backgroundImageSubtitle")}</p>
@@ -624,7 +579,6 @@ style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid var(-
 <div style={{ marginTop: 20 }}>
 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("themeAvatarSettings.avatarLabel")}</div>
 
-{/* NEW: current avatar preview, shows either the uploaded image or the emoji */}
 <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
 <div style={{ position: "relative", width: 60, height: 60 }}>
 <div style={{ width: 60, height: 60, borderRadius: "50%", overflow: "hidden", border: `2px solid ${moodRingColor() || "var(--accent)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "var(--card-bg)" }}>
@@ -651,7 +605,6 @@ style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid var(-
 ))}
 </div>
 
-{/* NEW: avatar accessories - unlockable by level */}
 {options.accessories?.length > 0 && (
 <div style={{ marginTop: 14 }}>
 <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8 }}>{t("themeAvatarSettings.accessoriesHeading")}</div>
@@ -694,7 +647,6 @@ style={{ fontSize: 18, padding: "8px 12px", borderRadius: 999, border: current.a
 
 {saved && <p style={{ fontSize: 12, color: "#4ade80", marginTop: 12 }}>{t("themeAvatarSettings.saved")} ✓</p>}
 
-{/* NEW: push notifications toggle */}
 {pushSupported && (
 <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("themeAvatarSettings.notificationsHeading")}</div>
@@ -710,7 +662,6 @@ style={{ padding: "8px 18px", borderRadius: 999, border: pushSubscribed ? "1px s
 </div>
 )}
 
-{/* NEW: accessibility - font size + high contrast */}
 <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{t("themeAvatarSettings.accessibilityHeading")}</div>
 <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8 }}>{t("themeAvatarSettings.textSizeLabel")}</div>
@@ -735,9 +686,6 @@ style={{ padding: "8px 16px", borderRadius: 999, fontSize: 12, cursor: "pointer"
 </div>
 </div>
 
-{/* NEW: self-serve data export + account deletion - actually
-delivers on what the Privacy Policy promises, instead of leaving
-it as a manual email-me process */}
 <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{t("themeAvatarSettings.yourDataHeading")}</div>
 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -771,7 +719,6 @@ style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: delet
 )}
 </div>
 
-{/* NEW: in-app feedback/bug reporting */}
 <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>💬 {t("themeAvatarSettings.feedbackHeading")}</div>
 <p style={{ fontSize: 11, opacity: 0.6, margin: "0 0 10px" }}>{t("themeAvatarSettings.feedbackSubtitle")}</p>

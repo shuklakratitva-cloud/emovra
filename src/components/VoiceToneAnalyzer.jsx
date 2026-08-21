@@ -4,10 +4,6 @@ import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const API = "https://emovra.onrender.com/api";
 
-// Maps the internal English risk-level code (used as the stored/compared
-// identifier throughout the scoring logic) to its translation key - the
-// code itself is left untouched so logic/comparisons keep working, only
-// the DISPLAYED label is translated.
 const LEVEL_LABEL_KEY = {
   RED: "voiceToneAnalyzer.levelRed",
   ORANGE: "voiceToneAnalyzer.levelOrange",
@@ -17,9 +13,6 @@ function levelLabel(t, level) {
   return t(LEVEL_LABEL_KEY[level] || level);
 }
 
-// Same pattern for the internal English emotion strings this file assigns -
-// "calm" and "sad / low energy" are still compared/stored as-is (e.g.
-// `emotion === "calm"`), only the rendered text is translated.
 const EMOTION_LABEL_KEY = {
   "calm": "voiceToneAnalyzer.emotionCalm",
   "sad / low energy": "voiceToneAnalyzer.emotionSadLowEnergy",
@@ -98,7 +91,7 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         if (blob.size > 0) {
           setAudioURL(URL.createObjectURL(blob));
-          // --- NEW: Send to Gemini backend ---
+
           if (token) {
             try {
               setAiLoading(true);
@@ -111,9 +104,9 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
               });
               const aiData = await res.json();
               if (aiData.success) {
-                // Use Gemini transcript if local failed
+
                 if (!transcript || transcript.length < 3) setTranscript(aiData.transcript);
-                // Merge Gemini result with local
+
                 setResult(prev => prev? {
                  ...prev,
                   transcript: aiData.transcript || prev.transcript,
@@ -165,7 +158,6 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
     let reasons = wordAnalysis? [...wordAnalysis.reasons] : [];
     let emotion = wordAnalysis? wordAnalysis.emotion : "calm";
 
-    // FIXED: YELLOW -> ORANGE everywhere
     if (pause > 40 || (avg < 20 && variance < 200)) {
       score += 25; reasons.push(t("voiceToneAnalyzer.reasonLowEnergyPause", { pause: pause.toFixed(0) }));
       if (score >= 70) level = "RED"; else if (score >= 35 && level === "GREEN") level = "ORANGE";
@@ -173,10 +165,9 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
     }
     if (variance > 500) {
       score += 15; reasons.push(t("voiceToneAnalyzer.reasonVoiceUnstable"));
-      if (level === "GREEN") level = "ORANGE"; // FIXED was YELLOW
+      if (level === "GREEN") level = "ORANGE";
     }
 
-    // FIXED: Final color logic with ORANGE
     if (score >= 75) level = "RED";
     else if (score >= 40) level = "ORANGE";
     else level = "GREEN";
@@ -200,7 +191,7 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
       wordScore: wordAnalysis?.score || 0,
       toneScore: Math.round(pause),
       isAI: false,
-      // emoAbuseDetected HIDDEN - not sent to frontend display
+
     };
     setResult(out);
     if (onResult) onResult(out);

@@ -1,5 +1,3 @@
-// src/components/GroundingExercises.jsx
-
 import React, { useState } from "react";
 import { GROUNDING_EXERCISES } from "../data/exercises";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
@@ -18,11 +16,6 @@ export default function GroundingExercises() {
   const exercise = GROUNDING_EXERCISES[currentIndex];
   if (!exercise) return null;
 
-  // NEW: exercise content lives in data/exercises.js as a plain content
-  // library (not translation keys), since it's actual paragraph/step
-  // content rather than short UI labels. Each entry carries an optional
-  // *_hi field - fall back to the English field if a Hindi one is missing
-  // so nothing ever renders blank.
   const isHi = lang === "hi";
   const exTitle = isHi && exercise.title_hi ? exercise.title_hi : exercise.title;
   const exDescription = isHi && exercise.description_hi ? exercise.description_hi : exercise.description;
@@ -36,9 +29,6 @@ export default function GroundingExercises() {
     setCurrentIndex((i) => Math.max(i - 1, 0));
   }
 
-  // NEW: explicit "I did this" action, ONLY so the "try a grounding
-  // exercise" daily challenge can verify it actually happened today - a
-  // deliberate click, not an automatic ping just from opening the tab.
   function markDone() {
     const token = localStorage.getItem("token");
     if (!token) return;

@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLanguage } from "../i18n/LanguageContext.jsx"; // NEW
-
-// Grows through stages based on the person's EXISTING level - no new
-// backend state needed, just a visual layer on data that already exists.
-// NEW: pet type (dragon/dog/cat/bird) is a personal choice, stored locally
-// - purely cosmetic, doesn't need to sync across devices, so no backend
-// change needed for this round.
+import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 const LS_KEY = "emovra_pet_type";
 
@@ -61,7 +55,7 @@ function stageFor(petType, level) {
 }
 
 export default function VirtualPet({ level = 1, xp = 0 }) {
-  const { t } = useLanguage(); // NEW
+  const { t } = useLanguage();
   const [petType, setPetType] = useState("bird");
   const [showPicker, setShowPicker] = useState(false);
 
