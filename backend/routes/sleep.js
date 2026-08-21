@@ -24,7 +24,7 @@ router.post("/", auth, async (req, res) => {
     const log = await SleepLog.findOneAndUpdate(
       { userId: req.user.id, date },
       { bedtime, wakeTime, hoursSlept, quality, notes: notes || "" },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     const gam = existed ? null : await awardXP(req.user.id, 6, {});
