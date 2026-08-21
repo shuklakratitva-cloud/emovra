@@ -48,7 +48,7 @@ router.patch("/:id", auth, async (req, res) => {
     const entry = await PrivateJournal.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
       { text_encrypted: encrypt(text.trim()) },
-      { new: true }
+      { returnDocument: "after" }
     );
     if (!entry) return res.status(404).json({ success: false, message: "Entry not found" });
     res.json({ success: true, entry: serialize(entry) });
