@@ -16,18 +16,21 @@ export function applyThemeVars(theme) {
   root.style.setProperty("--text-h", t.accent); 
   document.body.style.setProperty("background", t.bg, "important");
   document.documentElement.style.setProperty("background", t.bg, "important");
-  if (t.backgroundImage) {
-    const overlay = `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55))`;
-    document.body.style.setProperty("background-image", `${overlay}, url(${t.backgroundImage})`, "important");
-    document.body.style.setProperty("background-size", "cover", "important");
-    document.body.style.setProperty("background-position", "center", "important");
-    document.body.style.setProperty("background-attachment", "fixed", "important");
-  } else {
-    document.body.style.removeProperty("background-image");
-    document.body.style.removeProperty("background-size");
-    document.body.style.removeProperty("background-position");
-    document.body.style.removeProperty("background-attachment");
-  }
+if (t.backgroundImage) {
+  const overlay = `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55))`;
+  const bgImageValue = `${overlay}, url(${t.backgroundImage})`;
+  root.style.setProperty("--bg-image", bgImageValue);
+  document.body.style.setProperty("background-image", bgImageValue, "important");
+  document.body.style.setProperty("background-size", "cover", "important");
+  document.body.style.setProperty("background-position", "center", "important");
+  document.body.style.setProperty("background-attachment", "fixed", "important");
+} else {
+  root.style.setProperty("--bg-image", "none");
+  document.body.style.removeProperty("background-image");
+  document.body.style.removeProperty("background-size");
+  document.body.style.removeProperty("background-position");
+  document.body.style.removeProperty("background-attachment");
+}
 }
 export async function initTheme() {
   applyThemeVars(DEFAULT_THEME);
