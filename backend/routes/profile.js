@@ -17,7 +17,7 @@ const ACCESSORIES = [
 ];
 
 const MAX_AVATAR_DATA_URI_LENGTH = 280000;
-const MAX_BACKGROUND_DATA_URI_LENGTH = 2000000;
+const MAX_BACKGROUND_DATA_URI_LENGTH = 4000000;
 
 router.get("/options", (req, res) => {
   res.json({ success: true, themes: Object.values(THEMES), avatars: AVATARS, musicMoods: MUSIC_MOODS, accessories: ACCESSORIES });
