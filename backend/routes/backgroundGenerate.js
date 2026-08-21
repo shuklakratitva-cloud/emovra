@@ -4,7 +4,7 @@ import { protect as auth } from "../middleware/auth.js";
 const router = express.Router();
 
 const HF_MODEL = "black-forest-labs/FLUX.1-schnell";
-const HF_PROVIDER = "hf-inference";
+const HF_PROVIDER = "nscale";
 
 router.post("/generate", auth, async (req, res) => {
   try {
@@ -46,6 +46,7 @@ router.post("/generate", auth, async (req, res) => {
       if (response.status === 429 || errJson.error?.includes("rate")) {
         return res.status(429).json({ success: false, message: "Too many image requests right now - try again in a bit." });
       }
+      console.error("Background generation - HF error response:", response.status, JSON.stringify(errJson));
       return res.status(502).json({ success: false, message: "Couldn't generate that - try describing it differently." });
     }
 
