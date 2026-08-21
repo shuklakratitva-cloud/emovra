@@ -1,23 +1,8 @@
-// utils/localRiskFallback.js
-// Used ONLY when Gemini is unavailable (quota exceeded, network error, etc).
-// The old behavior in analyze.js was to hard-code { risk: "GREEN", score: 20 }
-// whenever Gemini threw ANY error - meaning a real quota outage (see your
-// Render logs: "429 Too Many Requests") silently made every message look
-// safe. This gives a real best-effort classification instead of a fake-safe
-// default, so a genuine crisis message doesn't get swallowed just because
-// the AI call failed.
-//
-// This intentionally mirrors the logic already in analyze.js's keyword
-// safety-nets and the frontend's analyzeRisk.js, so behavior stays close to
-// what you already tuned - it's a safety net for a safety net, not a
-// separate opinion.
-
 const RED_PHRASES = [
   "mujhe marna hai", "i want to die", "i want to end my life", "kill myself",
   "end my life", "mar jaunga", "mar jaungi", "khudkushi karunga",
   "suicide", "want to end it all", "no reason to live", "better off dead",
-  // NEW: same multilingual expansion as analyze.js's instant check - see
-  // that file for the full explanation and the native-speaker-review note.
+
   "நான் செத்துவிட வேண்டும்", "எனக்கு சாக வேண்டும்", "నేను చావాలి",
   "আমি মরে যেতে চাই", "मला मरायचे आहे", "મારે મરવું છે",
   "ನಾನು ಸಾಯಬೇಕು", "എനിക്ക് മരിക്കണം", "ਮੈਂ ਮਰਨਾ ਚਾਹੁੰਦਾ ਹਾਂ", "میں مرنا چاہتا ہوں",
@@ -33,10 +18,6 @@ const ORANGE_WORDS = [
   "tension", "bechain", "breakup", "kharab hai",
 ];
 
-// NEW: this classifier never had a YELLOW band at all - only GREEN/ORANGE/
-// RED - meaning even when Gemini and Groq were both down, the local
-// fallback could never produce YELLOW either. Mild, vague words that
-// don't rise to the ORANGE_WORDS level above.
 const YELLOW_WORDS = [
   "tired", "thak gaya", "thak gayi", "off today", "not myself", "meh",
   "bored", "boring day", "kinda down", "little down", "so-so", "okay-ish",

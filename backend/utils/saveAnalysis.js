@@ -1,18 +1,3 @@
-// utils/saveAnalysis.js
-// SINGLE SOURCE OF TRUTH for "what happens to a message after it's scored".
-// Previously analyze.js and gemini.js each reimplemented this independently,
-// with different (and sometimes incompatible) inline Mongoose schemas -
-// meaning gemini.js's Alert.create() was missing required fields and threw
-// on every call (silently swallowed), and analyze.js's Entry.create() threw
-// whenever userId wasn't a real Mongo ObjectId (e.g. "anonymous").
-//
-// Rules (unchanged from your spec):
-//   GREEN            -> never saved anywhere
-//   RED or ORANGE    -> saved to `entries`, encrypted
-//   school_emotional_abuse (RED or ORANGE) -> ALSO saved to `alerts`
-//
-// Logs: PRIVACY-SKIP / ENTRY-SAVED / ALERT-SAVED / ALERT-SKIP
-
 import mongoose from "mongoose";
 import Entry from "../models/Entry.js";
 import Alert from "../models/Alert.js";

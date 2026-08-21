@@ -1,24 +1,14 @@
-// backend/utils/gamification.js
-// Single place XP/level/streak/badges get updated. Every route that awards
-// XP calls awardXP() rather than touching User.xp directly, so the rules
-// stay consistent (and can't be bypassed by a client sending its own xp
-// value - none of these fields are ever accepted from req.body).
-
 import User from "../models/User.js";
 import { BADGES } from "../data/badges.js";
 
 import { todayIST } from "./istDate.js";
 
-// FIX: this used to be new Date().toISOString().slice(0,10) - UTC, not
-// IST. See istDate.js for the full explanation of the ~5.5 hour nightly
-// bug window this caused. Now delegates to the shared IST-aware helper.
 export function todayStr() {
   return todayIST();
 }
 
 export function levelForXP(xp) {
-  // Slow, gentle curve: level 1 at 0xp, level 2 at 50xp, level 5 at ~800xp,
-  // level 10 at ~2500xp. Feel free to retune.
+
   return Math.floor(Math.sqrt(xp / 50)) + 1;
 }
 
@@ -28,20 +18,17 @@ function daysBetween(a, b) {
   return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
 }
 
-// Call this once per "the user did something today" moment - journal save,
-// habit complete, challenge claim, chatbot use, or an explicit daily
-// check-in. Safe to call multiple times a day; streak only updates once.
 function bumpStreak(user) {
   const today = todayStr();
-  if (user.lastActiveDate === today) return; // already counted today
+  if (user.lastActiveDate === today) return;
 
   if (!user.lastActiveDate) {
     user.streakDays = 1;
   } else {
     const gap = daysBetween(user.lastActiveDate, today);
     if (gap === 1) user.streakDays += 1;
-    else if (gap > 1) user.streakDays = 1; // streak broken
-    // gap <= 0 (clock weirdness) - leave streak as-is
+    else if (gap > 1) user.streakDays = 1;
+
   }
   user.lastActiveDate = today;
 }
@@ -72,10 +59,6 @@ function checkBadges(user, context = {}) {
   return newly;
 }
 
-/**
- * Award XP to a user, bump their streak, recompute level, check badges.
- * Returns { user, newBadges, leveledUp } so the caller can surface a toast.
- */
 export async function awardXP(userId, amount, context = {}) {
   if (!userId) return null;
   const user = await User.findById(userId);
