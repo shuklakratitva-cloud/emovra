@@ -24,7 +24,7 @@ export default function LandingPage() {
       <style dangerouslySetInnerHTML={{ __html: `
         .serif{font-family:'Instrument Serif',serif}
         .tracking-mini{letter-spacing:0.18em;text-transform:uppercase;font-size:9px}
-        html{scroll-behavior:smooth}
+        html{scroll-behavior:smooth} @media(max-width:900px){.landing-nav{display:none !important} .hero-grid{grid-template-columns:1fr !important} .features-grid{grid-template-columns:1fr !important}}
       `}} />
 
       <a href="#main-content" style={{ position:'absolute', left:'-9999px', top:0, background:'#d4c5a0', color:'#000', padding:'8px 16px', zIndex:9999 }} onFocus={e=>e.target.style.left='10px'} onBlur={e=>e.target.style.left='-9999px'}>{lang === "hi" ? "मुख्य सामग्री पर जाएं" : "Skip to main content"}</a>
@@ -40,7 +40,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <nav aria-label="Main navigation" style={{ display:'flex', gap:28, fontSize:13, color:'rgba(232,220,198,0.6)' }}>
+        <nav aria-label="Main navigation" className="landing-nav" style={{ display:'flex', gap:28, fontSize:13, color:'rgba(232,220,198,0.6)' }}>
           <span onClick={goTop} style={{ color:'#d4c5a0', borderBottom:'1px solid #d4c5a0', cursor:'pointer' }}>{t("nav.home")}</span>
           <span onClick={()=>scrollTo('about')} style={{cursor:'pointer'}}>{t("nav.about")}</span>
           <span onClick={()=>scrollTo('features')} style={{cursor:'pointer'}}>{t("nav.features")}</span>
@@ -55,7 +55,7 @@ export default function LandingPage() {
       </header>
 
       <main id="main-content">
-        <div style={{ maxWidth:1280, margin:'0 auto', padding:'50px 32px', display:'grid', gridTemplateColumns:'1.1fr 0.9fr', gap:50, alignItems:'center' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto', padding:'50px 32px', display:'grid', gridTemplateColumns:'1.1fr 0.9fr', gap:50, alignItems:'center' }} className="hero-grid">
           <div>
             <h1 className="serif" style={{ fontSize:'54px', lineHeight:1.05, fontWeight:400, color:'#e8dcc6', margin:0 }}>{t("hero.title1")}<br/>{t("hero.title2")}</h1>
             <p style={{ marginTop:20, color:'rgba(232,220,198,0.65)', fontSize:13.5, lineHeight:1.6, maxWidth:480, fontWeight:300 }}>
@@ -98,7 +98,7 @@ export default function LandingPage() {
         <div id="features" style={{ maxWidth:1280, margin:'0 auto', padding:'80px 32px', borderTop:'0.5px solid rgba(212,197,160,0.12)', background:'radial-gradient(600px at 20% 0%, rgba(212,197,160,0.06), transparent)' }}>
           <div className="tracking-mini" style={{ color:'#d4c5a0' }}>{t("features.tag")}</div>
           <h2 className="serif" style={{ fontSize:36, marginTop:10 }}>{t("features.title")}</h2>
-          <div style={{ marginTop:24, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
+          <div style={{ marginTop:24, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }} className="features-grid">
             <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:18 }}><div style={{ fontWeight:600 }}>{t("features.emotion.title")}</div><p style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:6 }}>{t("features.emotion.desc")}</p></div>
             <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:18 }}><div style={{ fontWeight:600 }}>{t("features.private2.title")}</div><p style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:6 }}>{t("features.private2.desc")}</p></div>
             <div style={{ background:'rgba(18,18,20,0.9)', border:'0.5px solid rgba(212,197,160,0.15)', borderRadius:12, padding:18 }}><div style={{ fontWeight:600 }}>{t("features.sos.title")}</div><p style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:6 }}>{t("features.sos.desc")}</p></div>
