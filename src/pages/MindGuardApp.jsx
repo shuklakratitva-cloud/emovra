@@ -438,7 +438,7 @@ useEffect(() => {
   // Re-enable by changing this back to `if (!emailVerified)` once a real
   // domain is authenticated with Brevo - everything else (the gate UI,
   // send/confirm functions, backend routes) is untouched and ready to go.
-  if (false && !emailVerified) {
+  if (!emailVerified) {
     return (
       <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ maxWidth: 420, width: "100%", background: "var(--card-bg, #16161a)", borderRadius: 20, padding: 32, border: "1px solid var(--border)", textAlign: "center" }}>
