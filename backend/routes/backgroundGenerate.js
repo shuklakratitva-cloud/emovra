@@ -4,7 +4,7 @@ import { protect as auth } from "../middleware/auth.js";
 const router = express.Router();
 
 const HF_MODEL = "black-forest-labs/FLUX.1-schnell";
-const HF_PROVIDER = "nscale";
+const HF_PROVIDER = "fal-ai";
 
 router.post("/generate", auth, async (req, res) => {
   try {
