@@ -60,7 +60,7 @@ app.use(
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
+          allowedHeaders: ["Content-Type", "Authorization", "x-cron-secret"],
   })
 );
 
