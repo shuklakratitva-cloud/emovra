@@ -24,7 +24,7 @@ export default function LandingPage() {
       <style dangerouslySetInnerHTML={{ __html: `
         .serif{font-family:'Instrument Serif',serif}
         .tracking-mini{letter-spacing:0.18em;text-transform:uppercase;font-size:9px}
-        html{scroll-behavior:smooth} @media(max-width:900px){.landing-nav{display:none !important} .hero-grid{grid-template-columns:1fr !important} .features-grid{grid-template-columns:1fr !important}}
+        html{scroll-behavior:smooth} @media(max-width:900px){.landing-nav{display:none !important} .hero-grid{grid-template-columns:1fr !important} .features-grid{grid-template-columns:1fr !important} .hero-image-card{display:none !important}}
       `}} />
 
       <a href="#main-content" style={{ position:'absolute', left:'-9999px', top:0, background:'#d4c5a0', color:'#000', padding:'8px 16px', zIndex:9999 }} onFocus={e=>e.target.style.left='10px'} onBlur={e=>e.target.style.left='-9999px'}>{lang === "hi" ? "मुख्य सामग्री पर जाएं" : "Skip to main content"}</a>
@@ -84,7 +84,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div style={{ background:'rgba(15,15,17,0.6)', border:'0.5px solid rgba(212,197,160,0.25)', borderRadius:16, padding:16, height:460 }}>
+          <div style={{ background:'rgba(15,15,17,0.6)', border:'0.5px solid rgba(212,197,160,0.25)', borderRadius:16, padding:16, height:460 }} className="hero-image-card">
             <div style={{ borderRadius:12, overflow:'hidden', height:260 }}><img src={ZEN_IMAGE} alt="zen" style={{ width:'100%', height:'100%', objectFit:'cover' }} /></div>
             <div style={{ textAlign:'center', marginTop:20 }}>
               <div className="tracking-mini" style={{ color:'#d4c5a0' }}>{t("session.tag")}</div>
