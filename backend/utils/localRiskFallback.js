@@ -1,16 +1,62 @@
 const RED_PHRASES = [
-  "mujhe marna hai", "i want to die", "i want to end my life", "kill myself",
-  "end my life", "mar jaunga", "mar jaungi", "khudkushi karunga",
-  "suicide", "want to end it all", "no reason to live", "better off dead",
+  "mujhe marna hai",
+  "i want to die",
+  "i want to end my life",
+  "kill myself",
+  "end my life",
+  "mar jaunga",
+  "mar jaungi",
+  "khudkushi karunga",
+  "suicide",
+  "want to end it all",
+  "no reason to live",
+  "better off dead",
+  "nahi jee paunga",
+  "nahin jee paunga",
 
-  "நான் செத்துவிட வேண்டும்", "எனக்கு சாக வேண்டும்", "నేను చావాలి",
-  "আমি মরে যেতে চাই", "मला मरायचे आहे", "મારે મરવું છે",
-  "ನಾನು ಸಾಯಬೇಕು", "എനിക്ക് മരിക്കണം", "ਮੈਂ ਮਰਨਾ ਚਾਹੁੰਦਾ ਹਾਂ", "میں مرنا چاہتا ہوں",
+  "நான் செத்துவிட வேண்டும்",
+  "எனக்கு சாக வேண்டும்",
+  "నేను చావాలి",
+  "আমি মরে যেতে চাই",
+  "मला मरायचे आहे",
+  "મારે મરવું છે",
+  "ನಾನು ಸಾಯಬೇಕು",
+  "എനിക്ക് മരിക്കണം",
+  "ਮੈਂ ਮਰਨਾ ਚਾਹੁੰਦਾ ਹਾਂ",
+  "میں مرنا چاہتا ہوں",
 ];
 
-const SCHOOL_ABUSE = /\b(teacher|sir|ma'?am|madam)\b[^.!?\n]{0,40}\b(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|insult(ed)?|beizzati|daant(a|i)?|target(s|ed)?|shout(s|ed|ing)?|compar(es|ed|ing)|makes? fun)\b|\b(sabke samne|class me|publicly)\b[^.!?\n]{0,40}\b(daant|beizzati|insult|shame|humiliat)/i;
+// This file's RED_PHRASES check previously had NO negation handling at
+// all - meaning "I really don't want to end my life, just overwhelmed
+// with exams" would score RED/95 exactly like an actual disclosure. This
+// is the LAST-RESORT fallback (used when Gemini and Groq are both down),
+// so it matters most exactly when it's hardest to get right.
+//
+// Negation is checked per-clause (split on sentence punctuation and
+// but/however/etc.), not across the whole message, and with the matched
+// phrase itself removed from the clause before checking - so (a) an
+// unrelated negation word elsewhere in a longer message can't mask a
+// real, unnegated crisis phrase, and (b) a phrase that happens to
+// contain "nahi" as part of the idiom itself (e.g. "nahi jee paunga" -
+// "won't be able to live") doesn't get read as negating itself.
+const NEGATION_WORDS = /\b(nahi|nahin|matlab nahi|don't|dont|do not|never|not)\b/i;
+const CLAUSE_SPLIT = /[.,!?;]+|\bbut\b|\bhowever\b|\balthough\b|\bthough\b/i;
 
-const HOME_ABUSE = /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|toxic relationship|gaslighting|worthless bolta|kutta jaise|blackmail karta|slaps me)/i;
+export function hasUnnegatedPhrase(text, phrases) {
+  const lower = String(text || "").toLowerCase();
+  return lower.split(CLAUSE_SPLIT).some((clause) => {
+    const matched = phrases.find((p) => clause.includes(p));
+    if (!matched) return false;
+    const remainder = clause.split(matched).join(" ");
+    return !NEGATION_WORDS.test(remainder);
+  });
+}
+
+const SCHOOL_ABUSE =
+  /\b(teacher|sir|ma'?am|madam)\b[^.!?\n]{0,40}\b(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|insult(ed)?|beizzati|daant(a|i)?|target(s|ed)?|shout(s|ed|ing)?|compar(es|ed|ing)|makes? fun)\b|\b(sabke samne|class me|publicly)\b[^.!?\n]{0,40}\b(daant|beizzati|insult|shame|humiliat)/i;
+
+const HOME_ABUSE =
+  /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|toxic relationship|gaslighting|worthless bolta|kutta jaise|blackmail karta|slaps me)/i;
 
 // Narrow, same-topic signal that a "hits me" style message may be describing
 // a two-sided/mutual incident (e.g. a sibling fight) rather than one-sided
@@ -33,22 +79,51 @@ export function hasMutualContext(text, priorText = "") {
 }
 
 const ORANGE_WORDS = [
-  "anxious", "anxiety", "panic", "lonely", "akela", "depressed", "depression",
-  "stress", "overwhelm", "neend nahi", "nervous", "scared", "worried",
-  "tension", "bechain", "breakup", "kharab hai",
+  "anxious",
+  "anxiety",
+  "panic",
+  "lonely",
+  "akela",
+  "depressed",
+  "depression",
+  "stress",
+  "overwhelm",
+  "neend nahi",
+  "nervous",
+  "scared",
+  "worried",
+  "tension",
+  "bechain",
+  "breakup",
+  "kharab hai",
 ];
 
 const YELLOW_WORDS = [
-  "tired", "thak gaya", "thak gayi", "off today", "not myself", "meh",
-  "bored", "boring day", "kinda down", "little down", "so-so", "okay-ish",
-  "bas aisa hi", "thoda low", "not sure why", "low", "upset", "sad",
+  "tired",
+  "thak gaya",
+  "thak gayi",
+  "off today",
+  "not myself",
+  "meh",
+  "bored",
+  "boring day",
+  "kinda down",
+  "little down",
+  "so-so",
+  "okay-ish",
+  "bas aisa hi",
+  "thoda low",
+  "not sure why",
+  "low",
+  "upset",
+  "sad",
 ];
 
 export function localRiskFallback(rawText, priorText = "") {
   const text = String(rawText || "");
   const lower = text.toLowerCase();
 
-  const isRed = RED_PHRASES.some((p) => lower.includes(p));
+  const isRed = hasUnnegatedPhrase(text, RED_PHRASES);
   if (isRed) {
     const isSchool = SCHOOL_ABUSE.test(lower);
     const isHome = HOME_ABUSE.test(lower);
@@ -56,7 +131,11 @@ export function localRiskFallback(rawText, priorText = "") {
       risk: "RED",
       score: 95,
       reason: "Local fallback - direct crisis phrase (AI unavailable)",
-      triggers: isSchool ? ["self-harm", "teacher_remark"] : isHome ? ["self-harm", "emotional_abuse"] : ["self-harm"],
+      triggers: isSchool
+        ? ["self-harm", "teacher_remark"]
+        : isHome
+          ? ["self-harm", "emotional_abuse"]
+          : ["self-harm"],
       category: isSchool ? "school_emotional_abuse" : isHome ? "emotional_abuse" : "self_harm",
       abuseType: isSchool ? "school_emotional_abuse" : isHome ? "home_abuse" : "none",
       abuseSource: isSchool ? "teacher" : isHome ? "parent" : "none",
@@ -67,11 +146,15 @@ export function localRiskFallback(rawText, priorText = "") {
 
   if (SCHOOL_ABUSE.test(lower)) {
     return {
-      risk: "ORANGE", score: 85,
+      risk: "ORANGE",
+      score: 85,
       reason: "Local fallback - school emotional abuse pattern (AI unavailable)",
       triggers: ["teacher_remark", "public_shaming"],
-      category: "school_emotional_abuse", abuseType: "school_emotional_abuse", abuseSource: "teacher",
-      isAI: false, isFallback: true,
+      category: "school_emotional_abuse",
+      abuseType: "school_emotional_abuse",
+      abuseSource: "teacher",
+      isAI: false,
+      isFallback: true,
     };
   }
 
@@ -84,38 +167,54 @@ export function localRiskFallback(rawText, priorText = "") {
         ? "Local fallback - hit/abuse phrase, but message (or the message before it) also frames it as two-sided/self-defense - flagged for human review, not treated as confirmed one-sided abuse (AI unavailable)"
         : "Local fallback - home emotional abuse pattern (AI unavailable)",
       triggers: mutual ? ["possible_mutual_conflict"] : ["emotional_abuse", "gaslighting"],
-      category: "emotional_abuse", abuseType: "home_abuse", abuseSource: "parent",
+      category: "emotional_abuse",
+      abuseType: "home_abuse",
+      abuseSource: "parent",
       ambiguous: mutual,
-      isAI: false, isFallback: true,
+      isAI: false,
+      isFallback: true,
     };
   }
 
   const hits = ORANGE_WORDS.filter((w) => lower.includes(w));
   if (hits.length > 0) {
     return {
-      risk: "ORANGE", score: 60 + Math.min(hits.length * 5, 20),
+      risk: "ORANGE",
+      score: 60 + Math.min(hits.length * 5, 20),
       reason: "Local fallback - distress keywords (AI unavailable)",
       triggers: ["anxiety", "distress"],
-      category: "general", abuseType: "none", abuseSource: "none",
-      isAI: false, isFallback: true,
+      category: "general",
+      abuseType: "none",
+      abuseSource: "none",
+      isAI: false,
+      isFallback: true,
     };
   }
 
   const yellowHits = YELLOW_WORDS.filter((w) => lower.includes(w));
   if (yellowHits.length > 0) {
     return {
-      risk: "YELLOW", score: 30 + Math.min(yellowHits.length * 5, 15),
+      risk: "YELLOW",
+      score: 30 + Math.min(yellowHits.length * 5, 15),
       reason: "Local fallback - mild/vague unease (AI unavailable)",
       triggers: ["mild_unease"],
-      category: "general", abuseType: "none", abuseSource: "none",
-      isAI: false, isFallback: true,
+      category: "general",
+      abuseType: "none",
+      abuseSource: "none",
+      isAI: false,
+      isFallback: true,
     };
   }
 
   return {
-    risk: "GREEN", score: 15,
+    risk: "GREEN",
+    score: 15,
     reason: "Local fallback - no risk markers found (AI unavailable)",
-    triggers: ["general"], category: "general", abuseType: "none", abuseSource: "none",
-    isAI: false, isFallback: true,
+    triggers: ["general"],
+    category: "general",
+    abuseType: "none",
+    abuseSource: "none",
+    isAI: false,
+    isFallback: true,
   };
 }

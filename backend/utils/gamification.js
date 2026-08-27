@@ -8,7 +8,6 @@ export function todayStr() {
 }
 
 export function levelForXP(xp) {
-
   return Math.floor(Math.sqrt(xp / 50)) + 1;
 }
 
@@ -28,7 +27,6 @@ function bumpStreak(user) {
     const gap = daysBetween(user.lastActiveDate, today);
     if (gap === 1) user.streakDays += 1;
     else if (gap > 1) user.streakDays = 1;
-
   }
   user.lastActiveDate = today;
 }
@@ -43,7 +41,10 @@ function unlockBadge(user, badgeId) {
 
 function checkBadges(user, context = {}) {
   const newly = [];
-  const add = (id) => { const b = unlockBadge(user, id); if (b) newly.push(b); };
+  const add = (id) => {
+    const b = unlockBadge(user, id);
+    if (b) newly.push(b);
+  };
 
   if (context.firstJournalEntry) add("first_entry");
   if (user.streakDays >= 3) add("streak_3");
@@ -61,22 +62,46 @@ function checkBadges(user, context = {}) {
 
 export async function awardXP(userId, amount, context = {}) {
   if (!userId) return null;
-  const user = await User.findById(userId);
-  if (!user) return null;
 
-  const prevLevel = user.level || 1;
-  user.xp = (user.xp || 0) + Math.max(0, amount);
-  bumpStreak(user);
-  user.level = levelForXP(user.xp);
+  // FIX: this used to read the user, mutate xp/level/streak/badges in
+  // memory, then .save() the whole document - a classic lost-update race.
+  // Two awardXP calls for the same user landing close together (e.g.
+  // completing a habit and claiming a daily challenge within the same
+  // second - both separate requests, each calling this) could both read
+  // the same starting xp, and whichever save() finished last silently
+  // overwrote the other's increment, losing XP and any badge unlocked
+  // only in the "losing" call. xp is now incremented atomically via
+  // MongoDB's $inc, which is race-safe regardless of how many concurrent
+  // calls land - no lost-update window for the number that actually
+  // matters. streak/level/badges are still read-then-write against a
+  // freshly-read copy (best effort, same as before, not worse) - fully
+  // atomic guarantees there would need a transaction, which is a bigger
+  // change than this bug warrants.
+  const clampedAmount = Math.max(0, amount);
+  const afterXP = await User.findByIdAndUpdate(
+    userId,
+    { $inc: { xp: clampedAmount } },
+    { new: true }
+  );
+  if (!afterXP) return null;
 
-  const newBadges = checkBadges(user, context);
-  await user.save();
+  const prevLevel = levelForXP(afterXP.xp - clampedAmount) || 1;
+  bumpStreak(afterXP);
+  afterXP.level = levelForXP(afterXP.xp);
+  const newBadges = checkBadges(afterXP, context);
+
+  await User.findByIdAndUpdate(userId, {
+    level: afterXP.level,
+    streakDays: afterXP.streakDays,
+    lastActiveDate: afterXP.lastActiveDate,
+    badges: afterXP.badges,
+  });
 
   return {
-    xp: user.xp,
-    level: user.level,
-    streakDays: user.streakDays,
-    leveledUp: user.level > prevLevel,
+    xp: afterXP.xp,
+    level: afterXP.level,
+    streakDays: afterXP.streakDays,
+    leveledUp: afterXP.level > prevLevel,
     newBadges,
   };
 }
@@ -86,16 +111,20 @@ export async function getGamificationProfile(userId) {
   if (!user) return null;
   const nextLevelXP = 50 * Math.pow(user.level, 2);
   const currentLevelXP = 50 * Math.pow(user.level - 1, 2);
-  const progress = nextLevelXP > currentLevelXP
-    ? Math.min(1, (user.xp - currentLevelXP) / (nextLevelXP - currentLevelXP))
-    : 1;
+  const progress =
+    nextLevelXP > currentLevelXP
+      ? Math.min(1, (user.xp - currentLevelXP) / (nextLevelXP - currentLevelXP))
+      : 1;
 
   return {
     name: user.name,
     xp: user.xp,
     level: user.level,
     streakDays: user.streakDays,
-    badges: user.badges.map((b) => ({ ...(BADGES[b.id] || { id: b.id, name: b.id }), earnedAt: b.earnedAt })),
+    badges: user.badges.map((b) => ({
+      ...(BADGES[b.id] || { id: b.id, name: b.id }),
+      earnedAt: b.earnedAt,
+    })),
     nextLevelXP,
     progress,
   };
