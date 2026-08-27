@@ -1,14 +1,15 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import express from 'express';
-import crypto from 'crypto';
-import Otp from '../models/otp.js';
-import optionalAuth from '../middleware/optionalAuth.js';
-import { protect as auth } from '../middleware/auth.js';
-import { saveAnalysis } from '../utils/saveAnalysis.js';
-import { localRiskFallback, hasMutualContext } from '../utils/localRiskFallback.js';
-import { alertGeminiDown } from '../utils/alertEmail.js';
-import { callGeminiResilient, isSelfThrottled } from '../utils/geminiThrottle.js';
-import { classifyWithGroq } from '../utils/groqFallback.js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import express from "express";
+import optionalAuth from "../middleware/optionalAuth.js";
+import { saveAnalysis } from "../utils/saveAnalysis.js";
+import {
+  localRiskFallback,
+  hasMutualContext,
+  hasUnnegatedPhrase,
+} from "../utils/localRiskFallback.js";
+import { alertGeminiDown } from "../utils/alertEmail.js";
+import { callGeminiResilient, isSelfThrottled } from "../utils/geminiThrottle.js";
+import { classifyWithGroq } from "../utils/groqFallback.js";
 
 const router = express.Router();
 
@@ -44,7 +45,7 @@ Examples:
 "My teacher assigned homework and I feel stressed about exams" => {"risk":"ORANGE","score":40,"reason":"Exam stress - not abuse, teacher just mentioned in passing","triggers":["stress"],"category":"general","abuseType":"none","abuseSource":"none","emotion":"stressed"}
 `;
 
-function safeLogRisk(source, risk, score, category, extra=""){
+function safeLogRisk(source, risk, score, category, extra = "") {
   console.log(`[${source}] Risk:${risk} Score:${score} Cat:${category} ${extra}`);
 }
 
@@ -59,88 +60,151 @@ async function tryGroqClassification(text) {
   return { ...groqResult, isAI: true, source: "groq-fallback" };
 }
 
-const schoolAbusePatterns = /\b(teacher|sir|ma'?am|madam)\b[^.!?\n]{0,40}\b(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|insult(ed)?|beizzati|daant(a|i)?|target(s|ed)?|shout(s|ed|ing)?|compar(es|ed|ing)|makes? fun|public(ly)?)\b|\b(sabke samne|class me|public(ly)?)\b[^.!?\n]{0,40}\b(daant|beizzati|insult|shame|humiliat)/i;
+const schoolAbusePatterns =
+  /\b(teacher|sir|ma'?am|madam)\b[^.!?\n]{0,40}\b(useless|worthless|worst|dumb|stupid|fail|nikamma|nalayak|insult(ed)?|beizzati|daant(a|i)?|target(s|ed)?|shout(s|ed|ing)?|compar(es|ed|ing)|makes? fun|public(ly)?)\b|\b(sabke samne|class me|public(ly)?)\b[^.!?\n]{0,40}\b(daant|beizzati|insult|shame|humiliat)/i;
 
-router.post('/otp/send', auth, async (req, res) => {
-  try {
-    const { phone } = req.body;
-    if (!phone) return res.status(400).json({ msg: "Phone required" });
+// FIX: disabled, same reason as routes/otp.js in server.js - no SMS
+// provider exists anywhere in this codebase, nothing in the live frontend
+// calls these, and as implemented /otp/send returned the OTP directly in
+// its own JSON response (no out-of-band delivery at all) while /otp/verify
+// would mark any phone "verified" against your account with zero proof
+// you actually received it anywhere. Route handlers kept (commented) as a
+// reference in case real phone verification gets built later; they must
+// not return the OTP to the client once they do.
+// router.post('/otp/send', auth, async (req, res) => { ... });
+// router.post('/otp/verify', auth, async (req, res) => { ... });
 
-    await Otp.deleteMany({ phone });
-
-    const randomOtp = crypto.randomInt(100000, 999999).toString();
-    console.log(`[OTP-SEND] Phone:${phone} OTP:${randomOtp}`);
-
-    await Otp.create({ phone, otp: randomOtp });
-
-    res.json({ msg: "OTP sent", phone, otp: randomOtp, expiresIn: 300 });
-  } catch(e) {
-    res.status(500).json({ msg: "OTP send failed", error: e.message });
-  }
-});
-
-router.post('/otp/verify', auth, async (req, res) => {
-  try {
-    const { phone, otp } = req.body;
-
-    if (typeof phone !== "string" || typeof otp !== "string" || !phone || !otp) {
-      return res.status(400).json({ msg: "Phone and OTP required" });
-    }
-
-    const found = await Otp.findOne({ phone, otp });
-    if (!found) {
-      safeLogRisk("OTP-FAIL", "VERIFY", 0, "general", `Phone:${phone} OTP:${otp} invalid`);
-      return res.status(400).json({ verified: false, msg: "Invalid or expired OTP" });
-    }
-
-    await Otp.deleteMany({ phone });
-    safeLogRisk("OTP-SUCCESS", "VERIFY", 100, "general", `Phone:${phone} verified`);
-
-    try {
-      const mongoose = (await import("mongoose")).default;
-      if (mongoose.models.User) {
-        await mongoose.models.User.updateOne({ _id: req.userId }, { $set: { phoneVerified: true, phone } });
-      }
-    } catch {}
-
-    res.json({ verified: true, phone, msg: "Phone verified successfully" });
-  } catch(e) {
-    res.status(500).json({ verified: false, msg: "Verify failed", error: e.message });
-  }
-});
-
-router.post('/', optionalAuth, async (req, res) => {
+router.post("/", optionalAuth, async (req, res) => {
   const text = req.body.text || req.body.message || "";
   // Prefer the real authenticated user id (from optionalAuth) so
   // admin-panel populate() can show name/email/emergency contact. Falls
   // back to whatever the client sent, or "anonymous".
   const userId = req.user?.id || req.body.userId || req.body.userEmail || "anonymous";
   const userPhone = req.body.phone || req.body.userPhone || "";
-  if (!text.trim()) return res.json({ risk: "GREEN", score: 0, reason: "Empty", triggers: ["general"], category: "general", abuseType:"none", abuseSource:"none", isAI: true });
+  if (!text.trim())
+    return res.json({
+      risk: "GREEN",
+      score: 0,
+      reason: "Empty",
+      triggers: ["general"],
+      category: "general",
+      abuseType: "none",
+      abuseSource: "none",
+      isAI: true,
+    });
 
   const lower = text.toLowerCase();
 
-  const isDirectRed = /(mujhe marna hai|i want to die|kill myself|end my life|mar jaunga|mar jaungi|khudkushi karunga|khatam karna hai.*khud ko|நான் செத்துவிட வேண்டும்|எனக்கு சாக வேண்டும்|నేను చావాలి|আমি মরে যেতে চাই|मला मरायचे आहे|મારે મરવું છે|ನಾನು ಸಾಯಬೇಕು|എനിക്ക് മരിക്കണം|ਮੈਂ ਮਰਨਾ ਚਾਹੁੰਦਾ ਹਾਂ|میں مرنا چاہتا ہوں)/i.test(lower);
-  const hasNegation = /(nahi|nahin|don't|do not|not|never|matlab nahi)/i.test(lower) &&!lower.includes("nahi jee paunga");
+  // FIX: hasNegation used to be checked against the WHOLE message, so any
+  // message containing an unrelated negation word anywhere (e.g. "I don't
+  // know why, but I want to end my life") skipped this guaranteed local
+  // RED safety net entirely and fell through to slower AI classification
+  // instead. hasUnnegatedPhrase (shared with localRiskFallback.js) checks
+  // negation per-clause, with the matched phrase itself excluded from
+  // that check, so a genuine "I don't want to ___" right next to the
+  // phrase still correctly suppresses it, but an unrelated "don't"
+  // elsewhere in the message can no longer mask a real disclosure.
+  const RED_PHRASES_LOCAL = [
+    "mujhe marna hai",
+    "i want to die",
+    "kill myself",
+    "end my life",
+    "mar jaunga",
+    "mar jaungi",
+    "khudkushi karunga",
+    "nahi jee paunga",
+    "nahin jee paunga",
+    "நான் செத்துவிட வேண்டும்",
+    "எனக்கு சாக வேண்டும்",
+    "నేను చావాలి",
+    "আমি মরে যেতে চাই",
+    "मला मरायचे आहे",
+    "મારે મરવું છે",
+    "ನಾನು ಸಾಯಬೇಕು",
+    "എനിക്ക് മരിക്കണം",
+    "ਮੈਂ ਮਰਨਾ ਚਾਹੁੰਦਾ ਹਾਂ",
+    "میں مرنا چاہتا ہوں",
+  ];
+  const isDirectRed =
+    hasUnnegatedPhrase(text, RED_PHRASES_LOCAL) || /khatam karna hai.*khud ko/i.test(lower);
   const isSchoolAbuse = schoolAbusePatterns.test(lower);
-  const abusePatterns = /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|toxic relationship|gaslighting|worthless bolta|kutta jaise|blackmail karta|slaps me)/i;
+  const abusePatterns =
+    /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|toxic relationship|gaslighting|worthless bolta|kutta jaise|blackmail karta|slaps me)/i;
   const isAbuse = abusePatterns.test(lower);
 
-  const isAnxious = /(anxious|anxiety|panic|lonely|akela|depressed|depression|\bstress\b|overwhelm|neend nahi|nervous|scared|worried|tension|bechain)/i.test(lower);
+  const isAnxious =
+    /(anxious|anxiety|panic|lonely|akela|depressed|depression|\bstress\b|overwhelm|neend nahi|nervous|scared|worried|tension|bechain)/i.test(
+      lower
+    );
 
-  if (isDirectRed &&!hasNegation) {
-    const cat = isSchoolAbuse? "school_emotional_abuse" : isAbuse? "emotional_abuse" : "self_harm";
-    const triggers = isSchoolAbuse? ["self-harm","teacher_remark"] : isAbuse? ["self-harm","emotional_abuse"] : ["self-harm"];
-    const abuseType = cat==="school_emotional_abuse"?"school_emotional_abuse":cat==="emotional_abuse"?"home_abuse":"none";
-    const abuseSource = isSchoolAbuse?"teacher":isAbuse?"parent":"none";
-    await saveAnalysis({ userId, text, risk:"RED", score:95, category:cat, abuseType, abuseSource, triggers, emotion:"critical", phone:userPhone });
-    return res.json({ risk: "RED", score: 95, reason: "Direct intent - safety net", triggers, category: cat, abuseType, abuseSource, isAI: false, isSafetyNet: true });
+  if (isDirectRed) {
+    const cat = isSchoolAbuse
+      ? "school_emotional_abuse"
+      : isAbuse
+        ? "emotional_abuse"
+        : "self_harm";
+    const triggers = isSchoolAbuse
+      ? ["self-harm", "teacher_remark"]
+      : isAbuse
+        ? ["self-harm", "emotional_abuse"]
+        : ["self-harm"];
+    const abuseType =
+      cat === "school_emotional_abuse"
+        ? "school_emotional_abuse"
+        : cat === "emotional_abuse"
+          ? "home_abuse"
+          : "none";
+    const abuseSource = isSchoolAbuse ? "teacher" : isAbuse ? "parent" : "none";
+    await saveAnalysis({
+      userId,
+      text,
+      risk: "RED",
+      score: 95,
+      category: cat,
+      abuseType,
+      abuseSource,
+      triggers,
+      emotion: "critical",
+      phone: userPhone,
+    });
+    return res.json({
+      risk: "RED",
+      score: 95,
+      reason: "Direct intent - safety net",
+      triggers,
+      category: cat,
+      abuseType,
+      abuseSource,
+      isAI: false,
+      isSafetyNet: true,
+    });
   }
 
   if (isSchoolAbuse) {
-    const triggers = ["teacher_remark","public_shaming"];
-    await saveAnalysis({ userId, text, risk:"ORANGE", score:85, category:"school_emotional_abuse", abuseType:"school_emotional_abuse", abuseSource:"teacher", triggers, emotion:"humiliated", phone:userPhone });
-    return res.json({ risk: "ORANGE", score: 85, reason: "School emotional abuse - teacher remark", triggers, category: "school_emotional_abuse", abuseType:"school_emotional_abuse", abuseSource:"teacher", isAI: false, isSafetyNet: true });
+    const triggers = ["teacher_remark", "public_shaming"];
+    await saveAnalysis({
+      userId,
+      text,
+      risk: "ORANGE",
+      score: 85,
+      category: "school_emotional_abuse",
+      abuseType: "school_emotional_abuse",
+      abuseSource: "teacher",
+      triggers,
+      emotion: "humiliated",
+      phone: userPhone,
+    });
+    return res.json({
+      risk: "ORANGE",
+      score: 85,
+      reason: "School emotional abuse - teacher remark",
+      triggers,
+      category: "school_emotional_abuse",
+      abuseType: "school_emotional_abuse",
+      abuseSource: "teacher",
+      isAI: false,
+      isSafetyNet: true,
+    });
   }
 
   if (isAbuse) {
@@ -151,19 +215,62 @@ router.post('/', optionalAuth, async (req, res) => {
     // one journal entry at a time (no message history), so it can only
     // check within the same text; RED (self-harm) above is unaffected.
     const mutual = hasMutualContext(text);
-    const triggers = mutual ? ["possible_mutual_conflict"] : ["emotional_abuse","gaslighting"];
+    const triggers = mutual ? ["possible_mutual_conflict"] : ["emotional_abuse", "gaslighting"];
     const score = mutual ? 45 : 75;
     const reason = mutual
       ? "Message also frames this as two-sided/self-defense - flagged for review, not treated as confirmed one-sided abuse"
       : "Emotional abuse - safety net";
-    await saveAnalysis({ userId, text, risk:"ORANGE", score, category:"emotional_abuse", abuseType:"home_abuse", abuseSource:"parent", triggers, emotion:"distressed", phone:userPhone });
-    return res.json({ risk: "ORANGE", score, reason, triggers, category: "emotional_abuse", abuseType:"home_abuse", abuseSource:"parent", ambiguous: mutual, isAI: false, isSafetyNet: true });
+    await saveAnalysis({
+      userId,
+      text,
+      risk: "ORANGE",
+      score,
+      category: "emotional_abuse",
+      abuseType: "home_abuse",
+      abuseSource: "parent",
+      triggers,
+      emotion: "distressed",
+      phone: userPhone,
+    });
+    return res.json({
+      risk: "ORANGE",
+      score,
+      reason,
+      triggers,
+      category: "emotional_abuse",
+      abuseType: "home_abuse",
+      abuseSource: "parent",
+      ambiguous: mutual,
+      isAI: false,
+      isSafetyNet: true,
+    });
   }
 
   if (isAnxious) {
-    const triggers = ["anxiety","distress"];
-    await saveAnalysis({ userId, text, risk:"ORANGE", score:68, category:"general", abuseType:"none", abuseSource:"none", triggers, emotion:"anxious", phone:userPhone });
-    return res.json({ risk: "ORANGE", score: 68, reason: "Anxiety/distress keyword", triggers, category: "general", abuseType:"none", abuseSource:"none", isAI: false, isSafetyNet: true });
+    const triggers = ["anxiety", "distress"];
+    await saveAnalysis({
+      userId,
+      text,
+      risk: "ORANGE",
+      score: 68,
+      category: "general",
+      abuseType: "none",
+      abuseSource: "none",
+      triggers,
+      emotion: "anxious",
+      phone: userPhone,
+    });
+    return res.json({
+      risk: "ORANGE",
+      score: 68,
+      reason: "Anxiety/distress keyword",
+      triggers,
+      category: "general",
+      abuseType: "none",
+      abuseSource: "none",
+      isAI: false,
+      isSafetyNet: true,
+    });
   }
 
   const inCooldown = Date.now() < geminiCooldownUntil;
@@ -174,7 +281,7 @@ router.post('/', optionalAuth, async (req, res) => {
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
       const result = await callGeminiResilient(() =>
-        model.generateContent(SYSTEM_PROMPT + "\n\nText: \"" + text + "\"")
+        model.generateContent(SYSTEM_PROMPT + '\n\nText: "' + text + '"')
       );
       const txt = result.response.text() || "";
       const match = txt.match(/\{[\s\S]*\}/);
@@ -183,29 +290,76 @@ router.post('/', optionalAuth, async (req, res) => {
 
       if (match) {
         const parsed = JSON.parse(match[0]);
-        if (!['GREEN','YELLOW','ORANGE','RED'].includes(parsed.risk)) parsed.risk = 'ORANGE';
+        if (!["GREEN", "YELLOW", "ORANGE", "RED"].includes(parsed.risk)) parsed.risk = "ORANGE";
         if (!parsed.triggers || parsed.triggers.includes("error")) parsed.triggers = ["general"];
-        if (!parsed.category) parsed.category = parsed.abuseType?.includes("school")? "school_emotional_abuse" : "general";
-        if (!parsed.abuseType) parsed.abuseType = parsed.category.includes("school")? "school_emotional_abuse" : "none";
-        if (!parsed.abuseSource) parsed.abuseSource = parsed.abuseType==="school_emotional_abuse"? "teacher" : "none";
+        if (!parsed.category)
+          parsed.category = parsed.abuseType?.includes("school")
+            ? "school_emotional_abuse"
+            : "general";
+        if (!parsed.abuseType)
+          parsed.abuseType = parsed.category.includes("school") ? "school_emotional_abuse" : "none";
+        if (!parsed.abuseSource)
+          parsed.abuseSource = parsed.abuseType === "school_emotional_abuse" ? "teacher" : "none";
 
-        await saveAnalysis({ userId, text, risk: parsed.risk, score: parsed.score, category: parsed.category, abuseType: parsed.abuseType, abuseSource: parsed.abuseSource, triggers: parsed.triggers, emotion: parsed.emotion, phone: userPhone });
-        safeLogRisk("GEMINI-AI", parsed.risk, parsed.score, parsed.category, `AI success User:${userId}`);
-        return res.json({...parsed, isAI: true });
+        await saveAnalysis({
+          userId,
+          text,
+          risk: parsed.risk,
+          score: parsed.score,
+          category: parsed.category,
+          abuseType: parsed.abuseType,
+          abuseSource: parsed.abuseSource,
+          triggers: parsed.triggers,
+          emotion: parsed.emotion,
+          phone: userPhone,
+        });
+        safeLogRisk(
+          "GEMINI-AI",
+          parsed.risk,
+          parsed.score,
+          parsed.category,
+          `AI success User:${userId}`
+        );
+        return res.json({ ...parsed, isAI: true });
       }
 
       const groqFb1 = await tryGroqClassification(text);
       if (groqFb1) {
-        await saveAnalysis({ userId, text, risk: groqFb1.risk, score: groqFb1.score, category: groqFb1.category, abuseType: groqFb1.abuseType, abuseSource: groqFb1.abuseSource, triggers: groqFb1.triggers, phone: userPhone });
-        safeLogRisk("GROQ-AI", groqFb1.risk, groqFb1.score, groqFb1.category, `Gemini unparseable, Groq succeeded User:${userId}`);
+        await saveAnalysis({
+          userId,
+          text,
+          risk: groqFb1.risk,
+          score: groqFb1.score,
+          category: groqFb1.category,
+          abuseType: groqFb1.abuseType,
+          abuseSource: groqFb1.abuseSource,
+          triggers: groqFb1.triggers,
+          phone: userPhone,
+        });
+        safeLogRisk(
+          "GROQ-AI",
+          groqFb1.risk,
+          groqFb1.score,
+          groqFb1.category,
+          `Gemini unparseable, Groq succeeded User:${userId}`
+        );
         return res.json({ ...groqFb1, reason: groqFb1.reason || "Gemini unparseable - Groq used" });
       }
       const fb = localRiskFallback(text);
-      await saveAnalysis({ userId, text, risk: fb.risk, score: fb.score, category: fb.category, abuseType: fb.abuseType, abuseSource: fb.abuseSource, triggers: fb.triggers, phone: userPhone });
+      await saveAnalysis({
+        userId,
+        text,
+        risk: fb.risk,
+        score: fb.score,
+        category: fb.category,
+        abuseType: fb.abuseType,
+        abuseSource: fb.abuseSource,
+        triggers: fb.triggers,
+        phone: userPhone,
+      });
       return res.json({ ...fb, reason: "AI response unparseable - local fallback used" });
-
     } catch (e) {
-      console.error("Gemini error:", e.message.slice(0,300));
+      console.error("Gemini error:", e.message.slice(0, 300));
       const wasSelfThrottled = e.message?.includes("Self-throttled");
       geminiFailStreak += 1;
       if (e.message?.includes("429") || e.message?.toLowerCase().includes("quota")) {
@@ -218,24 +372,75 @@ router.post('/', optionalAuth, async (req, res) => {
 
       const groqFb2 = await tryGroqClassification(text);
       if (groqFb2) {
-        await saveAnalysis({ userId, text, risk: groqFb2.risk, score: groqFb2.score, category: groqFb2.category, abuseType: groqFb2.abuseType, abuseSource: groqFb2.abuseSource, triggers: groqFb2.triggers, phone: userPhone });
-        safeLogRisk("GROQ-AI", groqFb2.risk, groqFb2.score, groqFb2.category, `Gemini failed, Groq succeeded User:${userId}`);
+        await saveAnalysis({
+          userId,
+          text,
+          risk: groqFb2.risk,
+          score: groqFb2.score,
+          category: groqFb2.category,
+          abuseType: groqFb2.abuseType,
+          abuseSource: groqFb2.abuseSource,
+          triggers: groqFb2.triggers,
+          phone: userPhone,
+        });
+        safeLogRisk(
+          "GROQ-AI",
+          groqFb2.risk,
+          groqFb2.score,
+          groqFb2.category,
+          `Gemini failed, Groq succeeded User:${userId}`
+        );
         return res.json(groqFb2);
       }
       const fb = localRiskFallback(text);
-      await saveAnalysis({ userId, text, risk: fb.risk, score: fb.score, category: fb.category, abuseType: fb.abuseType, abuseSource: fb.abuseSource, triggers: fb.triggers, phone: userPhone });
+      await saveAnalysis({
+        userId,
+        text,
+        risk: fb.risk,
+        score: fb.score,
+        category: fb.category,
+        abuseType: fb.abuseType,
+        abuseSource: fb.abuseSource,
+        triggers: fb.triggers,
+        phone: userPhone,
+      });
       return res.json(fb);
     }
   } else {
-
     const groqFb3 = await tryGroqClassification(text);
     if (groqFb3) {
-      await saveAnalysis({ userId, text, risk: groqFb3.risk, score: groqFb3.score, category: groqFb3.category, abuseType: groqFb3.abuseType, abuseSource: groqFb3.abuseSource, triggers: groqFb3.triggers, phone: userPhone });
-      safeLogRisk("GROQ-AI", groqFb3.risk, groqFb3.score, groqFb3.category, `Gemini in cooldown, Groq succeeded User:${userId}`);
+      await saveAnalysis({
+        userId,
+        text,
+        risk: groqFb3.risk,
+        score: groqFb3.score,
+        category: groqFb3.category,
+        abuseType: groqFb3.abuseType,
+        abuseSource: groqFb3.abuseSource,
+        triggers: groqFb3.triggers,
+        phone: userPhone,
+      });
+      safeLogRisk(
+        "GROQ-AI",
+        groqFb3.risk,
+        groqFb3.score,
+        groqFb3.category,
+        `Gemini in cooldown, Groq succeeded User:${userId}`
+      );
       return res.json(groqFb3);
     }
     const fb = localRiskFallback(text);
-    await saveAnalysis({ userId, text, risk: fb.risk, score: fb.score, category: fb.category, abuseType: fb.abuseType, abuseSource: fb.abuseSource, triggers: fb.triggers, phone: userPhone });
+    await saveAnalysis({
+      userId,
+      text,
+      risk: fb.risk,
+      score: fb.score,
+      category: fb.category,
+      abuseType: fb.abuseType,
+      abuseSource: fb.abuseSource,
+      triggers: fb.triggers,
+      phone: userPhone,
+    });
     return res.json({ ...fb, reason: fb.reason + " (Gemini in cooldown, Groq also unavailable)" });
   }
 });

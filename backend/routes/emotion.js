@@ -2,6 +2,7 @@ import express from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { callGeminiResilient } from "../utils/geminiThrottle.js";
 import { chatWithGroq } from "../utils/groqFallback.js";
+import { hasUnnegatedPhrase } from "../utils/localRiskFallback.js";
 
 const router = express.Router();
 
@@ -39,23 +40,33 @@ router.post("/analyze", async (req, res) => {
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
         const result = await callGeminiResilient(() => model.generateContent(prompt));
-        let jsonText = result.response.text().replace(/```json|```/g, "").replace(/```/g, "").trim();
+        let jsonText = result.response
+          .text()
+          .replace(/```json|```/g, "")
+          .replace(/```/g, "")
+          .trim();
         const ai = JSON.parse(jsonText);
 
         if (ai.score >= 75) ai.color = "RED";
         else if (ai.score >= 45) ai.color = "ORANGE";
         else ai.color = "GREEN";
 
-        if (ai.color === "RED") { ai.label = "CRITICAL"; ai.risk = "high"; }
-        else if (ai.color === "ORANGE") { ai.label = "STRESSED"; ai.risk = "medium"; }
-        else { ai.label = "POSITIVE"; ai.risk = "low"; }
+        if (ai.color === "RED") {
+          ai.label = "CRITICAL";
+          ai.risk = "high";
+        } else if (ai.color === "ORANGE") {
+          ai.label = "STRESSED";
+          ai.risk = "medium";
+        } else {
+          ai.label = "POSITIVE";
+          ai.risk = "low";
+        }
 
         return res.json({
           success: true,
           ...ai,
           isAI: true,
         });
-
       } catch (geminiErr) {
         console.error("Gemini analyze failed, trying Groq:", geminiErr.message);
       }
@@ -69,9 +80,16 @@ router.post("/analyze", async (req, res) => {
             if (ai.score >= 75) ai.color = "RED";
             else if (ai.score >= 45) ai.color = "ORANGE";
             else ai.color = "GREEN";
-            if (ai.color === "RED") { ai.label = "CRITICAL"; ai.risk = "high"; }
-            else if (ai.color === "ORANGE") { ai.label = "STRESSED"; ai.risk = "medium"; }
-            else { ai.label = "POSITIVE"; ai.risk = "low"; }
+            if (ai.color === "RED") {
+              ai.label = "CRITICAL";
+              ai.risk = "high";
+            } else if (ai.color === "ORANGE") {
+              ai.label = "STRESSED";
+              ai.risk = "medium";
+            } else {
+              ai.label = "POSITIVE";
+              ai.risk = "low";
+            }
             return res.json({ success: true, ...ai, isAI: true, source: "groq-fallback" });
           }
         }
@@ -89,22 +107,78 @@ router.post("/analyze", async (req, res) => {
       triggers: "none",
       risk: "low",
       emoAbuseDetected: false,
-      reasons: ["Positive text detected"]
+      reasons: ["Positive text detected"],
     };
 
-    const abuseWords = ['worthless','hate you','abuse','beating','hit me','slap','emotional abuse','gaslight','kill you'];
-    const isAbuse = abuseWords.some(w => low.includes(w));
+    const abuseWords = [
+      "worthless",
+      "hate you",
+      "abuse",
+      "beating",
+      "hit me",
+      "slap",
+      "emotional abuse",
+      "gaslight",
+      "kill you",
+    ];
+    const isAbuse = abuseWords.some((w) => low.includes(w));
 
-    if (low.includes("suicide") || low.includes("kill myself") || low.includes("want to die") || low.includes("panic attack") || low.includes("can't breathe")) {
-      result = { color: "RED", score: 95, label: "CRITICAL", emotion: "critical", triggers: "self-harm/panic", risk: "high", emoAbuseDetected: isAbuse, reasons: ["Critical risk detected"] };
+    // FIX: this had NO negation handling at all - "I don't want to die,
+    // just tired" scored RED/95 same as an actual disclosure. Now checked
+    // per-clause with the matched phrase excluded from the check, so a
+    // real "I don't want to ___" still suppresses correctly while an
+    // unrelated negation elsewhere in the message can't mask a real one.
+    if (
+      hasUnnegatedPhrase(text, [
+        "suicide",
+        "kill myself",
+        "want to die",
+        "panic attack",
+        "can't breathe",
+      ])
+    ) {
+      result = {
+        color: "RED",
+        score: 95,
+        label: "CRITICAL",
+        emotion: "critical",
+        triggers: "self-harm/panic",
+        risk: "high",
+        emoAbuseDetected: isAbuse,
+        reasons: ["Critical risk detected"],
+      };
     } else if (isAbuse || low.includes("hopeless") || low.includes("worthless")) {
-      result = { color: "RED", score: 80, label: "CRITICAL", emotion: "abused", triggers: "emotional abuse", risk: "high", emoAbuseDetected: true, reasons: ["Emotional abuse detected"] };
-    } else if (low.includes("sad") || low.includes("stressed") || low.includes("anxious") || low.includes("depressed") || low.includes("alone") || low.includes("crying")) {
-      result = { color: "ORANGE", score: 60, label: "STRESSED", emotion: "stressed", triggers: "stress/anxiety", risk: "medium", emoAbuseDetected: isAbuse, reasons: ["Stress/anxiety detected"] };
+      result = {
+        color: "RED",
+        score: 80,
+        label: "CRITICAL",
+        emotion: "abused",
+        triggers: "emotional abuse",
+        risk: "high",
+        emoAbuseDetected: true,
+        reasons: ["Emotional abuse detected"],
+      };
+    } else if (
+      low.includes("sad") ||
+      low.includes("stressed") ||
+      low.includes("anxious") ||
+      low.includes("depressed") ||
+      low.includes("alone") ||
+      low.includes("crying")
+    ) {
+      result = {
+        color: "ORANGE",
+        score: 60,
+        label: "STRESSED",
+        emotion: "stressed",
+        triggers: "stress/anxiety",
+        risk: "medium",
+        emoAbuseDetected: isAbuse,
+        reasons: ["Stress/anxiety detected"],
+      };
     }
 
     res.json({ success: true, ...result, isAI: false });
-
   } catch (err) {
     console.error("Emotion error:", err);
     res.status(500).json({ success: false, msg: err.message });

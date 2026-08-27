@@ -51,12 +51,21 @@ router.get("/calendar", auth, async (req, res) => {
       createdAt: { $gte: start, $lt: end },
     }).select("riskLevel emotion createdAt");
 
+    // FIX: highestRisk used to default to "ORANGE" for every day that had
+    // any entries at all, and only ever escalated to "RED" - so a day with
+    // only GREEN check-ins was shown back to the user as an elevated
+    // ORANGE day in their own calendar. Now starts at GREEN and escalates
+    // through the real order (GREEN < YELLOW < ORANGE < RED).
+    const RISK_RANK = { GREEN: 0, YELLOW: 1, ORANGE: 2, RED: 3 };
     const byDay = {};
     entries.forEach((e) => {
       const day = toISTDateStr(e.createdAt);
-      if (!byDay[day]) byDay[day] = { count: 0, highestRisk: "ORANGE", emotions: [] };
+      if (!byDay[day]) byDay[day] = { count: 0, highestRisk: "GREEN", emotions: [] };
       byDay[day].count += 1;
-      if (e.riskLevel === "RED") byDay[day].highestRisk = "RED";
+      const rank = RISK_RANK[e.riskLevel];
+      if (rank !== undefined && rank > RISK_RANK[byDay[day].highestRisk]) {
+        byDay[day].highestRisk = e.riskLevel;
+      }
       if (e.emotion) byDay[day].emotions.push(e.emotion);
     });
 
