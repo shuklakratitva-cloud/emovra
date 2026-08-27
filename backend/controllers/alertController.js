@@ -19,7 +19,8 @@ function decryptAlert(alertDoc) {
 ========================================= */
 export const createAlert = async (req, res) => {
   try {
-    const { text, emotion, riskLevel, score, phone, category, abuseType, abuseSource, reasons } = req.body;
+    const { text, emotion, riskLevel, score, phone, category, abuseType, abuseSource, reasons } =
+      req.body;
 
     const alert = await Alert.create({
       userId: req.user.id,
@@ -34,20 +35,21 @@ export const createAlert = async (req, res) => {
       triggers: reasons || [],
     });
 
-    const populatedAlert = await Alert.findById(alert._id)
-      .populate("userId", "name email age emergencyName emergencyPhone");
+    const populatedAlert = await Alert.findById(alert._id).populate(
+      "userId",
+      "name email age emergencyName emergencyPhone"
+    );
 
     res.status(201).json({
       success: true,
       message: "Alert created successfully",
-      alert: decryptAlert(populatedAlert)
+      alert: decryptAlert(populatedAlert),
     });
-
   } catch (err) {
     console.error("Create Alert Error:", err);
     res.status(500).json({
       success: false,
-      message: "Failed to create alert"
+      message: "Failed to create alert",
     });
   }
 };
@@ -59,28 +61,27 @@ export const getRedAlert = async (req, res) => {
   try {
     const alert = await Alert.findOne({
       userId: req.user.id,
-      status: "ACTIVE"
+      status: "ACTIVE",
     })
-    .populate("userId", "name email age emergencyName emergencyPhone")
-    .sort({ createdAt: -1 });
+      .populate("userId", "name email age emergencyName emergencyPhone")
+      .sort({ createdAt: -1 });
 
     if (!alert) {
       return res.status(404).json({
         success: false,
-        message: "No active alert found"
+        message: "No active alert found",
       });
     }
 
     res.json({
       success: true,
-      alert: decryptAlert(alert)
+      alert: decryptAlert(alert),
     });
-
   } catch (err) {
     console.error("Get Alert Error:", err);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch alert"
+      message: "Failed to fetch alert",
     });
   }
 };
@@ -90,13 +91,20 @@ export const getRedAlert = async (req, res) => {
 ========================================= */
 export const callSOS = async (req, res) => {
   try {
-    const alert = await Alert.findById(req.params.id)
-      .populate("userId", "name email age emergencyName emergencyPhone");
+    // FIX: previously fetched by _id alone with no ownership check, so any
+    // authenticated user could pass another user's alert id (discoverable
+    // via /history, /red, or the admin endpoints) and read their decrypted
+    // crisis text + PII, or flip their alert's status. Scoped to the
+    // requesting user, same as getRedAlert/getAlertHistory already were.
+    const alert = await Alert.findOne({ _id: req.params.id, userId: req.user.id }).populate(
+      "userId",
+      "name email age emergencyName emergencyPhone"
+    );
 
     if (!alert) {
       return res.status(404).json({
         success: false,
-        message: "Alert not found"
+        message: "Alert not found",
       });
     }
 
@@ -107,14 +115,13 @@ export const callSOS = async (req, res) => {
     res.json({
       success: true,
       message: "SOS Call Initiated",
-      alert: decryptAlert(alert)
+      alert: decryptAlert(alert),
     });
-
   } catch (err) {
     console.error("SOS Error:", err);
     res.status(500).json({
       success: false,
-      message: "Failed to initiate SOS"
+      message: "Failed to initiate SOS",
     });
   }
 };
@@ -124,13 +131,17 @@ export const callSOS = async (req, res) => {
 ========================================= */
 export const clearAlert = async (req, res) => {
   try {
-    const alert = await Alert.findById(req.params.id)
-      .populate("userId", "name email");
+    // FIX: same ownership gap as callSOS above - without this, any logged-in
+    // user could clear (silence) another user's active crisis alert.
+    const alert = await Alert.findOne({ _id: req.params.id, userId: req.user.id }).populate(
+      "userId",
+      "name email"
+    );
 
     if (!alert) {
       return res.status(404).json({
         success: false,
-        message: "Alert not found"
+        message: "Alert not found",
       });
     }
 
@@ -141,14 +152,13 @@ export const clearAlert = async (req, res) => {
     res.json({
       success: true,
       message: "Alert cleared successfully",
-      alert: decryptAlert(alert)
+      alert: decryptAlert(alert),
     });
-
   } catch (err) {
     console.error("Clear Alert Error:", err);
     res.status(500).json({
       success: false,
-      message: "Failed to clear alert"
+      message: "Failed to clear alert",
     });
   }
 };
@@ -159,22 +169,21 @@ export const clearAlert = async (req, res) => {
 export const getAlertHistory = async (req, res) => {
   try {
     const alerts = await Alert.find({
-      userId: req.user.id
+      userId: req.user.id,
     })
-    .populate("userId", "name email")
-    .sort({ createdAt: -1 });
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
       count: alerts.length,
-      alerts: alerts.map(decryptAlert)
+      alerts: alerts.map(decryptAlert),
     });
-
   } catch (err) {
     console.error("History Error:", err);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch history"
+      message: "Failed to fetch history",
     });
   }
 };
