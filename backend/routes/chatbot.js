@@ -164,7 +164,13 @@ router.post("/", optionalAuth, async (req, res) => {
     const userId = req.user?.id || req.body.userId || "anonymous";
 
     if (lastUserMsg?.text) {
-      const risk = localRiskFallback(lastUserMsg.text);
+      // Pass the previous user message as context so a fragment like "he hit
+      // me" can be read together with a follow-up like "because I hit him
+      // first" instead of being scored as one-sided abuse on the first line
+      // alone. Self-harm (RED) detection is unaffected by this - it still
+      // fires instantly, with no waiting, regardless of context.
+      const priorUserMsg = [...messages].reverse().filter((m) => m.role === "user")[1];
+      const risk = localRiskFallback(lastUserMsg.text, priorUserMsg?.text || "");
       if (risk.risk === "RED" || risk.risk === "ORANGE") {
         await saveAnalysis({
           userId,

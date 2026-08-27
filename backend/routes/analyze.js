@@ -5,7 +5,7 @@ import Otp from '../models/otp.js';
 import optionalAuth from '../middleware/optionalAuth.js';
 import { protect as auth } from '../middleware/auth.js';
 import { saveAnalysis } from '../utils/saveAnalysis.js';
-import { localRiskFallback } from '../utils/localRiskFallback.js';
+import { localRiskFallback, hasMutualContext } from '../utils/localRiskFallback.js';
 import { alertGeminiDown } from '../utils/alertEmail.js';
 import { callGeminiResilient, isSelfThrottled } from '../utils/geminiThrottle.js';
 import { classifyWithGroq } from '../utils/groqFallback.js';
@@ -144,9 +144,20 @@ router.post('/', optionalAuth, async (req, res) => {
   }
 
   if (isAbuse) {
-    const triggers = ["emotional_abuse","gaslighting"];
-    await saveAnalysis({ userId, text, risk:"ORANGE", score:75, category:"emotional_abuse", abuseType:"home_abuse", abuseSource:"parent", triggers, emotion:"distressed", phone:userPhone });
-    return res.json({ risk: "ORANGE", score: 75, reason: "Emotional abuse - safety net", triggers, category: "emotional_abuse", abuseType:"home_abuse", abuseSource:"parent", isAI: false, isSafetyNet: true });
+    // Same-message self-defense/two-sided framing (e.g. "he hit me because
+    // I hit him first") softens this from a confident one-sided abuse call
+    // to an ambiguous one flagged for human review - it's still recorded,
+    // just not asserted as certain on a single line. This entry point sees
+    // one journal entry at a time (no message history), so it can only
+    // check within the same text; RED (self-harm) above is unaffected.
+    const mutual = hasMutualContext(text);
+    const triggers = mutual ? ["possible_mutual_conflict"] : ["emotional_abuse","gaslighting"];
+    const score = mutual ? 45 : 75;
+    const reason = mutual
+      ? "Message also frames this as two-sided/self-defense - flagged for review, not treated as confirmed one-sided abuse"
+      : "Emotional abuse - safety net";
+    await saveAnalysis({ userId, text, risk:"ORANGE", score, category:"emotional_abuse", abuseType:"home_abuse", abuseSource:"parent", triggers, emotion:"distressed", phone:userPhone });
+    return res.json({ risk: "ORANGE", score, reason, triggers, category: "emotional_abuse", abuseType:"home_abuse", abuseSource:"parent", ambiguous: mutual, isAI: false, isSafetyNet: true });
   }
 
   if (isAnxious) {
