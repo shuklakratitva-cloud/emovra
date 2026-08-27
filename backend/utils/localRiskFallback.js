@@ -12,6 +12,26 @@ const SCHOOL_ABUSE = /\b(teacher|sir|ma'?am|madam)\b[^.!?\n]{0,40}\b(useless|wor
 
 const HOME_ABUSE = /(beats me|hits me|maarta hai|maarti hai|pitta hai|gaali deta|gaali deti|abuse karta|toxic relationship|gaslighting|worthless bolta|kutta jaise|blackmail karta|slaps me)/i;
 
+// Narrow, same-topic signal that a "hits me" style message may be describing
+// a two-sided/mutual incident (e.g. a sibling fight) rather than one-sided
+// abuse - e.g. "he hit me" followed (in the same message, or the previous
+// message when a caller passes conversation context) by "because I hit him
+// first". This does NOT downgrade self-harm (RED) detection - that stays
+// instant regardless, per the safety-always-overrides-tone rule. It only
+// softens the ORANGE home-abuse classification so a single early fragment
+// isn't logged as confident one-sided abuse before the rest of the story is
+// in. Deliberately narrow (self-defense/two-sided framing only) - it must
+// NOT match generic minimization ("it's not a big deal", "I'm fine"),
+// because minimizing language is itself sometimes a sign of real abuse, not
+// evidence against it.
+export const MUTUAL_CONTEXT =
+  /\b(i|main|maine)\s+(hit|pushed|slapped|punched|maara|mara)\w*\s*(him|her|them|use|usko)?\s*(first|pehle)\b|\bi started it\b|\b(hit|pushed|slapped|punched)\s*(him|her|them)?\s*back\b|\bwe\s+(were\s+)?(both\s+)?(hit|hitting|pushed|pushing|fighting)(\s+each other)?\b|\bboth of us\b|\bit was mutual\b|\bwe were both\b/i;
+
+export function hasMutualContext(text, priorText = "") {
+  const combined = `${priorText || ""} ${text || ""}`.toLowerCase();
+  return MUTUAL_CONTEXT.test(combined);
+}
+
 const ORANGE_WORDS = [
   "anxious", "anxiety", "panic", "lonely", "akela", "depressed", "depression",
   "stress", "overwhelm", "neend nahi", "nervous", "scared", "worried",
@@ -24,7 +44,7 @@ const YELLOW_WORDS = [
   "bas aisa hi", "thoda low", "not sure why", "low", "upset", "sad",
 ];
 
-export function localRiskFallback(rawText) {
+export function localRiskFallback(rawText, priorText = "") {
   const text = String(rawText || "");
   const lower = text.toLowerCase();
 
@@ -56,11 +76,16 @@ export function localRiskFallback(rawText) {
   }
 
   if (HOME_ABUSE.test(lower)) {
+    const mutual = hasMutualContext(text, priorText);
     return {
-      risk: "ORANGE", score: 75,
-      reason: "Local fallback - home emotional abuse pattern (AI unavailable)",
-      triggers: ["emotional_abuse", "gaslighting"],
+      risk: "ORANGE",
+      score: mutual ? 45 : 75,
+      reason: mutual
+        ? "Local fallback - hit/abuse phrase, but message (or the message before it) also frames it as two-sided/self-defense - flagged for human review, not treated as confirmed one-sided abuse (AI unavailable)"
+        : "Local fallback - home emotional abuse pattern (AI unavailable)",
+      triggers: mutual ? ["possible_mutual_conflict"] : ["emotional_abuse", "gaslighting"],
       category: "emotional_abuse", abuseType: "home_abuse", abuseSource: "parent",
+      ambiguous: mutual,
       isAI: false, isFallback: true,
     };
   }
