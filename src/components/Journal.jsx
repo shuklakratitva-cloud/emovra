@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
+import { getMicErrorKey } from "../utils/micError.js";
 
 const API = "https://emovra.onrender.com/api";
 
@@ -35,8 +36,8 @@ function VoiceNoteRecorder({ onRecorded }) {
       };
       recorder.start();
       setRecording(true);
-    } catch {
-      alert(t("journal.micBlocked"));
+    } catch (err) {
+      alert(t(getMicErrorKey(err, "journal")));
     }
   }
 

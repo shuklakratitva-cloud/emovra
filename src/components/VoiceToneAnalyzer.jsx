@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { analyzeRisk } from "../utils/analyzeRisk.js";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
+import { getMicErrorKey } from "../utils/micError.js";
 
 const API = "https://emovra.onrender.com/api";
 
@@ -175,7 +176,7 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
         if (s >= 300) stop();
       }, 1000);
     } catch (e) {
-      setError(t("voiceToneAnalyzer.micBlocked"));
+      setError(t(getMicErrorKey(e, "voiceToneAnalyzer")));
     }
   }
 
