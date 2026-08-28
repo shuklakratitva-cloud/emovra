@@ -97,6 +97,9 @@ export const translations = {
     "auth.forgotPassword": "Forgot password?",
     "auth.alreadyHaveAccount": "Already have an account?",
     "auth.dontHaveAccount": "Don't have an account?",
+    "auth.emergencyNameRequired": "Emergency contact name is compulsory!",
+    "auth.invalidPhone": "That doesn't look like a valid phone number for the selected country - please double check it.",
+    "auth.serverErrorWait": "Server error - wait 30s",
 
     // Dashboard - tab labels
     "tab.overview": "Overview",
@@ -999,6 +1002,9 @@ export const translations = {
     "auth.forgotPassword": "पासवर्ड भूल गए?",
     "auth.alreadyHaveAccount": "पहले से खाता है?",
     "auth.dontHaveAccount": "खाता नहीं है?",
+    "auth.emergencyNameRequired": "आपातकालीन संपर्क का नाम देना ज़रूरी है!",
+    "auth.invalidPhone": "यह चुने गए देश के लिए मान्य फ़ोन नंबर नहीं लग रहा - कृपया दोबारा जांच लें।",
+    "auth.serverErrorWait": "सर्वर एरर - 30 सेकंड रुकें",
 
     // Dashboard - tab labels
     "tab.overview": "अवलोकन",
