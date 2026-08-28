@@ -137,11 +137,11 @@ export default function Auth({ onAuth }) {
     e.preventDefault();
     if (isSignup) {
       if (!form.emergencyName || form.emergencyName.trim().length < 2) {
-        alert("Emergency contact name is compulsory!"); return;
+        alert(t("auth.emergencyNameRequired")); return;
       }
       const digitsOnly = form.emergencyPhone.replace(/\D/g, "");
       if (digitsOnly.length < 7 || digitsOnly.length > 15 || !isValidPhoneNumber(`${form.countryCode}${digitsOnly}`)) {
-        alert("That doesn't look like a valid phone number for the selected country - please double check it."); return;
+        alert(t("auth.invalidPhone")); return;
       }
     }
     setLoading(true);
@@ -170,7 +170,7 @@ export default function Auth({ onAuth }) {
       navigate("/dashboard");
     } catch (err) {
       console.log("Full error:", err.response?.data);
-      alert(err.response?.data?.msg || err.message || "Server Error - wait 30s");
+      alert(err.response?.data?.msg || err.message || t("auth.serverErrorWait"));
     } finally { setLoading(false); }
   };
 
