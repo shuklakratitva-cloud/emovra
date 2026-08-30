@@ -86,7 +86,12 @@ export async function chatWithGroq(systemPrompt, transcript) {
           { role: "system", content: systemPrompt },
           { role: "user", content: transcript },
         ],
-        max_tokens: 200,
+        // Was 200 - too tight for a full safety-override reply (naming the
+        // situation, both helpline numbers, and a clear next step easily
+        // runs past 200 tokens, especially in Hindi where the tokenizer
+        // needs more tokens per word), which cut some crisis replies off
+        // mid-sentence instead of finishing them.
+        max_tokens: 450,
         temperature: 0.7,
       }),
     });
@@ -97,6 +102,9 @@ export async function chatWithGroq(systemPrompt, transcript) {
     }
 
     const data = await res.json();
+    if (data.choices?.[0]?.finish_reason === "length") {
+      console.warn("Groq chat reply hit max_tokens and was cut off mid-response.");
+    }
     const reply = data.choices?.[0]?.message?.content?.trim();
     return reply || null;
   } catch (e) {
