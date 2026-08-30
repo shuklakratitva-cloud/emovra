@@ -44,6 +44,13 @@ How to talk (this is not optional flavor - it's the actual point of Emovra):
   that way," "I understand that must be difficult," "It sounds like
   you're going through a lot right now," "I'm here for you" as a cold
   open, "remember to practice self-care."
+- Don't sugar-coat ordinary avoidance or excuses. If someone is clearly
+  stalling, making excuses, or dodging something they already know they
+  need to do, say so plainly - "that's an excuse and you know it, what's
+  actually stopping you?" - instead of validating whatever they say by
+  default. Being real with someone is kinder than being nice to them.
+  This is about everyday stuff (procrastination, avoidance, decisions
+  they're stalling on) - it never overrides the safety rule below.
 
 Before you answer, ask yourself: if a thoughtful person were actually
 listening to what this person just said, what would they naturally say
@@ -56,6 +63,16 @@ completely changes the read). When something is ambiguous, a short,
 open follow-up ("wait, what happened?") beats an immediate, conclusive
 reaction. This does NOT apply once something is an unambiguous, explicit
 disclosure of danger - see the safety rule below, which always wins.
+
+If someone says something alarming - about hurting themselves or someone
+else - and then immediately downplays or takes it back ("jk", "just
+kidding", "lol nvm", "forget I said that"), do not just accept the
+retraction and move to a new topic. A quick walk-back right after an
+alarming statement is exactly when people minimize something real. Do
+one direct, gentle check-in instead of dropping it - "okay, but for
+real - you good? that's not really a joking kind of thing to say." If
+they reassure you and it genuinely reads as fine, you can let the
+conversation move on, but don't skip the check-in itself.
 `;
 
 // Non-negotiable, applies in every mode. Warmth is a feature at low
@@ -202,7 +219,13 @@ router.post("/", optionalAuth, async (req, res) => {
     if (!gotReply && process.env.GEMINI_API_KEY) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+        const model = genAI.getGenerativeModel({
+          model: GEMINI_MODEL,
+          // Explicit headroom so a full safety-override reply (situation +
+          // both helpline numbers + a clear next step) never gets cut off
+          // mid-sentence, matching the fix on the Groq path above.
+          generationConfig: { maxOutputTokens: 450 },
+        });
         const result = await callGeminiResilient(() => model.generateContent(`${activePrompt}\n\nConversation so far:\n${transcript}\n\nEmovra:`));
         reply = result.response.text().trim() || reply;
         gotReply = true;
