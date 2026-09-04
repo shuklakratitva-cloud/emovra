@@ -5,10 +5,9 @@ import { saveAnalysis } from "../utils/saveAnalysis.js";
 import { localRiskFallback } from "../utils/localRiskFallback.js";
 import { alertGeminiDown } from "../utils/alertEmail.js";
 import { callGeminiResilient } from "../utils/geminiThrottle.js";
+import { GEMINI_MODEL } from "../utils/geminiConfig.js";
 
 const router = express.Router();
-
-const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 router.post('/chat', optionalAuth, async (req, res) => {
   try {

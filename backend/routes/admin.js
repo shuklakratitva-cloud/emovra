@@ -1,10 +1,70 @@
 import express from "express";
 import Entry, { decrypt } from "../models/Entry.js";
 import Alert from "../models/Alert.js";
+import User from "../models/User.js";
 import { protect as auth } from "../middleware/auth.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 
 const router = express.Router();
+
+// GET /api/admin/impact-stats - aggregate, anonymized usage numbers for
+// funding pitches / competition reporting. No names, emails, or message
+// content - just counts, so this is safe to screenshot or quote directly.
+//
+// NOTE: Entry has a TTL index (models/Entry.js) that auto-deletes
+// check-in records 30 days after creation, so there's no real "all-time
+// check-ins" number to report from this collection - only rolling
+// 30-day/7-day windows. totalUsers comes from the User collection
+// instead, which isn't subject to that expiry.
+router.get("/impact-stats", auth, isAdmin, async (req, res) => {
+  try {
+    const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalUsers,
+      checkIns30d,
+      checkIns7d,
+      activeUsers30d,
+      activeUsers7d,
+      redAlerts30d,
+      orangeAlerts30d,
+      dailyTrendRaw,
+    ] = await Promise.all([
+      User.countDocuments({}),
+      Entry.countDocuments({ createdAt: { $gte: since30 } }),
+      Entry.countDocuments({ createdAt: { $gte: since7 } }),
+      Entry.distinct("userId", { createdAt: { $gte: since30 }, userId: { $ne: null } }).then((a) => a.length),
+      Entry.distinct("userId", { createdAt: { $gte: since7 }, userId: { $ne: null } }).then((a) => a.length),
+      Entry.countDocuments({ riskLevel: "RED", createdAt: { $gte: since30 } }),
+      Entry.countDocuments({ riskLevel: "ORANGE", createdAt: { $gte: since30 } }),
+      Entry.aggregate([
+        { $match: { createdAt: { $gte: since30 } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    res.json({
+      success: true,
+      generatedAt: new Date().toISOString(),
+      retentionNote: "Check-in activity is kept for 30 days, then auto-deleted - the numbers below reflect that rolling window, not all-time totals.",
+      stats: {
+        totalUsers,
+        checkIns30d,
+        checkIns7d,
+        activeUsers30d,
+        activeUsers7d,
+        redAlerts30d,
+        orangeAlerts30d,
+        dailyTrend: dailyTrendRaw.map((d) => ({ date: d._id, count: d.count })),
+      },
+    });
+  } catch (err) {
+    console.error("Impact stats error:", err);
+    res.status(500).json({ success: false, message: "Failed to load impact stats" });
+  }
+});
 
 router.get("/reds", auth, isAdmin, async (req, res) => {
   try {
@@ -113,35 +173,6 @@ router.get("/school-abuse", auth, isAdmin, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: err.message });
-  }
-});
-
-// Back-compat alias for AdminPanel.jsx, which called /api/alerts/all
-// (a route that never existed). Kept here rather than under /alerts/* so
-// it still requires admin auth.
-router.get("/all", auth, isAdmin, async (req, res) => {
-  try {
-    const alerts = await Entry.find({ riskLevel: { $in: ['RED', 'ORANGE'] } })
-      .populate("userId", "name email age emergencyPhone emergencyName role")
-      .sort({ createdAt: -1 })
-      .limit(100);
-
-    const result = alerts.map(a => {
-      const obj = a.toObject();
-      return {
-        _id: obj._id,
-        userName: obj.userId?.name,
-        user: obj.userId,
-        text: obj.text_encrypted ? decrypt(obj.text_encrypted) : "",
-        sosPhone: obj.userId?.emergencyPhone,
-        emergencyPhone: obj.userId?.emergencyPhone,
-        riskLevel: obj.riskLevel,
-        createdAt: obj.createdAt,
-      };
-    });
-    res.json(result);
-  } catch (err) {
     res.status(500).json({ msg: err.message });
   }
 });

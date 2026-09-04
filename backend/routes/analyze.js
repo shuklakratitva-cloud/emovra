@@ -10,10 +10,9 @@ import {
 import { alertGeminiDown } from "../utils/alertEmail.js";
 import { callGeminiResilient } from "../utils/geminiThrottle.js";
 import { classifyWithGroq } from "../utils/groqFallback.js";
+import { GEMINI_MODEL } from "../utils/geminiConfig.js";
 
 const router = express.Router();
-
-const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 let geminiFailStreak = 0;
 let geminiCooldownUntil = 0;
