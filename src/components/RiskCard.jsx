@@ -4,6 +4,13 @@ import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 export default function RiskCard({ analysis, userName, emergencyPhone, safetyPlan }) {
   const { t } = useLanguage();
+  // FIX: this used to `return null` here, before the useMemo below - since
+  // RiskCard gets rendered with analysis sometimes null (before a check-in)
+  // and sometimes populated (after one), that skipped the hook on some
+  // renders and ran it on others, violating the Rules of Hooks. React can
+  // throw "Rendered fewer hooks than expected" for exactly this pattern.
+  // Every hook below now always runs; the null-analysis bailout moved past
+  // them, right before the JSX return.
   const level = String(analysis?.riskLevel || analysis?.risk || analysis?.level || "GREEN").toUpperCase();
   const isRed = level === "RED";
   const isOrange = level === "ORANGE";
@@ -16,8 +23,8 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
   const triggers = analysis?.reasons || analysis?.triggers || [];
 
   const { message, icon, accent, heading } = useMemo(() => {
-        if (!analysis) return {};
-        if (isRed) {
+    if (!analysis) return {};
+    if (isRed) {
       return {
         message: getRedMessage({ name: userName }),
         icon: "🫂", accent: "#f87171", heading: t("riskCard.headingRed"),

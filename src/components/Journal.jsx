@@ -9,12 +9,18 @@ function authHeaders() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
+// Recordings auto-stop at this length so the resulting base64 payload
+// stays comfortably under the backend's size limit (see
+// MAX_AUDIO_DATA_URL_LENGTH in backend/routes/privateJournal.js).
+const MAX_RECORDING_MS = 3 * 60 * 1000; // 3 minutes
+
 function VoiceNoteRecorder({ onRecorded }) {
   const [recording, setRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
+  const autoStopTimerRef = useRef(null);
   const { t } = useLanguage();
 
   async function start() {
@@ -29,13 +35,29 @@ function VoiceNoteRecorder({ onRecorded }) {
       };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
-        onRecorded?.(url);
+        // FIX: this used to be a URL.createObjectURL(blob) - fine for the
+        // in-page <audio> preview, but a blob: URL only lives as long as
+        // this tab/page does and was never actually sent to the backend,
+        // so the recording silently vanished the moment the entry was
+        // saved and the page reloaded. Reading it as a base64 data URL
+        // instead gives us a string that both plays back in <audio src>
+        // AND can travel in the same JSON POST body as the entry text.
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result;
+          setAudioUrl(dataUrl);
+          onRecorded?.(dataUrl);
+        };
+        reader.readAsDataURL(blob);
         streamRef.current?.getTracks().forEach((t) => t.stop());
+        if (autoStopTimerRef.current) {
+          clearTimeout(autoStopTimerRef.current);
+          autoStopTimerRef.current = null;
+        }
       };
       recorder.start();
       setRecording(true);
+      autoStopTimerRef.current = setTimeout(() => stop(), MAX_RECORDING_MS);
     } catch (err) {
       alert(t(getMicErrorKey(err, "journal")));
     }
@@ -384,6 +406,11 @@ export default function Journal() {
   const [editText, setEditText] = useState("");
   const [loading, setLoading] = useState(false);
   const [voiceNoteUrl, setVoiceNoteUrl] = useState(null);
+  // Bumped on every successful save so <VoiceNoteRecorder key={...}> below
+  // remounts and clears its own recorded-preview state - otherwise the
+  // mic widget kept showing the just-saved recording after the entry (and
+  // voiceNoteUrl) had already been cleared.
+  const [voiceNoteResetKey, setVoiceNoteResetKey] = useState(0);
   const [search, setSearch] = useState(""); // NEW: client-side search - entries are already decrypted for the owner once loaded, no new backend endpoint needed
   const { t } = useLanguage();
 
@@ -448,15 +475,16 @@ export default function Journal() {
       const res = await fetch(`${API}/private-journal`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ text: journalText }),
+        body: JSON.stringify({ text: journalText, audio: voiceNoteUrl || undefined }),
       });
       const data = await res.json();
       if (data.success) {
         setEntries((es) => [data.entry, ...es]);
         setJournalText("");
         setVoiceNoteUrl(null);
+        setVoiceNoteResetKey((k) => k + 1);
       } else {
-        alert(t("journal.couldNotSave"));
+        alert(data.message || t("journal.couldNotSave"));
       }
     } catch {
       alert(t("journal.couldNotSave"));
@@ -532,7 +560,7 @@ export default function Journal() {
         }}
       />
 
-      <VoiceNoteRecorder onRecorded={setVoiceNoteUrl} />
+      <VoiceNoteRecorder key={voiceNoteResetKey} onRecorded={setVoiceNoteUrl} />
 
       <button
         onClick={handleSave}
@@ -630,6 +658,9 @@ export default function Journal() {
             ) : (
               <>
                 <p style={{ whiteSpace: "pre-wrap" }}>{entry.text}</p>
+                {entry.audio && (
+                  <audio controls src={entry.audio} style={{ height: 32, marginBottom: 8, maxWidth: "100%" }} />
+                )}
                 <small>
                   {t("journal.createdLabel", { date: new Date(entry.createdAt).toLocaleString() })}
                 </small>

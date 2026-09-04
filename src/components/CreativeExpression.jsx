@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
+import { encryptLocal, decryptLocal } from "../utils/localCipher.js";
 
+// FIX: this used to be plain JSON.stringify/parse straight to
+// localStorage - unencrypted, unlike CBT Tools and Life Timeline which
+// hold similarly personal content. Poetry, sticker-journal notes and
+// scrapbook captions can be just as private as a journal entry, so this
+// now uses the same local encryption as the rest of the app. The
+// decrypt-then-fall-back-to-raw-parse path lets any data saved before
+// this fix load correctly once, then gets re-encrypted on the next save.
 const LS_KEY = "emovra_creative_data";
-function load() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } }
-function save(data) { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+function load() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return {};
+    try { return JSON.parse(decryptLocal(raw)) || {}; }
+    catch { return JSON.parse(raw) || {}; }
+  } catch { return {}; }
+}
+function save(data) { localStorage.setItem(LS_KEY, encryptLocal(JSON.stringify(data))); }
 
 function Poetry() {
   const { t } = useLanguage();
