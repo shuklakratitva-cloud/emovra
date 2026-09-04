@@ -4,20 +4,20 @@ import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 export default function RiskCard({ analysis, userName, emergencyPhone, safetyPlan }) {
   const { t } = useLanguage();
-  if (!analysis) return null;
-  const level = String(analysis.riskLevel || analysis.risk || analysis.level || "GREEN").toUpperCase();
+  const level = String(analysis?.riskLevel || analysis?.risk || analysis?.level || "GREEN").toUpperCase();
   const isRed = level === "RED";
   const isOrange = level === "ORANGE";
   const isYellow = level === "YELLOW";
   const isGreen = level === "GREEN" || (!isRed && !isOrange && !isYellow);
 
-  const category = analysis.category || analysis.abuseType || "general";
-  const isSchoolAbuse = category === "school_emotional_abuse" || analysis.abuseType === "school_emotional_abuse";
-  const isHomeAbuse = category === "emotional_abuse" || analysis.abuseType === "home_abuse";
-  const triggers = analysis.reasons || analysis.triggers || [];
+  const category = analysis?.category || analysis?.abuseType || "general";
+  const isSchoolAbuse = category === "school_emotional_abuse" || analysis?.abuseType === "school_emotional_abuse";
+  const isHomeAbuse = category === "emotional_abuse" || analysis?.abuseType === "home_abuse";
+  const triggers = analysis?.reasons || analysis?.triggers || [];
 
   const { message, icon, accent, heading } = useMemo(() => {
-    if (isRed) {
+        if (!analysis) return {};
+        if (isRed) {
       return {
         message: getRedMessage({ name: userName }),
         icon: "🫂", accent: "#f87171", heading: t("riskCard.headingRed"),
@@ -43,6 +43,8 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
   }, [analysis, t]);
 
   const isCalm = isGreen;
+
+  if (!analysis) return null;
 
   return (
     <div style={{

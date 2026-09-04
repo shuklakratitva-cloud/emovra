@@ -285,6 +285,7 @@ function VirtualCandle() {
 // tapping the water now bursts a little cluster of bubbles from wherever
 // you tapped, instead of just being a static scene.
 function VirtualAquarium() {
+  const { t } = useLanguage(); // FIX: t() below crashed without this
   const FISH_COLORS = ["#e8a35a", "#6ec6d9", "#e88a6a"];
   const [taps, setTaps] = useState([]);
 

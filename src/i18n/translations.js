@@ -856,7 +856,6 @@ export const translations = {
     // --- i18n gap-fix batch (Dashboard + Check-in + exercises) ---
     "nav.dashboard": "Dashboard",
     "nav.mood": "Mood",
-    "nav.journal": "Journal",
     "nav.creative": "Creative",
     "nav.companion": "Companion",
     "nav.rituals": "Rituals",
@@ -1761,7 +1760,6 @@ export const translations = {
     // --- i18n gap-fix batch (Dashboard + Check-in + exercises) ---
     "nav.dashboard": "\u0921\u0948\u0936\u092c\u094b\u0930\u094d\u0921",
     "nav.mood": "\u092e\u0942\u0921",
-    "nav.journal": "\u091c\u0930\u094d\u0928\u0932",
     "nav.creative": "\u0915\u094d\u0930\u093f\u090f\u091f\u093f\u0935",
     "nav.companion": "\u0938\u093e\u0925\u0940",
     "nav.rituals": "\u0930\u093f\u091a\u0941\u0905\u0932\u094d\u0938",

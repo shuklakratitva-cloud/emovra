@@ -8,7 +8,7 @@ import {
   hasUnnegatedPhrase,
 } from "../utils/localRiskFallback.js";
 import { alertGeminiDown } from "../utils/alertEmail.js";
-import { callGeminiResilient, isSelfThrottled } from "../utils/geminiThrottle.js";
+import { callGeminiResilient } from "../utils/geminiThrottle.js";
 import { classifyWithGroq } from "../utils/groqFallback.js";
 
 const router = express.Router();
