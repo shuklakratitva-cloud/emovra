@@ -19,7 +19,6 @@ import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
 import alertRoutes from "./routes/alert.js";
 import adminRoutes from "./routes/admin.js";
-import emotionRoutes from "./routes/emotion.js";
 import geminiRoutes from "./routes/gemini.js";
 import analyzeRoutes from "./routes/analyze.js";
 import otpRoutes from "./routes/otp.js";
@@ -91,12 +90,6 @@ app.use("/api/analyze", analyzeLimiter);
 app.use("/api/chat", analyzeLimiter);
 app.use("/api/voice", analyzeLimiter);
 app.use("/api/chatbot", analyzeLimiter);
-// FIX: /api/emotion is a fully unauthenticated, Gemini/Groq-calling
-// endpoint (see routes/emotion.js) but was only covered by the 100/min
-// generalLimiter below, not this stricter one - a straightforward
-// API-cost/quota-drain vector against a shared AI key with no auth and no
-// per-account cap. Now rate-limited the same as the other AI endpoints.
-app.use("/api/emotion", analyzeLimiter);
 app.use("/api/otp", otpLimiter);
 
 app.use((req, res, next) => {
@@ -198,7 +191,6 @@ app.get("/api", (req, res) => {
       "/api/data",
       "/api/alerts",
       "/api/admin",
-      "/api/emotion",
       "/api/chat",
       "/api/analyze",
       "/api/voice/analyze",
@@ -231,7 +223,15 @@ app.use("/api/auth", authRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/emotion", emotionRoutes);
+// NOTE: the old /api/emotion route (routes/emotion.js) was removed - it
+// was a third, weaker reimplementation of the same risk classifier as
+// /api/analyze and /api/chat (its own inline keyword list instead of the
+// shared localRiskFallback util, no Groq fallback, no Hindi/Hinglish
+// coverage), fully unauthenticated, and nothing in the frontend called it
+// (confirmed via repo-wide search). Removing it both de-duplicates the
+// risk-classification logic and closes an unauthenticated Gemini/Groq
+// quota-drain surface. /api/analyze and /api/chat remain, and both already
+// share the same localRiskFallback/hasUnnegatedPhrase/saveAnalysis utils.
 app.use("/api/voice", voiceRoutes);
 app.use("/api/journal-share", journalShareRoutes);
 app.use("/api/gamification", gamificationRoutes);
