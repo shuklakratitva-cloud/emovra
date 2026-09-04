@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import ImpactDashboard from "../components/ImpactDashboard.jsx";
 
 export default function Admin() {
   const [reds, setReds] = useState([]);
@@ -63,6 +64,8 @@ export default function Admin() {
     <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto", minHeight: "100vh", background: "#0a0a0c", color: "#e8dcc6" }}>
       <h1 style={{ color: "#d4c5a0" }}>Admin Panel - {filter === "emotional_abuse" ? "EMOTIONAL ABUSE" : filter === "self_harm" ? "SELF-HARM" : "ALL ALERTS"} ({filteredReds.length})</h1>
       <p style={{ color: "#666" }}>Abuse cases show full message content for review. Regular RED/ORANGE alerts show user info only - message content stays private. Sorted by most recent first.</p>
+
+      <ImpactDashboard token={token} />
 
             <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
         <button onClick={() => setFilter("all")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #d4c5a0", background: filter === "all" ? "#d4c5a0" : "transparent", color: filter === "all" ? "#000" : "#d4c5a0", cursor: "pointer", fontWeight: 700 }}>All ({counts.all})</button>

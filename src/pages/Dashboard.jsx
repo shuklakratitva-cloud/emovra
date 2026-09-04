@@ -2,7 +2,7 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import {
   Home, Smile, BookOpen, Palette, MessageCircle, Droplets, Trees,
-  Shield, Settings as SettingsIcon, Bell, Moon, Sparkles,
+  Shield, Settings as SettingsIcon, Bell, Moon, Sparkles, HelpCircle, X,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 import LanguageToggle from "../components/LanguageToggle.jsx";
@@ -28,6 +28,8 @@ const CreativeExpression = lazy(() => import("../components/CreativeExpression")
 const MindGames = lazy(() => import("../components/MindGames"));
 const ZenGarden = lazy(() => import("../components/ZenGarden"));
 const SelfCareTools = lazy(() => import("../components/SelfCareTools"));
+const CloudPrompts = lazy(() => import("../components/CloudPrompts"));
+const CalmGarden = lazy(() => import("../components/CalmGarden"));
 const ScheduledLetters = lazy(() => import("../components/ScheduledLetters"));
 const LifeTimeline = lazy(() => import("../components/LifeTimeline"));
 const DigitalTimeMachine = lazy(() => import("../components/DigitalTimeMachine"));
@@ -67,6 +69,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [toast, setToast] = useState(null);
+  const [showGuide, setShowGuide] = useState(false);
+  const [pendingChallengesScroll, setPendingChallengesScroll] = useState(false);
   const location = useLocation();
 
   const activeId = location.pathname === "/dashboard" ? "dashboard" : (location.pathname.split("/")[2] || "dashboard");
@@ -75,6 +79,28 @@ export default function Dashboard() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [location.pathname]);
+
+  // The bell needs to be visible from every dashboard sub-page, but the
+  // #ev-challenges card only exists on the index route. If we're not
+  // already there, navigate home first and scroll once that card mounts.
+  function goToChallenges() {
+    if (activeId !== "dashboard") {
+      setPendingChallengesScroll(true);
+      goTo("dashboard");
+    } else {
+      document.getElementById("ev-challenges")?.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+
+  useEffect(() => {
+    if (pendingChallengesScroll && activeId === "dashboard") {
+      const el = document.getElementById("ev-challenges");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+        setPendingChallengesScroll(false);
+      }
+    }
+  }, [pendingChallengesScroll, activeId, data]);
 
   const isAdmin = (() => {
     try { return JSON.parse(localStorage.getItem("user") || "null")?.role === "admin"; }
@@ -229,6 +255,77 @@ export default function Dashboard() {
             </div>
           )}
 
+          {showGuide && (
+            <div
+              onClick={() => setShowGuide(false)}
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 998, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{ background: "var(--card-bg)", border: "0.5px solid rgba(212,197,160,0.25)", borderRadius: 22, padding: 26, maxWidth: 520, width: "100%", maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.45)" }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "var(--text-h)" }}>{t("dashboard.quickGuideTitle")}</h2>
+                    <p style={{ fontSize: 12.5, color: "rgba(232,220,198,0.6)", margin: "6px 0 0" }}>{t("dashboard.quickGuideIntro")}</p>
+                  </div>
+                  <button onClick={() => setShowGuide(false)} aria-label={t("dashboard.quickGuideClose")} style={{ background: "transparent", border: "none", cursor: "pointer", color: "rgba(232,220,198,0.6)", padding: 4 }}>
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <h3 style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--accent)", marginTop: 20, marginBottom: 10 }}>{t("guide.nav.title")}</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {[
+                    { icon: Home, text: t("guide.nav.dashboard") },
+                    { icon: Smile, text: t("guide.nav.mood") },
+                    { icon: BookOpen, text: t("guide.nav.journal") },
+                    { icon: Palette, text: t("guide.nav.creative") },
+                    { icon: MessageCircle, text: t("guide.nav.companion") },
+                    { icon: Droplets, text: t("guide.nav.rituals") },
+                    { icon: Trees, text: t("guide.nav.sanctuary") },
+                  ].map(({ icon: Icon, text }, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <Icon size={15} style={{ marginTop: 2, flexShrink: 0, color: "var(--accent)" }} />
+                      <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text)" }}>{text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <h3 style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--accent)", marginTop: 22, marginBottom: 10 }}>{t("guide.widgets.title")}</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {[
+                    t("guide.widget.levelXp"),
+                    t("guide.widget.moodChart"),
+                    t("guide.widget.sleep"),
+                    t("guide.widget.habitTracker"),
+                    t("guide.widget.virtualPet"),
+                    t("guide.widget.zenGarden"),
+                    t("guide.widget.aiCompanion"),
+                    t("guide.widget.supportCard"),
+                    t("guide.widget.challenges"),
+                    t("guide.widget.bell"),
+                    t("guide.widget.statusDots"),
+                    t("guide.widget.languageToggle"),
+                    t("guide.widget.settings"),
+                  ].map((text, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--accent)", marginTop: 7, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text)" }}>{text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setShowGuide(false)}
+                  style={{ marginTop: 22, width: "100%", background: "var(--accent)", color: "#000", border: "none", padding: "12px 20px", borderRadius: 999, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}
+                >
+                  {t("dashboard.quickGuideClose")}
+                </button>
+              </div>
+            </div>
+          )}
+
                     <div className="ev-topbar">
             <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
               <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>
@@ -240,10 +337,13 @@ export default function Dashboard() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <LanguageToggle />
+            <div className="ev-bell" onClick={() => setShowGuide(true)} title={t("dashboard.quickGuide")}>
+              <HelpCircle size={16} />
+            </div>
             <div className="ev-bell" onClick={() => goTo("settings")} title={t("nav.settings")}>
               <SettingsIcon size={16} />
             </div>
-              <div className="ev-bell" onClick={() => document.getElementById("ev-challenges")?.scrollIntoView({ behavior: "smooth" })} title={unclaimedCount > 0 ? t("dashboard.challengesWaiting", { n: unclaimedCount }) : t("dashboard.noNewNotifications")}>
+              <div className="ev-bell" onClick={goToChallenges} title={unclaimedCount > 0 ? t("dashboard.challengesWaiting", { n: unclaimedCount }) : t("dashboard.noNewNotifications")}>
                 <Bell size={16} />
                 {(unclaimedCount > 0 || hasAlert) && <span className="ev-dot" />}
               </div>
@@ -478,10 +578,12 @@ export default function Dashboard() {
 
             <Route path="sanctuary" element={(
               <Suspense fallback={<Loader />}>
+                <CloudPrompts />
                 <RelaxationGames />
                 <ZenGarden />
                 <MusicTherapy />
                 <SelfCareTools />
+                <CalmGarden />
               </Suspense>
             )} />
 
