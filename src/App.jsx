@@ -6,16 +6,7 @@ import Dashboard from "./pages/Dashboard"; // NEW: personalized dashboard, shown
 import PrivacyPolicy from "./pages/PrivacyPolicy"; // NEW: real, hosted privacy policy - needed for Google OAuth publishing
 import TermsOfService from "./pages/TermsOfService"; // NEW: matching ToS page
 import NotFound from "./pages/NotFound"; // NEW: replaces the silent redirect-to-home for unmatched URLs
-// FIX: was importing AdminPanel, which calls a backend route
-// (/api/alerts/all) that never existed - the working Admin.jsx (with
-// working /api/admin/reds calls, filter tabs, WhatsApp/call buttons) was
-// never actually wired into the router at all.
-//
-// NOTE: I'm assuming Admin.jsx lives at src/pages/Admin.jsx, matching where
-// AdminPanel.jsx was (src/pages/AdminPanel.jsx). If Admin.jsx actually lives
-// somewhere else in your project (e.g. src/components/Admin.jsx), just
-// adjust this import path to match.
-import AdminPanel from "./pages/Admin";
+import AdminPanel from "./pages/Admin"; // the real, routed admin panel (src/pages/Admin.jsx)
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('token');
