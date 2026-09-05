@@ -42,9 +42,20 @@ entrySchema.pre('save', function() {
   if (raw) {
     this.text_encrypted = encrypt(raw);
 
-    if (this.score >= 75) this.riskLevel = 'RED';
-    else if (this.score >= 45) this.riskLevel = 'ORANGE';
-    else this.riskLevel = 'GREEN';
+    // FIX: this used to re-derive riskLevel from score unconditionally,
+    // silently discarding whatever the caller set. A voice note classified
+    // RED at score 60 (explicitly allowed by VOICE_PROMPT: "hopeless,
+    // worthless, hit me, abuse, gaslight = ORANGE/RED 60+") was rewritten
+    // to ORANGE on save, so the stored record contradicted both the server
+    // log and the response the user saw, and /api/admin/reds missed it
+    // (riskLevel !== "RED" and score < 75). The hook also can't produce
+    // YELLOW, though the enum and the rest of the app use it. Only fill in
+    // a level when the caller didn't specify one.
+    if (!this.riskLevel || !this.isModified('riskLevel')) {
+      if (this.score >= 75) this.riskLevel = 'RED';
+      else if (this.score >= 45) this.riskLevel = 'ORANGE';
+      else this.riskLevel = 'GREEN';
+    }
 
     const abuseWords = ['worthless','hate you','kill you','abuse','beating','hit me','slap','emotional abuse','gaslight'];
     this.emoAbuseDetected = abuseWords.some(w => raw.toLowerCase().includes(w));
