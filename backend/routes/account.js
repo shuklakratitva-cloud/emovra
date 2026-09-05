@@ -8,6 +8,11 @@ import SharedJournal from "../models/SharedJournal.js";
 import Habit from "../models/Habit.js";
 import Goal from "../models/Goal.js";
 import SleepLog from "../models/SleepLog.js";
+// FIX: these three models were never imported here, so account deletion
+// silently left them behind - see the delete handler below.
+import SafetyPlan from "../models/SafetyPlan.js";
+import ScheduledLetter from "../models/ScheduledLetter.js";
+import PushSubscription from "../models/PushSubscription.js";
 import { decrypt } from "../utils/crypto.js";
 
 const router = express.Router();
@@ -43,7 +48,13 @@ router.get("/export", auth, async (req, res) => {
       sharedJournals: sharedJournals.map((sj) => ({
         title: sj.title,
         role: String(sj.ownerId) === String(uid) ? "owner" : "collaborator",
-        entries: sj.entries.filter((e) => String(e.authorId) === String(uid)).map((e) => ({ text: e.text, timestamp: e.timestamp })),
+        // FIX: read `e.text` on a schema whose only text field is
+        // `text_encrypted` (and which, unlike Goal/Habit, defines no
+        // decrypting getter). It was always undefined, so JSON.stringify
+        // dropped the key entirely and every shared-journal entry exported
+        // as a bare timestamp with no content - a silently incomplete
+        // data-portability export.
+        entries: sj.entries.filter((e) => String(e.authorId) === String(uid)).map((e) => ({ text: safeDecrypt(e.text_encrypted), timestamp: e.timestamp })),
       })),
     });
   } catch (err) {
@@ -68,6 +79,16 @@ router.delete("/", auth, async (req, res) => {
         { "collaborators.userId": uid },
         { $pull: { collaborators: { userId: uid } } }
       ),
+      // FIX: SafetyPlan, ScheduledLetter and PushSubscription were all
+      // missing here, so "Account and all associated data deleted" was not
+      // true. The safety plan is the worst omission - it holds encrypted
+      // warning signs, coping strategies, support contacts and reasons to
+      // live, i.e. the most sensitive content in the app - and unlike
+      // Entry/Alert none of these models has a TTL index, so the orphaned
+      // documents persisted indefinitely with no UI left to reach them.
+      SafetyPlan.deleteMany({ userId: uid }),
+      ScheduledLetter.deleteMany({ userId: uid }),
+      PushSubscription.deleteMany({ userId: uid }),
     ]);
 
     await User.findByIdAndDelete(uid);

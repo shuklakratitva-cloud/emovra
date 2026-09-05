@@ -33,7 +33,22 @@ Rules:
 `;
 
 async function finishAndRespond(req, res, analysis, source) {
-  const riskLevel = String(analysis.riskLevel || "GREEN").toUpperCase();
+  // FIX: this used to read only `analysis.riskLevel`, but the two fallback
+  // tiers speak a different dialect - classifyWithGroq() returns `risk`
+  // (that's the contract in analyze.js's SYSTEM_PROMPT) and
+  // localRiskFallback() returns `risk` too. So whenever Gemini was down
+  // (routine - any 429 puts it in a 2-minute cooldown), a genuine RED
+  // disclosure arrived here as riskLevel:undefined, defaulted to "GREEN",
+  // was never saved to entries, never reached /api/admin/reds, and the
+  // user got back {success:true, riskLevel:"GREEN", score:95} - a
+  // self-contradicting payload the UI renders as safe. Accept both shapes.
+  const riskLevel = String(analysis.riskLevel || analysis.risk || "GREEN").toUpperCase();
+  // Same mismatch on the supporting fields: local/Groq use `reason`
+  // (singular string) + `triggers`, Gemini uses `reasons` (array).
+  const reasons =
+    analysis.reasons ||
+    analysis.triggers ||
+    (analysis.reason ? [analysis.reason] : []);
 
   if (riskLevel !== "RED" && riskLevel !== "ORANGE") {
     console.log(`[PRIVACY-SKIP] Voice(${source}) Risk:${riskLevel} Score:${analysis.score} - not saved - User:${req.user.id}`);
@@ -45,7 +60,7 @@ async function finishAndRespond(req, res, analysis, source) {
     score: analysis.score,
     riskLevel,
     emotion: analysis.emotion,
-    reasons: analysis.reasons || [],
+    reasons,
   });
   entry._plainText = analysis.transcript;
   if (analysis.emoAbuseDetected) entry.emoAbuseDetected = true;

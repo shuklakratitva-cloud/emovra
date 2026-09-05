@@ -24,7 +24,10 @@ router.post("/", auth, async (req, res) => {
     const log = await SleepLog.findOneAndUpdate(
       { userId: req.user.id, date },
       { bedtime, wakeTime, hoursSlept, quality, notes: notes || "" },
-      { upsert: true, returnDocument: "after" }
+      // FIX: without runValidators the schema's own bounds (quality 1-5)
+      // are not applied on an update, so {quality: 9999, hoursSlept: -50}
+      // persisted happily and then skewed the sleep chart and averages.
+      { upsert: true, returnDocument: "after", runValidators: true }
     );
 
     const gam = existed ? null : await awardXP(req.user.id, 6, {});

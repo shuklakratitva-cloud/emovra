@@ -18,6 +18,13 @@ router.post("/strength/submit", auth, async (req, res) => {
 
     const resultKey = scoreQuiz(answers);
     const result = STRENGTH_QUIZ.results[resultKey];
+    // FIX: scoreQuiz() just tallies whatever values it's given and returns
+    // the most frequent one, with no allowlist check. Any client posting
+    // {"answers":{"q1":"x"}} produced resultKey "x", making `result`
+    // undefined and throwing a TypeError on result.label one line later.
+    if (!result) {
+      return res.status(400).json({ success: false, message: "Invalid quiz answers" });
+    }
 
     const existing = await User.findById(req.user.id).select("personalityResult");
     const today = todayIST();

@@ -74,9 +74,20 @@ router.post("/deliver-due", async (req, res) => {
         subject: "A letter from your past self",
         text: `Hi ${letter.userId.name || ""},\n\nYou wrote this to yourself a while back, scheduled for today:\n\n"${text}"\n\n- Sent by your past self, via Emovra`,
       });
-      letter.delivered = true;
-      await letter.save();
-      if (ok) sent++;
+      // FIX: this used to mark the letter delivered unconditionally, before
+      // checking `ok`. sendEmail() returns false (it never throws) when
+      // Brevo rate-limits, the sender domain is rejected, or mail config is
+      // missing - so a single bad cron run flipped every due letter to
+      // delivered:true, permanently excluding it from the {delivered:false}
+      // query. The letters were never retried and never arrived, while the
+      // log cheerfully printed "Delivered 0/12".
+      if (ok) {
+        letter.delivered = true;
+        await letter.save();
+        sent++;
+      } else {
+        console.warn(`[LETTERS] Send failed for letter ${letter._id} - leaving undelivered for retry`);
+      }
     }
 
     console.log(`[LETTERS] Delivered ${sent}/${due.length} due letters`);

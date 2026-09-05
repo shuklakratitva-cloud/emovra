@@ -33,8 +33,14 @@ router.post("/subscribe", auth, async (req, res) => {
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
       return res.status(400).json({ success: false, message: "Invalid subscription" });
     }
+    // FIX: matching on `endpoint` alone meant anyone who learned another
+    // user's push endpoint could POST it here and silently reassign that
+    // subscription to their own account - stopping the victim's reminders
+    // and pointing their device's notifications at someone else's records.
+    // Scope the match to the caller so an upsert can only ever create or
+    // update a row that already belongs to them.
     await PushSubscription.findOneAndUpdate(
-      { endpoint },
+      { endpoint, userId: req.user.id },
       { userId: req.user.id, endpoint, keys },
       { upsert: true }
     );
