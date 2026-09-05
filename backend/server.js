@@ -2,7 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import helmet from "helmet";
 import * as Sentry from "@sentry/node";
 
@@ -85,12 +85,34 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// FIX: /api/background drives paid image generation (FLUX.1-schnell via
+// fal-ai) but had no dedicated limit, so it inherited generalLimiter's
+// 100 requests/minute - roughly 144,000 billable generations a day from a
+// single signed-up account. Auth alone is not a cost control here. Keyed on
+// the authenticated user rather than IP so a shared school network doesn't
+// have one student's usage lock out everyone else.
+const imageGenLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  // ipKeyGenerator() is required for the IP fallback: express-rate-limit v8
+  // rejects a custom keyGenerator that touches req.ip directly, because a
+  // raw IPv6 address lets one client rotate through a /64 to bypass limits.
+  keyGenerator: (req, res) => req.user?.id || ipKeyGenerator(req, res),
+  message: {
+    success: false,
+    message: "Image generation limit reached - please try again in an hour.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use("/api/", generalLimiter);
 app.use("/api/analyze", analyzeLimiter);
 app.use("/api/chat", analyzeLimiter);
 app.use("/api/voice", analyzeLimiter);
 app.use("/api/chatbot", analyzeLimiter);
 app.use("/api/otp", otpLimiter);
+app.use("/api/background", imageGenLimiter);
 
 app.use((req, res, next) => {
   if (req.path.includes("/analyze")) {
