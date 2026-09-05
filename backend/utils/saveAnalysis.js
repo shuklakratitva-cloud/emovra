@@ -3,6 +3,7 @@ import Entry from "../models/Entry.js";
 import Alert from "../models/Alert.js";
 import { encrypt } from "./crypto.js";
 import { entryFingerprint, dedupCutoff } from "./entryFingerprint.js";
+import { scheduleFollowUp } from "./scheduleFollowUp.js";
 
 function log(tag, risk, score, category, extra = "") {
   console.log(`[${tag}] Risk:${risk} Score:${score} Cat:${category} ${extra}`);
@@ -85,6 +86,10 @@ export async function saveAnalysis({
     });
     entrySaved = true;
     log("ENTRY-SAVED", riskLevel, score, category, `Saved to entries User:${userLabel}`);
+
+    // A RED disclosure earns a check-back tomorrow. Only for a real
+    // authenticated user - an anonymous entry has nobody to follow up with.
+    if (riskLevel === "RED" && safeUserId) await scheduleFollowUp(safeUserId);
   } catch (e) {
     console.error("Entry save error:", e.message);
   }

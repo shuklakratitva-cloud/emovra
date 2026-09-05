@@ -1,6 +1,8 @@
 import { sendEmail } from "./mailer.js";
 
-const ADMIN_EMAIL = process.env.ADMIN_ALERT_EMAIL || "shukla.kratitva@gmail.com";
+import { SUPPORT_EMAIL } from "./supportEmail.js";
+
+const ADMIN_EMAIL = process.env.ADMIN_ALERT_EMAIL || SUPPORT_EMAIL;
 
 let lastAlertSentAt = 0;
 const ALERT_COOLDOWN_MS = 30 * 60 * 1000;
