@@ -40,6 +40,16 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
   const intervalRef = useRef(null);
   const startRef = useRef(0);
   const recogRef = useRef(null);
+  // FIX: the 5-minute auto-stop below never actually fired. start()'s
+  // setInterval closed over the `stop` from the render in which start()
+  // ran - a render where `recording` was still false - and stop()'s first
+  // line is `if (!recording) return;`. So at 300s the interval called a
+  // permanently no-op stop, once a second, forever: the mic stayed live,
+  // the rAF loop kept pushing samples, and MediaRecorder kept accumulating
+  // chunks until the user manually hit Stop or navigated away. Mirroring
+  // `recording` into a ref lets stop() read the live value regardless of
+  // which render's closure invoked it.
+  const recordingRef = useRef(false);
 
   // FIX: start() opens the mic (getUserMedia), an AudioContext
   // analyser loop (requestAnimationFrame), a setInterval timer, and
@@ -168,6 +178,7 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
       recorder.start(1000);
 
       startRef.current = Date.now();
+      recordingRef.current = true;
       setRecording(true);
       setTimer(0);
       intervalRef.current = setInterval(() => {
@@ -181,7 +192,8 @@ export default function VoiceToneAnalyzer({ onResult, token }) {
   }
 
   function stop() {
-    if (!recording) return;
+    if (!recordingRef.current) return;
+    recordingRef.current = false;
     clearInterval(intervalRef.current);
     cancelAnimationFrame(rafRef.current);
     try {

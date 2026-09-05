@@ -18,6 +18,23 @@ function useAmbientSound() {
     setPlaying(false);
   }
 
+  // FIX: nothing tore this down on unmount. Starting Rain/Fireplace/Forest
+  // in the Sanctuary and then navigating to another dashboard section
+  // unmounted the component along with its Stop button, while the
+  // oscillators kept playing and the fireplace/forest setIntervals kept
+  // allocating new Web Audio nodes every ~220ms - unstoppable without a
+  // full page reload, which is a bad failure mode for a calming feature.
+  useEffect(() => {
+    return () => {
+      nodesRef.current.forEach((n) => { try { n.stop?.(); n.disconnect?.(); } catch {} });
+      nodesRef.current = [];
+      intervalsRef.current.forEach((id) => clearInterval(id));
+      intervalsRef.current = [];
+      try { ctxRef.current?.close(); } catch {}
+      ctxRef.current = null;
+    };
+  }, []);
+
   function makeNoiseBuffer(ctx) {
     const bufferSize = 2 * ctx.sampleRate;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);

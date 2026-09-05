@@ -2,8 +2,18 @@ import React, { useMemo } from "react";
 import { getGreenMessage, getYellowMessage, getOrangeMessage, getRedMessage } from "../utils/motivationalMessages";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-export default function RiskCard({ analysis, userName, emergencyPhone, safetyPlan }) {
+export default function RiskCard({ analysis, userName, emergencyPhone, emergencyCountryCode, safetyPlan }) {
   const { t } = useLanguage();
+  // FIX: emergencyPhone is stored digits-only at signup, with the country
+  // code kept separately (Auth.jsx). The SOS button used to render
+  // tel:<digits>, which dials a nonexistent local number for any contact
+  // with a non-local country code - on the RED screen, where it matters most.
+  const sosDial = (() => {
+    const digits = String(emergencyPhone || "").replace(/\D/g, "");
+    if (!digits) return "";
+    const cc = String(emergencyCountryCode || "").replace(/\D/g, "");
+    return cc && !digits.startsWith(cc) ? `+${cc}${digits}` : `+${digits}`;
+  })();
   // FIX: this used to `return null` here, before the useMemo below - since
   // RiskCard gets rendered with analysis sometimes null (before a check-in)
   // and sometimes populated (after one), that skipped the hook on some
@@ -91,13 +101,13 @@ export default function RiskCard({ analysis, userName, emergencyPhone, safetyPla
             </a>
           )}
           {isRed && emergencyPhone && (
-            <a href={`tel:${emergencyPhone}`} style={{
+            <a href={`tel:${sosDial || emergencyPhone}`} style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               background: "transparent", color: "var(--text)", padding: "10px 18px",
               borderRadius: 20, textDecoration: "none", fontWeight: 600, fontSize: 13,
               border: "1px solid var(--border)"
             }}>
-              📞 {t("riskCard.callYourSos", { number: emergencyPhone })}
+              📞 {t("riskCard.callYourSos", { number: sosDial || emergencyPhone })}
             </a>
           )}
         </div>

@@ -9,9 +9,17 @@ export default function WellnessCalendar() {
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
 
-  const base = new Date();
-  base.setMonth(base.getMonth() + monthOffset);
-  const monthStr = base.toISOString().slice(0, 7);
+  // FIX: `new Date()` + setMonth() overflows on long months. On March 31
+  // with monthOffset -1, setMonth(1) means "Feb 31", which normalizes to
+  // March 3 - so monthStr stayed "2026-03", the ‹ button appeared to do
+  // nothing, and a second click jumped straight to January, making
+  // February unreachable that day. Anchoring to day 1 removes the overflow.
+  // Also build monthStr from local getFullYear/getMonth rather than
+  // toISOString(), which converts to UTC and could disagree with the
+  // locally-computed monthLabel across a timezone boundary.
+  const today = new Date();
+  const base = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+  const monthStr = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
   const monthLabel = base.toLocaleString("default", { month: "long", year: "numeric" });
 
   useEffect(() => {

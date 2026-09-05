@@ -23,6 +23,30 @@ function VoiceNoteRecorder({ onRecorded }) {
   const autoStopTimerRef = useRef(null);
   const { t } = useLanguage();
 
+  // FIX: this component had no cleanup effect at all. The only place the
+  // mic stream was released was recorder.onstop - which never fires if the
+  // component unmounts mid-recording. Journal remounts this recorder on
+  // every save (key={voiceNoteResetKey}) and the whole tab unmounts when
+  // the user navigates elsewhere in the dashboard, so starting a voice note
+  // and then clicking away left the microphone captured and the browser's
+  // recording indicator lit until the tab was closed.
+  useEffect(() => {
+    return () => {
+      try {
+        if (recorderRef.current && recorderRef.current.state !== "inactive") {
+          recorderRef.current.stop();
+        }
+      } catch {}
+      try {
+        streamRef.current?.getTracks().forEach((tr) => tr.stop());
+      } catch {}
+      if (autoStopTimerRef.current) {
+        clearTimeout(autoStopTimerRef.current);
+        autoStopTimerRef.current = null;
+      }
+    };
+  }, []);
+
   async function start() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
