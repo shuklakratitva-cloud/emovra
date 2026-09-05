@@ -1,4 +1,4 @@
-const API = "https://emovra.onrender.com/api";
+import { API_BASE as API } from "../config/api.js";
 const DEFAULT_THEME = {
   id: "classic-black-gold",
   bg: "#0a0a0c",
