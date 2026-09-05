@@ -12,6 +12,7 @@ import { analyzeRisk } from "../utils/analyzeRisk.js";
 import Auth from "../components/Auth.jsx";
 import OnboardingWalkthrough from "../components/OnboardingWalkthrough.jsx";
 import LegalCookieBanner from "../components/LegalCookieBanner.jsx";
+import FollowUpCard from "../components/FollowUpCard.jsx";
 import "../App.css";
 
 const MoodChart = lazy(() => import("../components/MoodChart"));
@@ -1030,6 +1031,12 @@ export default function MindGuardApp() {
         <main id="main-content" style={{ maxWidth: 720, margin: "18px auto", padding: "0 16px" }}>
           {tab === "checkin" && (
             <>
+              {/* Day-after check-back for a RED disclosure. Renders nothing
+                  unless one is actually due, so it costs a single request
+                  and is invisible to everyone else. Placed above the
+                  composer on purpose: it should be the first thing seen,
+                  not something found after scrolling. */}
+              <FollowUpCard />
               <div
                 style={{
                   padding: 20,

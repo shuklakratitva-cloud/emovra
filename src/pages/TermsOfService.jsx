@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { SUPPORT_EMAIL } from "../config/contact.js";
 
 export default function TermsOfService() {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export default function TermsOfService() {
         </Section>
 
         <Section title="Contact">
-          <p>Questions about these terms: <a href="mailto:shukla.kratitva@gmail.com" style={{ color: "#d4b07a" }}>shukla.kratitva@gmail.com</a></p>
+          <p>Questions about these terms: <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "#d4b07a" }}>{SUPPORT_EMAIL}</a></p>
         </Section>
       </div>
     </div>

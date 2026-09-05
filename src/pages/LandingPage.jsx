@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import LegalCookieBanner from "../components/LegalCookieBanner";
 import LanguageToggle from "../components/LanguageToggle";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
+import { SUPPORT_EMAIL } from "../config/contact.js";
 
 const ZEN_IMAGE = "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=800&auto=format&fit=crop";
 const EMOVRA_LOGO = "/emovra-logo.png";
@@ -131,7 +132,7 @@ export default function LandingPage() {
           <h2 className="serif" style={{ fontSize:32, marginTop:10 }}>{t("support.title")}</h2>
           <div style={{ display:'flex', justifyContent:'center', gap:16, marginTop:24, flexWrap:'wrap' }}>
             <a href="tel:9999773355" style={{ background:'#d4b07a', color:'#000', padding:'12px 20px', borderRadius:999, textDecoration:'none', fontWeight:700, fontSize:13 }}>📞 9999773355</a>
-            <a href="mailto:shukla.kratitva@gmail.com" style={{ border:'0.5px solid rgba(212,197,160,0.3)', color:'#d4c5a0', padding:'12px 20px', borderRadius:999, textDecoration:'none', fontWeight:600, fontSize:13 }}>✉ shukla.kratitva@gmail.com</a>
+            <a href={`mailto:${SUPPORT_EMAIL}`} style={{ border:'0.5px solid rgba(212,197,160,0.3)', color:'#d4c5a0', padding:'12px 20px', borderRadius:999, textDecoration:'none', fontWeight:600, fontSize:13 }}>✉ {SUPPORT_EMAIL}</a>
           </div>
           <div style={{ marginTop:30, display:'flex', justifyContent:'space-between' }} className="tracking-mini">
             <span style={{ color:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', gap:8 }}><img src={EMOVRA_LOGO} alt="logo" style={{ height:24, width:'auto' }} /> © 2026 EMOVRA</span>

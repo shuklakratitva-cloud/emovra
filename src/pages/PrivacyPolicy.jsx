@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { SUPPORT_EMAIL } from "../config/contact.js";
 
 export default function PrivacyPolicy() {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export default function PrivacyPolicy() {
         </Section>
 
         <Section title="Contact">
-          <p>For privacy questions or data requests, contact: <b>shukla.kratitva@gmail.com</b></p>
+          <p>For privacy questions or data requests, contact: <b>{SUPPORT_EMAIL}</b></p>
         </Section>
       </div>
     </div>

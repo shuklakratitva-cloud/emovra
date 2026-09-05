@@ -9,6 +9,7 @@ import LanguageToggle from "../components/LanguageToggle.jsx";
 import Footer from "../components/Footer.jsx";
 import VirtualPet from "../components/VirtualPet.jsx";
 import GoalReminders from "../components/GoalReminders.jsx";
+import FollowUpCard from "../components/FollowUpCard.jsx";
 import { loadMoodHistory } from "../utils/storage.js";
 
 const HabitTracker = lazy(() => import("../components/HabitTracker"));
@@ -355,6 +356,13 @@ export default function Dashboard() {
           <Routes>
             <Route index element={(
             <>
+              {/* FIX: the day-after check-back was originally only on
+                  /app -> Check-in, but Auth.jsx navigates to /dashboard on
+                  both login and signup - so the students it exists for
+                  could open the app, land here, and never see it. It is on
+                  both screens now; it self-hides unless one is actually
+                  due, so the duplicate costs one request and shows once. */}
+              <FollowUpCard />
                             <div className="ev-card" style={{ marginBottom: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
                   <div>
