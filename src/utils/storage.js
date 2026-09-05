@@ -16,10 +16,21 @@ export const STORAGE_KEYS = {
 // STORAGE_KEYS, since those other files read/write them directly, not
 // through saveToStorage/loadFromStorage) so clearAppStorage() can remove
 // them too.
+// FIX (second pass): this list included the XOR key "emovra_lk" but NOT
+// the two other stores encrypted with it - Creative Corner's poems/sticker
+// journal/scrapbook and the Calm Garden's growth state. So logging out
+// deleted the key and left those ciphertexts behind; getOrCreateKey() then
+// minted a fresh random key, and the next load decrypted the old data into
+// garbage that failed JSON.parse and silently returned {}. The user's own
+// written work looked permanently erased (and was - the next save
+// overwrote the orphaned ciphertext). Either both go or neither; since
+// logout is meant to leave a shared device clean, both go.
 const EXTRA_SENSITIVE_KEYS = [
   "emovra_cbt_data",
   "emovra_life_timeline",
   "emovra_history",
+  "emovra_creative_data",
+  "emovra_calm_garden",
   "emovra_lk",
 ];
 export function saveToStorage(k, v) {

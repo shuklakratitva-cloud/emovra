@@ -71,12 +71,16 @@ export async function analyzeWithGemini(text, toneData = null) {
       source: "gemini-chat",
     };
   } catch (e) {
-    return {
-      level: "ORANGE", riskLevel: "ORANGE", score: 30,
-      emotion: "neutral", sentiment: "neutral",
-      reasons: ["fallback"],
-      advice: "Could not connect to AI, but noted.",
-      isCrisis: false, source: "fallback"
-    };
+    // FIX: this used to swallow the failure and return a flat ORANGE/30.
+    // Because it never threw, the caller's catch in MindGuardApp - which
+    // runs the local analyzeRisk() safety net covering indirect ideation
+    // ("no one would notice if I disappeared", "better off without me",
+    // "I'm a burden", "wish I was dead") - was dead code that could never
+    // execute. The result: whenever the backend was cold-starting or rate
+    // limited, a message that analyzeRisk() would have scored RED was
+    // shown to the student as ORANGE, with no Kiran helpline and no SOS
+    // emergency-contact button (RiskCard gates both on isRed). Rethrow so
+    // the local safety net actually gets its turn.
+    throw new Error(`AI unavailable: ${e?.message || "network error"}`, { cause: e });
   }
 }
