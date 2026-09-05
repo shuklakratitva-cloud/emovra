@@ -24,6 +24,13 @@ const entrySchema = new mongoose.Schema({
   triggers: [String],
 
   emoAbuseDetected: { type: Boolean, default: false },
+
+  // Short-lived duplicate guard - see utils/entryFingerprint.js. Not a
+  // unique index on purpose: the same person writing the same words weeks
+  // apart is a real, separate check-in and must still be stored. Only the
+  // recent-window lookup treats a repeat as a duplicate.
+  dedupHash: { type: String, default: "" },
+
   timestamp: { type: Date, default: Date.now }
 }, {
   timestamps: true,
@@ -51,14 +58,39 @@ entrySchema.pre('save', function() {
     // (riskLevel !== "RED" and score < 75). The hook also can't produce
     // YELLOW, though the enum and the rest of the app use it. Only fill in
     // a level when the caller didn't specify one.
-    if (!this.riskLevel || !this.isModified('riskLevel')) {
+    //
+    // Written with $isDefault() rather than isModified() because that is
+    // the direct question being asked: "did the caller supply a level, or
+    // is this just the schema default?" isModified() answers it correctly
+    // today (Mongoose reports false for a default-applied path on a new
+    // document, verified), but only as a side effect - it is about change
+    // tracking for persistence, not about provenance, and routes/data.js
+    // depends on getting this right: it passes no riskLevel and relies
+    // entirely on the derivation below, so if that distinction ever
+    // shifted, every entry saved through it would store as GREEN however
+    // high the score and real ORANGE/RED check-ins would vanish from
+    // /api/admin/reds.
+    const callerSetRiskLevel = !this.$isDefault('riskLevel') && !!this.riskLevel;
+    if (!callerSetRiskLevel) {
       if (this.score >= 75) this.riskLevel = 'RED';
       else if (this.score >= 45) this.riskLevel = 'ORANGE';
       else this.riskLevel = 'GREEN';
     }
 
+    // FIX: this used to ASSIGN the result of the keyword scan, wiping out
+    // any emoAbuseDetected the caller had already set from a real
+    // classification. routes/voice.js sets it from the model's own
+    // judgement and routes/data.js sets it from the reported abuseType,
+    // and both were being overwritten here by a nine-word list that
+    // contains "worthless" but not "useless", "nikamma", "nalayak",
+    // "beizzati" or most of what school abuse actually sounds like. So a
+    // correctly classified abuse report was silently downgraded to
+    // emoAbuseDetected:false, which is exactly the flag /api/admin/alerts
+    // and /api/admin/abuse-only use to decide whether an admin may read
+    // the message. OR it in instead: keywords can only ever add a
+    // detection, never erase one.
     const abuseWords = ['worthless','hate you','kill you','abuse','beating','hit me','slap','emotional abuse','gaslight'];
-    this.emoAbuseDetected = abuseWords.some(w => raw.toLowerCase().includes(w));
+    if (abuseWords.some(w => raw.toLowerCase().includes(w))) this.emoAbuseDetected = true;
   }
 });
 
@@ -73,4 +105,7 @@ entrySchema.methods.getDecryptedText = function() {
 // happens on its own once the index exists.
 entrySchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 entrySchema.index({ userId: 1, createdAt: -1 });
+// Sparse so the millions of pre-existing docs with no dedupHash aren't
+// indexed; the duplicate lookup always supplies a real hash.
+entrySchema.index({ dedupHash: 1, createdAt: -1 }, { sparse: true });
 export default mongoose.model("Entry", entrySchema);
