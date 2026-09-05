@@ -151,6 +151,26 @@ router.post("/:id/leave", auth, async (req, res) => {
   try {
     const journal = await SharedJournal.findById(req.params.id);
     if (!journal) return res.status(404).json({ success: false, message: "Not found" });
+    // FIX: the only route here with no access check. Every other :id route
+    // gates on hasAccess(); this one let any authenticated user POST
+    // /leave against any journal id at all. The filter below meant they
+    // could only ever remove themselves, so nobody could be kicked out -
+    // but the 404-vs-200 difference still answered "does this journal
+    // exist?" for arbitrary ids, which is exactly the probe that turns a
+    // guessed id into a confirmed target for the other routes.
+    //
+    // It also silently did nothing for an owner: owners aren't in
+    // collaborators, so "leave" returned success while leaving them on a
+    // journal they thought they'd left. Say so instead.
+    if (!hasAccess(journal, req.user.id)) {
+      return res.status(403).json({ success: false, message: "You don't have access to this journal" });
+    }
+    if (String(journal.ownerId) === String(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "You own this journal - delete it instead of leaving it",
+      });
+    }
     journal.collaborators = journal.collaborators.filter((c) => String(c.userId) !== String(req.user.id));
     await journal.save();
     res.json({ success: true });
