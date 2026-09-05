@@ -674,45 +674,37 @@ export default function MusicTherapy() {
       <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{t("musicTherapy.findMusicHeading")}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {/* The YouTube and Spotify search links that used to sit beside
+              each mood button were removed deliberately. A student often
+              reaches this screen straight after a rough check-in, and
+              handing them off to an algorithmic feed at that moment is the
+              opposite of what the rest of the app does - it ends the
+              session somewhere nobody can see, on content nobody chose.
+              These moods now play in-app through the same Web Audio engine
+              as the ambient sounds above (startMoodTone), so the calming
+              path stays inside Emovra from beginning to end. */}
           {(moods || []).map((m) => {
             const moodKind = `mood:${m.mood}`;
             const isPlayingThis = ambient.playing && ambient.kind === moodKind;
             return (
-              <div key={m.mood} style={{ display: "flex", alignItems: "center", border: "1px solid var(--border)", borderRadius: 999, overflow: "hidden" }}>
-                <button
-                  type="button"
-                  onClick={() => (isPlayingThis ? ambient.stop() : ambient.startMoodTone(m.mood))}
-                  title={t("musicTherapy.playInApp")}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", fontSize: 12,
-                    border: "none", cursor: "pointer",
-                    background: isPlayingThis ? "rgba(212,176,122,0.15)" : "transparent",
-                    color: "var(--text)",
-                  }}
-                >
-                  {isPlayingThis ? "⏸" : "▶"} {m.emoji} {m.label}
-                </button>
-                <a
-                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.query)}`}
-                  target="_blank" rel="noreferrer"
-                  title={t("musicTherapy.searchFullSong")}
-                  style={{ display: "flex", alignItems: "center", padding: "8px 10px", borderLeft: "1px solid var(--border)", color: "var(--text)", opacity: 0.7, textDecoration: "none", fontSize: 12 }}
-                >
-                  🔗
-                </a>
-                <a
-                  href={`https://open.spotify.com/search/${encodeURIComponent(m.query)}`}
-                  target="_blank" rel="noreferrer"
-                  title={t("musicTherapy.searchSpotify", { query: m.query })}
-                  style={{ display: "flex", alignItems: "center", padding: "8px 10px", borderLeft: "1px solid var(--border)", color: "#1DB954", textDecoration: "none", fontSize: 13 }}
-                >
-                  ♫
-                </a>
-              </div>
+              <button
+                key={m.mood}
+                type="button"
+                onClick={() => (isPlayingThis ? ambient.stop() : ambient.startMoodTone(m.mood))}
+                title={t("musicTherapy.playInApp")}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "8px 16px", borderRadius: 999, fontSize: 12, cursor: "pointer",
+                  border: isPlayingThis ? "2px solid #d4b07a" : "1px solid var(--border)",
+                  background: isPlayingThis ? "rgba(212,176,122,0.15)" : "transparent",
+                  color: "var(--text)",
+                }}
+              >
+                {isPlayingThis ? "⏸" : "▶"} {m.emoji} {m.label}
+              </button>
             );
           })}
         </div>
-        <p style={{ fontSize: 10, opacity: 0.4, marginTop: 10 }}>{t("musicTherapy.searchDisclaimer")}</p>
       </div>
     </div>
   );
