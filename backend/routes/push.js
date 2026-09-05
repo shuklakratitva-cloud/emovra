@@ -4,6 +4,7 @@ import { protect as auth } from "../middleware/auth.js";
 import PushSubscription from "../models/PushSubscription.js";
 import User from "../models/User.js";
 import { todayIST } from "../utils/istDate.js";
+import { SUPPORT_EMAIL } from "../utils/supportEmail.js";
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ function ensureVapid() {
   if (vapidConfigured) return true;
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false;
   webpush.setVapidDetails(
-    `mailto:${process.env.VAPID_CONTACT_EMAIL || process.env.ADMIN_ALERT_EMAIL || "shukla.kratitva@gmail.com"}`,
+    `mailto:${process.env.VAPID_CONTACT_EMAIL || process.env.ADMIN_ALERT_EMAIL || SUPPORT_EMAIL}`,
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
   );

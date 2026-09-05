@@ -1,5 +1,6 @@
 import express from "express";
 import { protect as auth } from "../middleware/auth.js";
+import { imageGenLimiter } from "../utils/rateLimiters.js";
 import { InferenceClient } from "@huggingface/inference";
 
 const router = express.Router();
@@ -7,7 +8,7 @@ const router = express.Router();
 const HF_MODEL = "black-forest-labs/FLUX.1-schnell";
 const HF_PROVIDER = "fal-ai";
 
-router.post("/generate", auth, async (req, res) => {
+router.post("/generate", auth, imageGenLimiter, async (req, res) => {
     try {
           const { prompt } = req.body;
           if (!prompt || !prompt.trim()) {

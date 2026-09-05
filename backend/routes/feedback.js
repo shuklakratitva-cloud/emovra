@@ -2,6 +2,7 @@ import express from "express";
 import { protect as auth } from "../middleware/auth.js";
 import User from "../models/User.js";
 import { sendEmail } from "../utils/mailer.js";
+import { SUPPORT_EMAIL } from "../utils/supportEmail.js";
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ router.post("/", auth, async (req, res) => {
     }
 
     const sent = await sendEmail({
-      to: "shukla.kratitva@gmail.com",
+      to: SUPPORT_EMAIL,
       subject: `Emovra feedback from ${user.name || user.email}`,
       text: `From: ${user.name || "(no name)"} <${user.email}>\nPage: ${page || "(not specified)"}\n\n${message.trim()}`,
     });

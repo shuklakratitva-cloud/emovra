@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Entry from "../models/Entry.js";
+import { scheduleFollowUp } from "../utils/scheduleFollowUp.js";
 import { protect as auth } from "../middleware/auth.js";
 import { callGeminiResilient } from "../utils/geminiThrottle.js";
 import { transcribeWithGroqWhisper, classifyWithGroq } from "../utils/groqFallback.js";
@@ -65,6 +66,15 @@ async function finishAndRespond(req, res, analysis, source) {
   entry._plainText = analysis.transcript;
   if (analysis.emoAbuseDetected) entry.emoAbuseDetected = true;
   await entry.save();
+
+  // FIX: a spoken RED disclosure used to get no day-after check-back at
+  // all. This route writes its Entry directly rather than going through
+  // utils/saveAnalysis.js, so it silently missed the follow-up that the
+  // typed check-in path schedules - meaning the students who find it
+  // easier to say something out loud than to type it were exactly the
+  // ones the new check-back never reached.
+  if (riskLevel === "RED") await scheduleFollowUp(req.user.id, entry._id);
+
   console.log(`[ENTRY-SAVED] Voice(${source}) Risk:${riskLevel} Score:${analysis.score} - saved to entries - User:${req.user.id}`);
 
   res.json({ success: true, transcript: analysis.transcript, riskLevel: entry.riskLevel, score: entry.score });

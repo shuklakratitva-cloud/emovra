@@ -80,6 +80,25 @@ router.get("/reds", auth, isAdmin, async (req, res) => {
 
     const decrypted = reds.map(e => {
       const obj = e.toObject();
+      // FIX: this route used to decrypt and return the message of EVERY
+      // RED / score>=75 entry with no gate at all, while the Privacy Policy
+      // tells students an admin can read their words only for "a narrow
+      // category (school-related emotional abuse)". /api/admin/alerts
+      // already honoured that promise; this one silently didn't. The admin
+      // panel happens not to call /reds today, so nothing was being read
+      // through it - but a live endpoint that contradicts your own written
+      // policy is a breach waiting for the first person who opens it.
+      //
+      // Same isAbuseCase test as /alerts, deliberately, so the two can't
+      // drift apart: an admin gets the identity and routing details they
+      // need to check in on any student at risk, but the disclosure itself
+      // stays encrypted at rest and unread unless it is an abuse report a
+      // human is required to act on.
+      const isAbuseCase =
+        obj.category === "school_emotional_abuse" ||
+        obj.emoAbuseDetected === true ||
+        obj.abuseType === "home_abuse" ||
+        obj.abuseType === "school_emotional_abuse";
       return {
         _id: obj._id,
         user: obj.userId,
@@ -90,9 +109,11 @@ router.get("/reds", auth, isAdmin, async (req, res) => {
         abuseType: obj.abuseType,
         abuseSource: obj.abuseSource,
         emoAbuseDetected: obj.emoAbuseDetected,
+        isAbuseCase,
         reasons: obj.reasons,
         triggers: obj.triggers,
-        text: obj.text_encrypted ? decrypt(obj.text_encrypted) : obj.text || "[no text]",
+        text: isAbuseCase ? (obj.text_encrypted ? decrypt(obj.text_encrypted) : obj.text || "") : null,
+        textHidden: !isAbuseCase,
         timestamp: obj.timestamp || obj.createdAt,
         createdAt: obj.createdAt
       };

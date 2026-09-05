@@ -3,6 +3,7 @@ import Entry, { decrypt } from "../models/Entry.js";
 import auth from "../middleware/auth.js";
 import { awardXP } from "../utils/gamification.js";
 import { entryFingerprint, dedupCutoff } from "../utils/entryFingerprint.js";
+import { scheduleFollowUp } from "../utils/scheduleFollowUp.js";
 
 const router = express.Router();
 
@@ -113,6 +114,10 @@ router.post('/save', auth, async (req, res) => {
 
     entry._plainText = text;
     await entry.save();
+
+    // Same check-back as the server-side classifier paths, so it does not
+    // matter which route stored the disclosure.
+    if (entry.riskLevel === "RED") await scheduleFollowUp(req.user.id, entry._id);
 
     const totalEntries = await Entry.countDocuments({ userId: req.user.id });
     const gam = await awardXP(req.user.id, 10, { firstJournalEntry: totalEntries === 1 });

@@ -13,6 +13,7 @@ import SleepLog from "../models/SleepLog.js";
 import SafetyPlan from "../models/SafetyPlan.js";
 import ScheduledLetter from "../models/ScheduledLetter.js";
 import PushSubscription from "../models/PushSubscription.js";
+import FollowUp from "../models/FollowUp.js";
 import { decrypt } from "../utils/crypto.js";
 
 const router = express.Router();
@@ -89,6 +90,7 @@ router.delete("/", auth, async (req, res) => {
       SafetyPlan.deleteMany({ userId: uid }),
       ScheduledLetter.deleteMany({ userId: uid }),
       PushSubscription.deleteMany({ userId: uid }),
+      FollowUp.deleteMany({ userId: uid }),
     ]);
 
     await User.findByIdAndDelete(uid);
