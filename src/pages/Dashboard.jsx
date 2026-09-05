@@ -40,7 +40,7 @@ const Chatbot = lazy(() => import("../components/Chatbot"));
 
 const Journal = lazy(() => import("../components/Journal"));
 
-const API = "https://emovra.onrender.com/api";
+import { API_BASE as API } from "../config/api.js";
 
 function authHeaders() {
   const token = localStorage.getItem("token");

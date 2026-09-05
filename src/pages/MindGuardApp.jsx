@@ -22,7 +22,7 @@ const VoiceToneAnalyzer = lazy(() => import("../components/VoiceToneAnalyzer.jsx
 
 const Chatbot = lazy(() => import("../components/Chatbot"));
 
-const API = import.meta.env.VITE_API_URL || "https://emovra.onrender.com/api";
+import { API_BASE as API } from "../config/api.js";
 
 function getAdvice(t, level, category) {
   const lvl = String(level || "").toUpperCase();
@@ -585,6 +585,17 @@ export default function MindGuardApp() {
 
       try {
         const g = await analyzeWithGemini(inputText, voiceData);
+        // FIX: analyzeWithGemini() talks to /api/chat, and that route runs
+        // saveAnalysis() itself - so reaching it already wrote the Entry
+        // (and, for school abuse, the Alert). Without this line the code
+        // below still ran saveToBackend() -> /data/save and
+        // saveAlertToAdmin() -> /alerts/red, storing the SAME disclosure a
+        // second time. Every RED/ORANGE check-in that fell through to this
+        // fallback path (i.e. any time /api/analyze was cold-starting or
+        // rate limited) was counted twice in the student's own history, in
+        // the admin panel, and by the early-warning rule that escalates on
+        // repeated flags - so a single message could look like a pattern.
+        if (g.savedServerSide) alreadySavedServerSide = true;
         const lvl = (g.level || "GREEN").toUpperCase();
         result = {
           riskLevel: lvl,

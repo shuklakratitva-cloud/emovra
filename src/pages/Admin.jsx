@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import ImpactDashboard from "../components/ImpactDashboard.jsx";
+import { API_BASE } from "../config/api.js";
 
 export default function Admin() {
   const [reds, setReds] = useState([]);
@@ -19,7 +20,7 @@ export default function Admin() {
     }
     const fetchReds = async () => {
       try {
-        const res = await axios.get("https://emovra.onrender.com/api/admin/alerts", {
+        const res = await axios.get(`${API_BASE}/admin/alerts`, {
           headers: { Authorization: "Bearer " + token }
         });
         setReds(res.data || []);
@@ -53,13 +54,50 @@ export default function Admin() {
     return full ? `+${full}` : "";
   };
 
-  // === NEW: FILTER LOGIC FOR SEPARATE SECTIONS ===
+  // === FILTER LOGIC FOR SEPARATE SECTIONS ===
+  // FIX: "school_emotional_abuse" was not recognised anywhere in this file.
+  // A teacher-abuse report therefore matched neither the Self-Harm filter
+  // nor the Emotional Abuse one, was counted in neither tally, and was
+  // badged with the raw category string instead of ABUSE. The one report
+  // type that most needs an adult to actually look at it was the one that
+  // fell between the two tabs. abuseCategoryOf() is the single place that
+  // decides what an entry is, so the filter, the counts and the card badge
+  // can no longer drift apart from each other.
+  const abuseCategoryOf = (entry) => {
+    const raw = String(entry.category || "").toLowerCase();
+    if (raw === "school_emotional_abuse" || entry.abuseType === "school_emotional_abuse") {
+      return "school_emotional_abuse";
+    }
+    if (raw === "emotional_abuse" || entry.abuseType === "home_abuse" || entry.abuseType === "both") {
+      return "emotional_abuse";
+    }
+    if (raw === "self_harm") return "self_harm";
+    if (entry.triggers?.includes("emotional_abuse")) return "emotional_abuse";
+    if (raw && raw !== "general") return raw;
+    // A bare "general"/absent category on a RED entry is almost always a
+    // self-harm flag from a path that never set one.
+    return "self_harm";
+  };
+  const isAbuseEntry = (entry) => {
+    const c = abuseCategoryOf(entry);
+    return (
+      entry.isAbuseCase === true ||
+      entry.emoAbuseDetected === true ||
+      c === "emotional_abuse" ||
+      c === "school_emotional_abuse"
+    );
+  };
+
   const filteredReds = reds.filter((entry) => {
-    const category = entry.category || (entry.triggers?.includes("emotional_abuse") ? "emotional_abuse" : "self_harm");
+    const category = abuseCategoryOf(entry);
     const risk = (entry.riskLevel || entry.risk || "RED").toUpperCase();
     if (filter === "all") return true;
-    if (filter === "self_harm") return category === "self_harm" || risk === "RED";
+    // Abuse cases are excluded from Self-Harm even when they are RED -
+    // otherwise every school-abuse report also showed up under Self-Harm
+    // purely because of its score, burying the genuine self-harm queue.
+    if (filter === "self_harm") return category === "self_harm" && !isAbuseEntry(entry);
     if (filter === "emotional_abuse") return category === "emotional_abuse";
+    if (filter === "school_emotional_abuse") return category === "school_emotional_abuse";
     if (filter === "RED") return risk === "RED";
     if (filter === "ORANGE") return risk === "ORANGE";
     return true;
@@ -67,8 +105,9 @@ export default function Admin() {
 
   const counts = {
     all: reds.length,
-    self_harm: reds.filter(e => (e.category || "self_harm") === "self_harm" && (e.riskLevel || "RED").toUpperCase() === "RED").length,
-    emotional_abuse: reds.filter(e => e.category === "emotional_abuse" || e.triggers?.includes("emotional_abuse")).length,
+    self_harm: reds.filter(e => abuseCategoryOf(e) === "self_harm" && !isAbuseEntry(e)).length,
+    emotional_abuse: reds.filter(e => abuseCategoryOf(e) === "emotional_abuse").length,
+    school_emotional_abuse: reds.filter(e => abuseCategoryOf(e) === "school_emotional_abuse").length,
     RED: reds.filter(e => (e.riskLevel || e.risk || "RED").toUpperCase() === "RED").length,
     ORANGE: reds.filter(e => (e.riskLevel || e.risk || "").toUpperCase() === "ORANGE").length,
   };
@@ -78,15 +117,16 @@ export default function Admin() {
 
   return (
     <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto", minHeight: "100vh", background: "#0a0a0c", color: "#e8dcc6" }}>
-      <h1 style={{ color: "#d4c5a0" }}>Admin Panel - {filter === "emotional_abuse" ? "EMOTIONAL ABUSE" : filter === "self_harm" ? "SELF-HARM" : "ALL ALERTS"} ({filteredReds.length})</h1>
+      <h1 style={{ color: "#d4c5a0" }}>Admin Panel - {filter === "emotional_abuse" ? "EMOTIONAL ABUSE" : filter === "school_emotional_abuse" ? "SCHOOL ABUSE" : filter === "self_harm" ? "SELF-HARM" : filter === "RED" ? "RED" : filter === "ORANGE" ? "ORANGE" : "ALL ALERTS"} ({filteredReds.length})</h1>
       <p style={{ color: "#666" }}>Abuse cases show full message content for review. Regular RED/ORANGE alerts show user info only - message content stays private. Sorted by most recent first.</p>
 
       <ImpactDashboard token={token} />
 
             <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
         <button onClick={() => setFilter("all")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #d4c5a0", background: filter === "all" ? "#d4c5a0" : "transparent", color: filter === "all" ? "#000" : "#d4c5a0", cursor: "pointer", fontWeight: 700 }}>All ({counts.all})</button>
-        <button onClick={() => setFilter("self_harm")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #ef4444", background: filter === "self_harm" ? "#ef4444" : "transparent", color: filter === "self_harm" ? "#fff" : "#fca5a5", cursor: "pointer", fontWeight: 700 }}>🚨 Self-Harm ({counts.RED})</button>
+        <button onClick={() => setFilter("self_harm")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #ef4444", background: filter === "self_harm" ? "#ef4444" : "transparent", color: filter === "self_harm" ? "#fff" : "#fca5a5", cursor: "pointer", fontWeight: 700 }}>🚨 Self-Harm ({counts.self_harm})</button>
         <button onClick={() => setFilter("emotional_abuse")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #fb923c", background: filter === "emotional_abuse" ? "#fb923c" : "transparent", color: filter === "emotional_abuse" ? "#000" : "#fb923c", cursor: "pointer", fontWeight: 700 }}>⚠️ Emotional Abuse ({counts.emotional_abuse})</button>
+        <button onClick={() => setFilter("school_emotional_abuse")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #60a5fa", background: filter === "school_emotional_abuse" ? "#60a5fa" : "transparent", color: filter === "school_emotional_abuse" ? "#000" : "#60a5fa", cursor: "pointer", fontWeight: 700 }}>🏫 School Abuse ({counts.school_emotional_abuse})</button>
         <button onClick={() => setFilter("ORANGE")} style={{ padding: "8px 16px", borderRadius: 20, border: "0.5px solid #f59e0b", background: filter === "ORANGE" ? "rgba(251,146,60,0.2)" : "transparent", color: "#fbbf24", cursor: "pointer", fontWeight: 700 }}>ORANGE ({counts.ORANGE})</button>
       </div>
 
@@ -105,19 +145,20 @@ export default function Admin() {
         const level = entry.score || entry.level || 98;
         const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : (entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "");
         const age = userData.age || entry.age || "";
-        const category = entry.category || (triggers.includes("emotional_abuse") ? "emotional_abuse" : "self_harm");
+        const category = abuseCategoryOf(entry);
         const riskLevel = (entry.riskLevel || entry.risk || "RED").toUpperCase();
 
-        const isAbuse = entry.isAbuseCase === true || category === "emotional_abuse";
+        const isAbuse = isAbuseEntry(entry);
+        const isSchoolAbuse = category === "school_emotional_abuse";
         const cleanPhoneWA = getCleanPhoneForWhatsApp(phone, countryCode);
         const dialablePhone = getDialablePhone(phone, countryCode);
 
         return (
-          <div key={entry._id} style={{ background: "rgba(18,18,20,0.95)", border: isAbuse ? "2px solid #fb923c" : "2px solid #ef4444", borderRadius: 12, padding: 16, marginTop: 15 }}>
+          <div key={entry._id} style={{ background: "rgba(18,18,20,0.95)", border: isSchoolAbuse ? "2px solid #60a5fa" : isAbuse ? "2px solid #fb923c" : "2px solid #ef4444", borderRadius: 12, padding: 16, marginTop: 15 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <b style={{ fontSize: 16 }}>{name} {age ? `(${age}y)` : ""}</b>
               <div style={{ display: "flex", gap: 8 }}>
-                <span style={{ background: isAbuse ? "#fff7ed" : "#fee2e2", color: isAbuse ? "#ea580c" : "#dc2626", padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: "bold" }}>{isAbuse ? "ABUSE" : category.toUpperCase()}</span>
+                <span style={{ background: isSchoolAbuse ? "#eff6ff" : isAbuse ? "#fff7ed" : "#fee2e2", color: isSchoolAbuse ? "#1d4ed8" : isAbuse ? "#ea580c" : "#dc2626", padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: "bold" }}>{isSchoolAbuse ? "SCHOOL ABUSE" : isAbuse ? "ABUSE" : category.toUpperCase()}</span>
                 <span style={{ background: riskLevel === "RED" ? "#fee2e2" : "#fef3c7", color: riskLevel === "RED" ? "#dc2626" : "#d97706", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: "bold" }}>{riskLevel} - {level}%</span>
               </div>
             </div>
