@@ -13,8 +13,7 @@ import { loadMoodHistory } from "../utils/storage.js";
 
 const HabitTracker = lazy(() => import("../components/HabitTracker"));
 const GoalPlanner = lazy(() => import("../components/GoalPlanner"));
-const MentalHealthInsights = lazy(() => import("../components/MentalHealthInsights"));
-const WellnessCalendar = lazy(() => import("../components/WellnessCalendar"));
+const MoodHistory = lazy(() => import("../components/MoodHistory"));
 const SleepAssistant = lazy(() => import("../components/SleepAssistant"));
 const CreativeCorner = lazy(() => import("../components/CreativeCorner"));
 const MusicTherapy = lazy(() => import("../components/MusicTherapy"));
@@ -33,9 +32,7 @@ const CalmGarden = lazy(() => import("../components/CalmGarden"));
 const ScheduledLetters = lazy(() => import("../components/ScheduledLetters"));
 const LifeTimeline = lazy(() => import("../components/LifeTimeline"));
 const DigitalTimeMachine = lazy(() => import("../components/DigitalTimeMachine"));
-const DailyAffirmation = lazy(() => import("../components/DailyAffirmation"));
 const SafetyPlan = lazy(() => import("../components/SafetyPlan"));
-const ComplimentGenerator = lazy(() => import("../components/ComplimentGenerator"));
 const Chatbot = lazy(() => import("../components/Chatbot"));
 
 const Journal = lazy(() => import("../components/Journal"));
@@ -532,8 +529,7 @@ export default function Dashboard() {
 
             <Route path="mood" element={(
               <Suspense fallback={<Loader />}>
-                <MentalHealthInsights />
-                <WellnessCalendar />
+                <MoodHistory />
                 <PersonalityQuiz />
               </Suspense>
             )} />
@@ -545,7 +541,6 @@ export default function Dashboard() {
                 <SocialSkills />
                 <LifeTimeline />
                 <ScheduledLetters />
-                <DailyAffirmation />
                 <SafetyPlan />
               </Suspense>
             )} />
@@ -555,7 +550,6 @@ export default function Dashboard() {
                 <CreativeCorner />
                 <CreativeExpression />
                 <FortuneCookie />
-                <ComplimentGenerator />
               </Suspense>
             )} />
 
