@@ -290,8 +290,18 @@ export default function MindGuardApp() {
     if (!inputText.trim()) return;
     setLoading(true);
 
-    const rawLower = inputText.toLowerCase();
+    const rawLower = inputText.toLowerCase().replace(/[‘’]/g, "'");
     const lower = rawLower.replace(/[^a-z0-9 ]/g, " ");
+    // FIX: `lower` strips apostrophes AND sentence punctuation, which quietly
+    // broke the negation guard below in two ways: "don't" became "don t" so
+    // NEGATION_WORDS could never match the single most common contraction,
+    // and CLAUSE_SPLIT's [.,!?;] branch was dead because the punctuation was
+    // already gone - leaving only but/however/although/though to split on.
+    // Net effect: "I definitely don't want to kill myself, just venting"
+    // fired a guaranteed RED crisis alert, the exact case the comment below
+    // says was fixed. Keep a separate string that preserves apostrophes and
+    // sentence punctuation, and run the negation logic against that one.
+    const negLower = rawLower.replace(/[^a-z0-9 '.,!?;]/g, " ");
 
     // FIX: hasNegation used to be checked against the WHOLE message
     // ("I don't know why, but I want to die" used to skip the guaranteed
@@ -363,7 +373,7 @@ export default function MindGuardApp() {
       "teacher said worthless",
     ];
 
-    const wantsToDie = hasUnnegatedPhrase(lower, [
+    const wantsToDie = hasUnnegatedPhrase(negLower, [
       "i want to die",
       "mujhe marna hai",
       "marna hai mujhe",
@@ -425,7 +435,7 @@ export default function MindGuardApp() {
       return;
     }
 
-    if (hasUnnegatedPhrase(lower, redKeys)) {
+    if (hasUnnegatedPhrase(negLower, redKeys)) {
       const forced = {
         riskLevel: "RED",
         score: 98,
@@ -610,7 +620,16 @@ export default function MindGuardApp() {
           "lonely",
         ].some((w) => lower.includes(w));
 
-        if (hasPositive && !hasNegative) {
+        // FIX: the two keyword branches below used to ignore `f` entirely,
+        // so when the backend was down a message like "I'm so happy I
+        // finally decided to end things" hit the positive-keywords branch
+        // and came back GREEN even though analyzeRisk() scored it RED.
+        // The keyword heuristic may only *lower* risk when the local
+        // analyzer also sees nothing - never override a RED/ORANGE it found.
+        const localLevel = (f.riskLevel || f.level || "GREEN").toUpperCase();
+        const localSaysRisk = localLevel === "RED" || localLevel === "ORANGE";
+
+        if (hasPositive && !hasNegative && !localSaysRisk) {
           result = {
             riskLevel: "GREEN",
             score: 82,
@@ -624,7 +643,7 @@ export default function MindGuardApp() {
             abuseSource: "none",
             confidence: 65,
           };
-        } else if (hasPositive && hasNegative) {
+        } else if (hasPositive && hasNegative && !localSaysRisk) {
           result = {
             riskLevel: "ORANGE",
             score: 55,
@@ -1139,6 +1158,7 @@ export default function MindGuardApp() {
                       text={analysis.text}
                       userName={user.name}
                       emergencyPhone={user.emergencyPhone}
+                      emergencyCountryCode={user.countryCode}
                       safetyPlan={safetyPlan}
                     />
                     <Suspense fallback={<Loader />}>

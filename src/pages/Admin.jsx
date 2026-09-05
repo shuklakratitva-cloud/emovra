@@ -32,9 +32,25 @@ export default function Admin() {
     fetchReds();
   }, []);
 
-  const getCleanPhoneForWhatsApp = (phone) => {
+  // FIX: signup stores emergencyPhone as digits only and keeps the country
+  // code in a separate `countryCode` field (Auth.jsx:158-159), but this
+  // used to build wa.me/<digits> with no country code at all. wa.me rejects
+  // a number without one, so the WhatsApp button on EVERY crisis alert
+  // opened an error page - including the default +91 case - and the tel:
+  // link dialled a nonexistent local number for any contact abroad.
+  const getCleanPhoneForWhatsApp = (phone, countryCode = "") => {
     if (!phone) return "";
-    return phone.replace(/\D/g, '');
+    const digits = String(phone).replace(/\D/g, "");
+    if (!digits) return "";
+    const cc = String(countryCode).replace(/\D/g, "");
+    // Don't double-prefix if the stored number already carries the code.
+    if (cc && !digits.startsWith(cc)) return `${cc}${digits}`;
+    return digits;
+  };
+
+  const getDialablePhone = (phone, countryCode = "") => {
+    const full = getCleanPhoneForWhatsApp(phone, countryCode);
+    return full ? `+${full}` : "";
   };
 
   // === NEW: FILTER LOGIC FOR SEPARATE SECTIONS ===
@@ -93,7 +109,8 @@ export default function Admin() {
         const riskLevel = (entry.riskLevel || entry.risk || "RED").toUpperCase();
 
         const isAbuse = entry.isAbuseCase === true || category === "emotional_abuse";
-        const cleanPhoneWA = getCleanPhoneForWhatsApp(phone);
+        const cleanPhoneWA = getCleanPhoneForWhatsApp(phone, countryCode);
+        const dialablePhone = getDialablePhone(phone, countryCode);
 
         return (
           <div key={entry._id} style={{ background: "rgba(18,18,20,0.95)", border: isAbuse ? "2px solid #fb923c" : "2px solid #ef4444", borderRadius: 12, padding: 16, marginTop: 15 }}>
@@ -122,9 +139,9 @@ export default function Admin() {
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
               {phone ? (
                 <>
-                  <a href={"tel:" + phone}>
+                  <a href={"tel:" + (dialablePhone || phone)}>
                     <button style={{ background: "#dc2626", color: "white", padding: "10px 16px", border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer" }}>
-                      📞 Call SOS: {phone}
+                      📞 Call SOS: {dialablePhone || phone}
                     </button>
                   </a>
                   <a href={`https://wa.me/${cleanPhoneWA}`} target="_blank" rel="noreferrer">
