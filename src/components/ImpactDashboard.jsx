@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = "https://emovra.onrender.com/api";
+import { API_BASE as API } from "../config/api.js";
 
 // Aggregate, anonymized usage numbers for the admin panel - no names,
 // emails, or message content ever pass through here, just counts. Meant

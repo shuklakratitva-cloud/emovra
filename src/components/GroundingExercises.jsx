@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { GROUNDING_EXERCISES } from "../data/exercises";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-const API = "https://emovra.onrender.com/api";
+import { API_BASE as API } from "../config/api.js";
 
 export default function GroundingExercises() {
   const [currentIndex, setCurrentIndex] = useState(0);

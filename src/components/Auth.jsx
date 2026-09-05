@@ -19,7 +19,8 @@ const getConsent = () => {
   };
 };
 
-const BASE_URL = "https://emovra.onrender.com/api/auth";
+import { API_BASE } from "../config/api.js";
+const BASE_URL = `${API_BASE}/auth`;
 
 const GOOGLE_CLIENT_ID = "992525447470-niu0jm6nnqoqdam751qe2pa6ge6slpsq.apps.googleusercontent.com";
 

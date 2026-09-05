@@ -3,7 +3,7 @@ import { analyzeRisk } from "../utils/analyzeRisk.js";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 import { getMicErrorKey } from "../utils/micError.js";
 
-const API = "https://emovra.onrender.com/api";
+import { API_BASE as API } from "../config/api.js";
 
 const LEVEL_LABEL_KEY = {
   RED: "voiceToneAnalyzer.levelRed",

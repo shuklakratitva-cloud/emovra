@@ -2,7 +2,7 @@ import React from "react";
 import useMood from "../hooks/useMood";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-const API = "https://emovra.onrender.com/api";
+import { API_BASE as API } from "../config/api.js";
 
 function pingMoodCheckin() {
   const token = localStorage.getItem("token");

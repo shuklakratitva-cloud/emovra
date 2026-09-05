@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
-const API = "https://emovra.onrender.com/api";
+import { API_BASE as API } from "../config/api.js";
 
 function authHeaders() {
   const token = localStorage.getItem("token");
