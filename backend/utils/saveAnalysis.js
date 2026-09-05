@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Entry from "../models/Entry.js";
 import Alert from "../models/Alert.js";
 import { encrypt } from "./crypto.js";
+import { entryFingerprint, dedupCutoff } from "./entryFingerprint.js";
 
 function log(tag, risk, score, category, extra = "") {
   console.log(`[${tag}] Risk:${risk} Score:${score} Cat:${category} ${extra}`);
@@ -34,8 +35,38 @@ export async function saveAnalysis({
   }
 
   const text_encrypted = encrypt(text || "");
+  const dedupHash = entryFingerprint(userLabel, text);
   let entrySaved = false;
   let alertSaved = false;
+
+  // FIX: one check-in can reach the database through more than one route.
+  // The frontend calls /api/analyze; when that is cold-starting or rate
+  // limited it falls back to /api/chat (routes/gemini.js), and both land
+  // here. The client also has its own /data/save call for the cases where
+  // the server did not save. The result was that a single RED/ORANGE
+  // disclosure was frequently stored TWICE - which doubled it in the
+  // student's own history, double-counted it in the admin panel and in
+  // insights, and made the early-warning rule (which escalates on repeated
+  // flags) treat one message as a pattern of several. The client now
+  // reports back when the server already saved, but that report travels
+  // over the same unreliable connection that triggered the fallback, so
+  // this window check is the guarantee rather than the optimisation.
+  if (dedupHash) {
+    try {
+      const duplicate = await Entry.exists({
+        dedupHash,
+        createdAt: { $gte: dedupCutoff() },
+      });
+      if (duplicate) {
+        log("DEDUP-SKIP", riskLevel, score, category, `Identical text already stored moments ago - not duplicating User:${userLabel}`);
+        return { entrySaved: false, alertSaved: false, deduped: true };
+      }
+    } catch (e) {
+      // A failed duplicate lookup must never block a crisis record from
+      // being written - fall through and save.
+      console.error("Dedup check failed (saving anyway):", e.message);
+    }
+  }
 
   try {
     await Entry.create({
@@ -49,6 +80,7 @@ export async function saveAnalysis({
       triggers: triggers || [],
       emotion: emotion || "neutral",
       text_encrypted,
+      dedupHash,
       emoAbuseDetected: !!(abuseType && abuseType !== "none"),
     });
     entrySaved = true;
