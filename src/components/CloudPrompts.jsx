@@ -52,39 +52,64 @@ export default function CloudPrompts() {
     <div style={{ background: "var(--card-bg, #fff)", padding: "24px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", marginTop: "20px" }}>
       <h2>☁️ {t("cloudPrompts.heading")}</h2>
       <p style={{ fontSize: 13, opacity: 0.7 }}>{t("cloudPrompts.subtitle")}</p>
+      {/* FIX: the sky strip used to be almost transparent
+          (rgba(157,193,224,0.16) fading to 0.04). Users can set a custom or
+          AI-generated background image in Settings, and it showed straight
+          through - so the clouds and the prompt sat on top of a photo and
+          nothing was readable. It now paints its own opaque-enough sky. */}
       <div
         style={{
           position: "relative", height: 170, overflow: "hidden", borderRadius: 12, marginTop: 12,
-          background: "linear-gradient(180deg, rgba(157,193,224,0.16), rgba(157,193,224,0.04))",
+          background:
+            "linear-gradient(180deg, rgba(120,160,200,0.55), rgba(150,185,215,0.35))",
+          border: "1px solid rgba(157,193,224,0.35)",
         }}
       >
         {clouds.map((c) => (
-          <div
+          <button
             key={c.id}
+            type="button"
             onClick={() => tapCloud(c.id)}
+            aria-label={t("cloudPrompts.hint")}
             style={{
               position: "absolute", top: c.top, left: "-30%", width: c.size, height: c.size * 0.5,
-              cursor: "pointer",
+              cursor: "pointer", padding: 0, border: "none", background: "transparent",
               animation: `emovra-cloud-drift ${c.duration}s linear infinite`,
               animationDelay: `${c.delay}s`,
             }}
           >
             <CloudShape />
-            {active && active.cloudId === c.id && (
-              <div
-                style={{
-                  position: "absolute", top: -10, left: "50%", transform: "translate(-50%, -100%)",
-                  background: "var(--card-bg, #fff)", color: "var(--text-h)", fontSize: 12, fontWeight: 600,
-                  padding: "8px 12px", borderRadius: 10, boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
-                  maxWidth: 200, textAlign: "center", lineHeight: 1.4,
-                  animation: "emovra-cloud-fade 0.3s ease",
-                }}
-              >
-                {t(active.textKey)}
-              </div>
-            )}
-          </div>
+          </button>
         ))}
+
+        {/* FIX: the prompt used to render as a tooltip INSIDE the cloud, at
+            top:-10 with translate(-50%,-100%) - i.e. entirely above it. The
+            strip has overflow:hidden, so for the cloud at top 8% the whole
+            message was clipped away and tapping it appeared to do nothing;
+            the one at 42% was cut in half. It also drifted sideways with the
+            cloud while you were still reading it.
+
+            It is one centred panel now: never clipped, never moving, and
+            legible whatever the cloud happens to be over. aria-live so a
+            screen reader announces it, since the trigger is a cloud. */}
+        {active && (
+          <div
+            aria-live="polite"
+            style={{
+              position: "absolute", left: "50%", top: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "var(--card-bg, #fff)", color: "var(--text-h)",
+              fontSize: 14, fontWeight: 600, lineHeight: 1.5,
+              padding: "14px 18px", borderRadius: 12,
+              border: "1px solid rgba(212,176,122,0.5)",
+              boxShadow: "0 6px 18px rgba(0,0,0,0.28)",
+              maxWidth: "78%", textAlign: "center", pointerEvents: "none",
+              animation: "emovra-cloud-fade 0.3s ease",
+            }}
+          >
+            {t(active.textKey)}
+          </div>
+        )}
       </div>
       <p style={{ marginTop: 10, fontSize: 12, opacity: 0.5, textAlign: "center" }}>{t("cloudPrompts.hint")}</p>
       <style>{`
@@ -93,8 +118,14 @@ export default function CloudPrompts() {
           100% { left: 115%; }
         }
         @keyframes emovra-cloud-fade {
-          0% { opacity: 0; transform: translate(-50%, -90%); }
-          100% { opacity: 1; transform: translate(-50%, -100%); }
+          0% { opacity: 0; transform: translate(-50%, -42%); }
+          100% { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        /* Constant drifting motion is the wrong default in a calming
+           feature for anyone sensitive to it. Clouds still work - they just
+           hold still. */
+        @media (prefers-reduced-motion: reduce) {
+          [style*="emovra-cloud-drift"] { animation: none !important; left: 20% !important; }
         }
       `}</style>
     </div>

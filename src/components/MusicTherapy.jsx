@@ -92,7 +92,9 @@ function useAmbientSound() {
     const ctx = ctxRef.current || new (window.AudioContext || window.webkitAudioContext)();
     ctxRef.current = ctx;
     const master = ctx.createGain();
-    master.gain.value = 0.15;
+    // Same problem as the mood tones below - 0.15 was far too quiet on a
+    // phone speaker for what is meant to be a background ambience.
+    master.gain.value = 0.42;
     master.connect(ctx.destination);
 
     if (soundKind === "rain" || soundKind === "white-noise" || soundKind === "forest" || soundKind === "cafe") {
@@ -168,7 +170,13 @@ function useAmbientSound() {
     const ctx = ctxRef.current || new (window.AudioContext || window.webkitAudioContext)();
     ctxRef.current = ctx;
     const master = ctx.createGain();
-    master.gain.value = 0.14;
+    // FIX: this was 0.14, and each voice then got only 0.5/voices on top
+    // (0.25 each for a two-note preset), so peak output sat around 7% of
+    // full scale - audible on headphones in a silent room and essentially
+    // nothing on a phone speaker. The mood presets are low sine tones
+    // (110-330Hz), which phone speakers reproduce weakly to begin with, so
+    // they need more headroom than the ambient sounds, not less.
+    master.gain.value = 0.5;
     master.connect(ctx.destination);
 
     const PRESETS = {
@@ -197,7 +205,10 @@ function useAmbientSound() {
       osc.connect(g).connect(filter);
       osc.start();
       // fade in instead of snapping straight to volume, so it doesn't click/pop
-      g.gain.linearRampToValueAtTime(0.5 / preset.freqs.length, ctx.currentTime + 1.5);
+      // 0.8 rather than 0.5 across the voices, and a shorter ramp so it
+      // reaches full level in 0.8s instead of taking a second and a half
+      // to become audible at all.
+      g.gain.linearRampToValueAtTime(0.8 / preset.freqs.length, ctx.currentTime + 0.8);
       voiceNodes.push(osc, g);
     });
 
@@ -207,7 +218,9 @@ function useAmbientSound() {
     const lfoGain = ctx.createGain();
     lfo.type = "sine";
     lfo.frequency.value = preset.lfoRate;
-    lfoGain.gain.value = 0.05;
+    // Swell depth scaled to the new master level: +-0.12 around 0.5 keeps
+    // the breathing motion audible without dipping toward silence.
+    lfoGain.gain.value = 0.12;
     lfo.connect(lfoGain).connect(master.gain);
     lfo.start();
 
@@ -453,83 +466,6 @@ function VirtualRainWindow() {
   );
 }
 
-function VirtualFireplace() {
-  const { t } = useLanguage();
-  const [poking, setPoking] = useState(false);
-  const [sparks, setSparks] = useState([]);
-
-  function handleTap() {
-    setPoking(true);
-    setTimeout(() => setPoking(false), 700);
-    const id = Date.now();
-    const burst = Array.from({ length: 6 }, (_, i) => ({
-      id: id + i,
-      x: 44 + Math.random() * 32,
-      delay: Math.random() * 0.3,
-      duration: 1 + Math.random() * 0.7,
-    }));
-    setSparks((s) => [...s, ...burst]);
-    setTimeout(() => setSparks((s) => s.filter((sp) => !burst.some((b) => b.id === sp.id))), 2200);
-  }
-
-  return (
-    <div style={{ textAlign: "center", padding: "10px 0", cursor: "pointer" }} onClick={handleTap} role="button" tabIndex={0}>
-      <svg width="120" height="120" viewBox="0 0 120 120" style={{ overflow: "visible" }}>
-        <defs>
-          <radialGradient id="ev-fire-core" cx="50%" cy="30%" r="70%">
-            <stop offset="0%" stopColor="#fff2c9" />
-            <stop offset="40%" stopColor="#ffb648" />
-            <stop offset="80%" stopColor="#e2531f" />
-            <stop offset="100%" stopColor="#e2531f" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="ev-ember-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#ffcf7a" />
-            <stop offset="100%" stopColor="#ffcf7a" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <rect x="28" y="92" width="64" height="10" rx="5" fill="#4a3325" />
-        <rect x="34" y="84" width="52" height="9" rx="4.5" fill="#5c4130" />
-        <circle cx="45" cy="90" r="9" fill="url(#ev-ember-glow)" style={{ animation: "emovra-ember-flicker 1.6s ease-in-out infinite" }} />
-        <circle cx="70" cy="88" r="7" fill="url(#ev-ember-glow)" style={{ animation: "emovra-ember-flicker 2s ease-in-out infinite 0.4s" }} />
-        <g style={{ transformOrigin: "60px 70px", animation: poking ? "emovra-fire-poke 0.7s ease-out 1" : "emovra-fire-flicker 1.8s ease-in-out infinite" }}>
-          <path d="M60 30 C74 46 72 64 60 72 C48 64 46 46 60 30 Z" fill="url(#ev-fire-core)" />
-        </g>
-        <g style={{ transformOrigin: "44px 78px", animation: "emovra-fire-flicker 2.1s ease-in-out infinite 0.3s" }}>
-          <path d="M44 52 C53 62 52 74 44 79 C36 74 35 62 44 52 Z" fill="url(#ev-fire-core)" opacity="0.85" />
-        </g>
-        <g style={{ transformOrigin: "76px 78px", animation: "emovra-fire-flicker 1.7s ease-in-out infinite 0.6s" }}>
-          <path d="M76 54 C84 63 83 74 76 79 C69 74 68 63 76 54 Z" fill="url(#ev-fire-core)" opacity="0.85" />
-        </g>
-        {sparks.map((sp) => (
-          <circle
-            key={sp.id}
-            cx={sp.x}
-            cy="80"
-            r="1.4"
-            fill="#ffcf7a"
-            style={{ animation: `emovra-spark-rise ${sp.duration}s ease-out forwards`, animationDelay: `${sp.delay}s` }}
-          />
-        ))}
-      </svg>
-      <style>{`
-        @keyframes emovra-fire-flicker {
-          0%, 100% { transform: scale(1,1) rotate(0deg); opacity: 1; }
-          30% { transform: scale(0.92,1.08) rotate(-3deg); opacity: 0.9; }
-          60% { transform: scale(1.08,0.94) rotate(2deg); opacity: 1; }
-        }
-        @keyframes emovra-fire-poke {
-          0% { transform: scale(1,1) rotate(0deg); }
-          25% { transform: scale(0.8,1.3) rotate(-8deg); }
-          55% { transform: scale(1.25,0.85) rotate(6deg); }
-          100% { transform: scale(1,1) rotate(0deg); }
-        }
-        @keyframes emovra-ember-flicker { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
-        @keyframes emovra-spark-rise { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
-      `}</style>
-      <p style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>{t("musicTherapy.fireplaceCaption")}</p>
-    </div>
-  );
-}
 
 function VirtualStarryNight() {
   const { t } = useLanguage();
@@ -621,7 +557,6 @@ export default function MusicTherapy() {
     { k: "candle", emoji: "🕯️", labelKey: "musicTherapy.candleButton", Comp: VirtualCandle },
     { k: "aquarium", emoji: "🐠", labelKey: "musicTherapy.aquariumButton", Comp: VirtualAquarium },
     { k: "rain-window", emoji: "🌧", labelKey: "musicTherapy.rainWindowButton", Comp: VirtualRainWindow },
-    { k: "fireplace-visual", emoji: "🔥", labelKey: "musicTherapy.fireplaceVisualButton", Comp: VirtualFireplace },
     { k: "stars", emoji: "✨", labelKey: "musicTherapy.starsButton", Comp: VirtualStarryNight },
   ];
 

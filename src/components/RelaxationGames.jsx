@@ -8,6 +8,25 @@ const BREATH_DURATIONS = [
   { id: 120, key: "relaxationGames.duration120" },
 ];
 
+// FIX: every game drew its play area straight onto the card with either no
+// background or one at 5-18% alpha. A user's custom background image is
+// painted on <body> with background-attachment:fixed behind only a 55%
+// dark overlay (utils/applyTheme.js), so that photo showed through the
+// play areas at close to full strength: the stones sat on a car, the
+// breathing flower was an outline over a logo, the drawing canvas looked
+// blank. The games read as broken rather than calm, which is the opposite
+// of the point.
+//
+// One opaque stage, shared by all of them, so what you are interacting
+// with is always the brightest thing on screen.
+const STAGE = {
+  background: "linear-gradient(180deg, rgba(24,24,28,0.98), rgba(16,16,19,0.98))",
+  border: "1px solid rgba(212,176,122,0.22)",
+  borderRadius: 14,
+  padding: "18px 12px",
+  margin: "4px 0 2px",
+};
+
 function BreathingFlower({ onComplete }) {
   const [phase, setPhase] = useState("in"); // in | hold | out
   const [running, setRunning] = useState(false);
@@ -56,7 +75,7 @@ function BreathingFlower({ onComplete }) {
   const ss = String(remaining % 60).padStart(2, "0");
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
+    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
       <div style={{ width: 220, height: 220, margin: "0 auto", position: "relative" }}>
         <svg viewBox="0 0 200 200" width="220" height="220" style={{ overflow: "visible" }}>
           <defs>
@@ -124,30 +143,6 @@ function BreathingFlower({ onComplete }) {
   );
 }
 
-function StressBall() {
-  const [squished, setSquished] = useState(false);
-  const [pops, setPops] = useState(0);
-  const { t } = useLanguage();
-  return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
-      <div
-        onMouseDown={() => { setSquished(true); setPops((p) => p + 1); }}
-        onMouseUp={() => setSquished(false)}
-        onMouseLeave={() => setSquished(false)}
-        onTouchStart={() => { setSquished(true); setPops((p) => p + 1); }}
-        onTouchEnd={() => setSquished(false)}
-        style={{
-          width: 130, height: 130, margin: "0 auto", borderRadius: "50%", cursor: "pointer", userSelect: "none",
-          background: "radial-gradient(circle at 35% 30%, #f4a261, #e07a3f)",
-          transform: squished ? "scale(0.82, 1.15)" : "scale(1,1)",
-          transition: "transform 0.15s ease",
-          boxShadow: squished ? "0 2px 8px rgba(0,0,0,0.3)" : "0 8px 16px rgba(0,0,0,0.25)",
-        }}
-      />
-      <p style={{ marginTop: 14, fontSize: 12, opacity: 0.6 }}>{t("relaxationGames.stressBallHint", { count: pops })}</p>
-    </div>
-  );
-}
 
 function BubblePop() {
   const GRID = 30;
@@ -168,7 +163,7 @@ function BubblePop() {
   const allPopped = popped.every(Boolean);
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
+    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, maxWidth: 280, margin: "0 auto" }}>
         {popped.map((isPopped, i) => (
           <button
@@ -227,7 +222,7 @@ function ArrangeStones() {
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
+    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
       <div style={{ minHeight: 220, display: "flex", flexDirection: "column-reverse", alignItems: "center", gap: 4, padding: "10px 0", justifyContent: "flex-start" }}>
         {stack.map((st) => (
           <div
@@ -262,36 +257,90 @@ function ArrangeStones() {
 // ------------------------------------------------------------------
 // Catch Falling Leaves - tap drifting leaves before they land, no fail state
 // ------------------------------------------------------------------
-const LEAF_EMOJIS = ["🍃", "🍂", "🍁"];
+// Leaf types. The golden one is rare and worth triple - something to
+// actually watch for, rather than every leaf being identical.
+const LEAF_TYPES = [
+  { emoji: "🍃", points: 1, weight: 5 },
+  { emoji: "🍂", points: 1, weight: 5 },
+  { emoji: "🍁", points: 1, weight: 4 },
+  { emoji: "🌟", points: 3, weight: 1, golden: true },
+];
+const LEAF_WEIGHT_TOTAL = LEAF_TYPES.reduce((n, l) => n + l.weight, 0);
+function pickLeafType() {
+  let r = Math.random() * LEAF_WEIGHT_TOTAL;
+  for (const type of LEAF_TYPES) {
+    r -= type.weight;
+    if (r <= 0) return type;
+  }
+  return LEAF_TYPES[0];
+}
+
+const LEAVES_BEST_KEY = "emovra_leaves_best";
 
 function CatchLeaves() {
   const { t } = useLanguage();
   const [leaves, setLeaves] = useState([]);
   const [caught, setCaught] = useState(0);
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [best, setBest] = useState(() => {
+    try { return Number(localStorage.getItem(LEAVES_BEST_KEY)) || 0; } catch { return 0; }
+  });
   const idRef = useRef(0);
 
+  // Difficulty ramps with how many you have caught: leaves fall faster,
+  // spawn more often, and more share the screen. Capped at 6 so it plateaus
+  // into "brisk but playable" rather than climbing until it is impossible -
+  // this still lives in a wellness app, and an unwinnable game is a bad way
+  // to spend a bad evening.
+  const level = Math.min(6, 1 + Math.floor(caught / 8));
+
+  // A streak multiplies what each leaf is worth, so paying attention pays
+  // off. Missing one resets the streak but never takes points away - there
+  // is still no fail state, just a reason to focus.
+  const multiplier = Math.min(3, 1 + Math.floor(streak / 5));
+
   useEffect(() => {
+    // Re-created whenever the level changes so the spawner never closes
+    // over a stale difficulty.
+    const spawnEvery = Math.max(450, 1300 - (level - 1) * 165);
+    const maxOnScreen = 4 + level;
     const spawn = setInterval(() => {
       setLeaves((ls) => {
-        if (ls.length >= 5) return ls;
-        const id = idRef.current++;
+        if (ls.length >= maxOnScreen) return ls;
+        const type = pickLeafType();
+        const base = Math.max(2.4, 6.5 - (level - 1) * 0.72);
         return [
           ...ls,
           {
-            id,
+            id: idRef.current++,
             x: 8 + Math.random() * 80,
-            duration: 6 + Math.random() * 4,
-            drift: Math.random() * 40 - 20,
-            emoji: LEAF_EMOJIS[Math.floor(Math.random() * LEAF_EMOJIS.length)],
+            // Golden leaves fall noticeably quicker - the bonus has to be
+            // earned, not just collected.
+            duration: (base + Math.random() * 1.6) * (type.golden ? 0.7 : 1),
+            drift: Math.random() * 60 - 30,
+            emoji: type.emoji,
+            points: type.points,
+            golden: !!type.golden,
           },
         ];
       });
-    }, 1300);
+    }, spawnEvery);
     return () => clearInterval(spawn);
-  }, []);
+  }, [level]);
 
-  function catchLeaf(id) {
-    setLeaves((ls) => ls.filter((l) => l.id !== id));
+  function catchLeaf(leaf) {
+    setLeaves((ls) => ls.filter((l) => l.id !== leaf.id));
+    setStreak((st) => st + 1);
+    setScore((sc) => {
+      const next = sc + leaf.points * multiplier;
+      setBest((b) => {
+        if (next <= b) return b;
+        try { localStorage.setItem(LEAVES_BEST_KEY, String(next)); } catch { /* private mode */ }
+        return next;
+      });
+      return next;
+    });
     setCaught((c) => {
       const next = c + 1;
       if (next % 5 === 0) recordCalmMoment(1);
@@ -299,19 +348,31 @@ function CatchLeaves() {
     });
   }
   function landLeaf(id) {
+    // A leaf reaching the bottom is the only "miss": it quietly ends the
+    // streak. No sound, no flash, no penalty to the score.
     setLeaves((ls) => ls.filter((l) => l.id !== id));
+    setStreak(0);
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
-      <div style={{ position: "relative", height: 240, borderRadius: 12, overflow: "hidden", background: "linear-gradient(180deg, rgba(212,176,122,0.05), rgba(212,176,122,0.14))" }}>
+    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
+      {/* FIX: this stage was rgba(212,176,122,0.05)->0.14 - between 5% and
+          14% opaque. A user's custom background image is painted on <body>
+          with background-attachment:fixed and only a 55% dark overlay
+          (utils/applyTheme.js), so the photo showed straight through the
+          play area and the leaves were falling over a picture. The game
+          looked broken rather than boring. Opaque stage, so the thing you
+          are playing is actually the thing you can see. */}
+      <div style={{ position: "relative", height: 240, borderRadius: 12, overflow: "hidden", background: "linear-gradient(180deg, #1b2a1f, #101a13)", border: "1px solid rgba(212,176,122,0.25)" }}>
         {leaves.map((l) => (
           <span
             key={l.id}
-            onClick={() => catchLeaf(l.id)}
+            onClick={() => catchLeaf(l)}
             onAnimationEnd={() => landLeaf(l.id)}
             style={{
-              position: "absolute", left: `${l.x}%`, top: -30, fontSize: 26, cursor: "pointer",
+              position: "absolute", left: `${l.x}%`, top: -30,
+              fontSize: l.golden ? 30 : 26, cursor: "pointer",
+              filter: l.golden ? "drop-shadow(0 0 10px rgba(246,223,168,0.95))" : "none",
               "--ev-drift": `${l.drift}px`,
               animation: `emovra-leaf-fall ${l.duration}s linear forwards`,
             }}
@@ -319,8 +380,21 @@ function CatchLeaves() {
             {l.emoji}
           </span>
         ))}
+        <div style={{ position: "absolute", left: 10, top: 8, fontSize: 11, opacity: 0.75, textAlign: "left", lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 700, color: "var(--text-h)" }}>{t("relaxationGames.leavesScore", { score })}</div>
+          <div>{t("relaxationGames.leavesLevel", { level })}</div>
+        </div>
+        {streak >= 2 && (
+          <div style={{ position: "absolute", right: 10, top: 8, fontSize: 11, fontWeight: 700, color: "var(--text-h)" }}>
+            {t("relaxationGames.leavesStreak", { streak })}
+            {multiplier > 1 ? ` ×${multiplier}` : ""}
+          </div>
+        )}
       </div>
-      <p style={{ marginTop: 12, fontSize: 12, opacity: 0.6 }}>{t("relaxationGames.leavesCaught", { count: caught })}</p>
+      <p style={{ marginTop: 12, fontSize: 12, opacity: 0.6 }}>
+        {t("relaxationGames.leavesCaught", { count: caught })}
+        {best > 0 ? ` · ${t("relaxationGames.leavesBest", { best })}` : ""}
+      </p>
       <p style={{ marginTop: 4, fontSize: 12, opacity: 0.5 }}>{t("relaxationGames.leavesHint")}</p>
       <style>{`
         @keyframes emovra-leaf-fall {
@@ -360,7 +434,7 @@ function ConnectStars() {
   const done = order.length === STAR_POINTS.length;
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
+    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
       <svg viewBox="0 0 100 90" width="260" height="234" style={{ margin: "0 auto", display: "block", background: "linear-gradient(180deg, #0e1330, #1b2350)", borderRadius: 12 }}>
         {order.slice(1).map((idx, i) => {
           const a = STAR_POINTS[order[i]];
@@ -405,7 +479,7 @@ function TraceShape() {
   const [duration, setDuration] = useState(14);
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
+    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
       <svg viewBox="0 0 190 190" width="220" height="220" style={{ margin: "0 auto", display: "block", cursor: "pointer" }} onClick={() => setPlaying((p) => !p)}>
         <path d={TRACE_PATH} fill="none" stroke="rgba(212,176,122,0.28)" strokeWidth="3" strokeLinecap="round" />
         <circle r="5" fill="#f6dfa8" style={{ filter: "drop-shadow(0 0 6px rgba(246,223,168,0.9))" }}>
@@ -498,7 +572,7 @@ function MatchColors() {
   const allMatched = matched.length === deck.length;
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
+    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, maxWidth: 260, margin: "0 auto" }}>
         {deck.map((card) => {
           const isUp = flipped.includes(card.id) || matched.includes(card.id);
@@ -534,7 +608,6 @@ function MatchColors() {
 
 const GAMES = [
   { id: "breathe", emoji: "🌸", labelKey: "relaxationGames.breathingTab", Component: BreathingFlower },
-  { id: "ball", emoji: "🤏", labelKey: "relaxationGames.stressBallTab", Component: StressBall },
   { id: "pop", emoji: "🫧", labelKey: "relaxationGames.bubblePopTab", Component: BubblePop },
   { id: "stones", emoji: "🪨", labelKey: "relaxationGames.stonesTab", Component: ArrangeStones },
   { id: "leaves", emoji: "🍂", labelKey: "relaxationGames.leavesTab", Component: CatchLeaves },

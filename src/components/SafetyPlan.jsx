@@ -47,6 +47,13 @@ export default function SafetyPlan() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  // FIX: four always-open textareas made this the tallest card in the
+  // Journal tab, so everything below it was a long scroll away - and a
+  // safety plan is mostly written once and then re-read, not re-typed.
+  // It opens as a short summary when one already exists, and Edit brings
+  // the form back. Null until the plan loads, so we can decide from the
+  // fetched content rather than flashing the form open first.
+  const [editing, setEditing] = useState(null);
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -60,9 +67,18 @@ export default function SafetyPlan() {
             supportContacts: d.plan.supportContacts,
             reasonsToLive: d.plan.reasonsToLive,
           });
+        // Start collapsed only if there is actually a plan to collapse;
+        // a first-time user still gets the form open in front of them.
+        const filled = d.success && d.plan &&
+          [d.plan.warningSigns, d.plan.copingStrategies, d.plan.supportContacts, d.plan.reasonsToLive]
+            .some((v) => (v || "").trim().length > 0);
+        setEditing(!filled);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setEditing((e) => (e === null ? true : e));
+        setLoading(false);
+      });
   }, []);
 
   // FIX: this used to do nothing at all on a failed save - no success
@@ -83,6 +99,7 @@ export default function SafetyPlan() {
       const data = await res.json();
       if (data.success) {
         setSaved(true);
+      setEditing(false);
         setTimeout(() => setSaved(false), 2000);
       } else {
         setSaveError(true);
@@ -112,6 +129,43 @@ export default function SafetyPlan() {
         {t("safetyPlan.intro")} {hasAnyContent && t("safetyPlan.introExtra")}
       </p>
 
+      {!editing ? (
+        <div style={{ marginTop: 14 }}>
+          {FIELDS.filter((f) => (values[f.key] || "").trim()).map((f) => (
+            <div key={f.key} style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-h)" }}>{t(f.labelKey)}</div>
+              {/* One line each, clamped. The full text is one tap away in
+                  Edit - the point of the collapsed view is to be re-readable
+                  at a glance, not to reproduce the whole plan. */}
+              <div
+                style={{
+                  fontSize: 13, opacity: 0.85, marginTop: 2, whiteSpace: "pre-wrap",
+                  display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {values[f.key]}
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={() => { setEditing(true); setSaved(false); setSaveError(false); }}
+            style={{
+              marginTop: 14, padding: "8px 20px", borderRadius: 999,
+              border: "1px solid var(--border)", background: "transparent",
+              color: "var(--text)", fontWeight: 600, fontSize: 13, cursor: "pointer",
+            }}
+          >
+            {t("safetyPlan.edit")}
+          </button>
+          {saved && (
+            <span style={{ marginLeft: 12, fontSize: 12, color: "#4ade80" }}>
+              {t("safetyPlan.saved")} ✓
+            </span>
+          )}
+        </div>
+      ) : (
+      <>
       {FIELDS.map((f) => (
         <div key={f.key} style={{ marginTop: 16 }}>
           <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-h)" }}>
@@ -160,6 +214,8 @@ export default function SafetyPlan() {
         <span style={{ marginLeft: 12, fontSize: 12, color: "#f87171" }}>
           {t("journal.couldNotSave")}
         </span>
+      )}
+      </>
       )}
     </div>
   );
