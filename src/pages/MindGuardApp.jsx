@@ -63,6 +63,9 @@ export default function MindGuardApp() {
     }
   });
   const [voiceData, setVoiceData] = useState(null);
+  // Set when the backend rejects our token. See saveToBackend below - this
+  // is the difference between "saved" and "silently thrown away".
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("checkin");
   const [history, setHistory] = useState(() => {
@@ -224,12 +227,34 @@ export default function MindGuardApp() {
     }
     if (!token) return;
     try {
-      await fetch(`${API}/data/save`, {
+      // FIX: this used to be a bare `await fetch(...)` with an empty catch,
+      // and never looked at the response. fetch() only rejects on a network
+      // failure - a 401 is a perfectly successful HTTP response - so the
+      // catch never fired and a rejected save looked identical to a
+      // successful one.
+      //
+      // That mattered because the JWT expires after 20 days
+      // (backend/routes/auth.js) and there is no refresh token, while the
+      // app decides you are logged in purely from localStorage.user, which
+      // never expires. So once the token aged out, the user still appeared
+      // logged in, still saw their risk card, and every single check-in
+      // from then on was silently discarded - permanently, with no error
+      // anywhere. Check the status and say so.
+      const res = await fetch(`${API}/data/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(entry),
       });
-    } catch {}
+      if (res.status === 401 || res.status === 403) {
+        setSessionExpired(true);
+        console.warn("Session expired - check-in was NOT saved to the server.");
+      } else if (!res.ok) {
+        console.warn(`Check-in save failed with ${res.status} - not saved.`);
+      }
+    } catch (e) {
+      // Genuine network failure (offline, or Render cold-starting).
+      console.warn("Check-in save failed - not saved:", e?.message);
+    }
   }
 
   async function saveAlertToAdmin(
@@ -248,7 +273,7 @@ export default function MindGuardApp() {
     if (riskLevel !== "RED" && riskLevel !== "ORANGE") return;
     if (!token) return;
     try {
-      await fetch(`${API}/alerts/red`, {
+      const res = await fetch(`${API}/alerts/red`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -266,6 +291,7 @@ export default function MindGuardApp() {
           timestamp: new Date().toISOString(),
         }),
       });
+      if (res.status === 401 || res.status === 403) setSessionExpired(true);
     } catch (e) {
       console.warn("Alert save failed:", e.message);
     }
@@ -1036,6 +1062,40 @@ export default function MindGuardApp() {
                   and is invisible to everyone else. Placed above the
                   composer on purpose: it should be the first thing seen,
                   not something found after scrolling. */}
+              {/* The session-expired banner. Deliberately NOT an auto
+                  logout: a student may have just written something serious
+                  and is reading their risk card - yanking them to a login
+                  screen at that moment is the wrong trade. Their result and
+                  helplines stay on screen; this tells them the truth about
+                  what was saved and lets them choose when to sign back in. */}
+              {sessionExpired && (
+                <div
+                  role="alert"
+                  style={{
+                    background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.5)",
+                    borderRadius: 14, padding: "16px 18px", marginBottom: 18,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{t("session.expiredTitle")}</div>
+                  <p style={{ fontSize: 13, opacity: 0.85, margin: "6px 0 12px", lineHeight: 1.6 }}>
+                    {t("session.expiredBody")}
+                  </p>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem("token");
+                      localStorage.removeItem("user");
+                      setUser(null);
+                    }}
+                    style={{
+                      background: "var(--accent)", color: "#000", border: "none",
+                      padding: "9px 18px", borderRadius: 999, fontWeight: 700,
+                      fontSize: 13, cursor: "pointer",
+                    }}
+                  >
+                    {t("session.signInAgain")}
+                  </button>
+                </div>
+              )}
               <FollowUpCard />
               <div
                 style={{
