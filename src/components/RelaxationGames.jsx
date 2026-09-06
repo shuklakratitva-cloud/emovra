@@ -8,25 +8,6 @@ const BREATH_DURATIONS = [
   { id: 120, key: "relaxationGames.duration120" },
 ];
 
-// FIX: every game drew its play area straight onto the card with either no
-// background or one at 5-18% alpha. A user's custom background image is
-// painted on <body> with background-attachment:fixed behind only a 55%
-// dark overlay (utils/applyTheme.js), so that photo showed through the
-// play areas at close to full strength: the stones sat on a car, the
-// breathing flower was an outline over a logo, the drawing canvas looked
-// blank. The games read as broken rather than calm, which is the opposite
-// of the point.
-//
-// One opaque stage, shared by all of them, so what you are interacting
-// with is always the brightest thing on screen.
-const STAGE = {
-  background: "linear-gradient(180deg, rgba(24,24,28,0.98), rgba(16,16,19,0.98))",
-  border: "1px solid rgba(212,176,122,0.22)",
-  borderRadius: 14,
-  padding: "18px 12px",
-  margin: "4px 0 2px",
-};
-
 function BreathingFlower({ onComplete }) {
   const [phase, setPhase] = useState("in"); // in | hold | out
   const [running, setRunning] = useState(false);
@@ -75,7 +56,7 @@ function BreathingFlower({ onComplete }) {
   const ss = String(remaining % 60).padStart(2, "0");
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
+    <div style={{ textAlign: "center", padding: "20px 0" }}>
       <div style={{ width: 220, height: 220, margin: "0 auto", position: "relative" }}>
         <svg viewBox="0 0 200 200" width="220" height="220" style={{ overflow: "visible" }}>
           <defs>
@@ -163,7 +144,7 @@ function BubblePop() {
   const allPopped = popped.every(Boolean);
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
+    <div style={{ textAlign: "center", padding: "20px 0" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, maxWidth: 280, margin: "0 auto" }}>
         {popped.map((isPopped, i) => (
           <button
@@ -190,69 +171,7 @@ function BubblePop() {
   );
 }
 
-// ------------------------------------------------------------------
-// Arrange Stones - tap to add a stone to a gently wobbling cairn
-// ------------------------------------------------------------------
-const STONE_COLORS = ["#c9b79c", "#b3a58f", "#9e9483", "#ada398", "#8f8779", "#c2b49b"];
 
-function ArrangeStones() {
-  const { t } = useLanguage();
-  const [stack, setStack] = useState([]);
-  const nextId = useRef(0);
-
-  function addStone() {
-    setStack((s) => {
-      if (s.length >= 8) return s;
-      const id = nextId.current++;
-      return [
-        ...s,
-        {
-          id,
-          width: 92 - s.length * 8 + (Math.random() * 8 - 4),
-          offsetX: Math.random() * 14 - 7,
-          rotate: Math.random() * 8 - 4,
-          color: STONE_COLORS[s.length % STONE_COLORS.length],
-        },
-      ];
-    });
-  }
-  function clear() {
-    if (stack.length >= 4) recordCalmMoment(1);
-    setStack([]);
-  }
-
-  return (
-    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
-      <div style={{ minHeight: 220, display: "flex", flexDirection: "column-reverse", alignItems: "center", gap: 4, padding: "10px 0", justifyContent: "flex-start" }}>
-        {stack.map((st) => (
-          <div
-            key={st.id}
-            style={{
-              width: Math.max(30, st.width), height: 24, borderRadius: "50%",
-              background: `radial-gradient(circle at 35% 25%, ${st.color}, #00000030)`,
-              transform: `translateX(${st.offsetX}px) rotate(${st.rotate}deg)`,
-              boxShadow: "0 3px 6px rgba(0,0,0,0.18)",
-              transition: "transform 0.4s ease",
-            }}
-          />
-        ))}
-      </div>
-      <button
-        onClick={addStone}
-        disabled={stack.length >= 8}
-        style={{ marginTop: 8, padding: "8px 20px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: stack.length >= 8 ? "default" : "pointer", opacity: stack.length >= 8 ? 0.5 : 1 }}
-      >
-        {t("relaxationGames.addStone")}
-      </button>
-      {stack.length > 0 && (
-        <p onClick={clear} style={{ marginTop: 10, fontSize: 12, opacity: 0.6, cursor: "pointer", textDecoration: "underline" }}>
-          {t("relaxationGames.clearStack")}
-        </p>
-      )}
-      <p style={{ marginTop: 8, fontSize: 12, opacity: 0.5 }}>{t("relaxationGames.stonesHint")}</p>
-    </div>
-  );
-}
 
 // ------------------------------------------------------------------
 // Catch Falling Leaves - tap drifting leaves before they land, no fail state
@@ -355,15 +274,8 @@ function CatchLeaves() {
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
-      {/* FIX: this stage was rgba(212,176,122,0.05)->0.14 - between 5% and
-          14% opaque. A user's custom background image is painted on <body>
-          with background-attachment:fixed and only a 55% dark overlay
-          (utils/applyTheme.js), so the photo showed straight through the
-          play area and the leaves were falling over a picture. The game
-          looked broken rather than boring. Opaque stage, so the thing you
-          are playing is actually the thing you can see. */}
-      <div style={{ position: "relative", height: 240, borderRadius: 12, overflow: "hidden", background: "linear-gradient(180deg, #1b2a1f, #101a13)", border: "1px solid rgba(212,176,122,0.25)" }}>
+    <div style={{ textAlign: "center", padding: "20px 0" }}>
+      <div style={{ position: "relative", height: 240, borderRadius: 12, overflow: "hidden", background: "linear-gradient(180deg, rgba(212,176,122,0.05), rgba(212,176,122,0.14))" }}>
         {leaves.map((l) => (
           <span
             key={l.id}
@@ -434,7 +346,7 @@ function ConnectStars() {
   const done = order.length === STAR_POINTS.length;
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
+    <div style={{ textAlign: "center", padding: "20px 0" }}>
       <svg viewBox="0 0 100 90" width="260" height="234" style={{ margin: "0 auto", display: "block", background: "linear-gradient(180deg, #0e1330, #1b2350)", borderRadius: 12 }}>
         {order.slice(1).map((idx, i) => {
           const a = STAR_POINTS[order[i]];
@@ -477,10 +389,28 @@ function TraceShape() {
   const { t } = useLanguage();
   const [playing, setPlaying] = useState(true);
   const [duration, setDuration] = useState(14);
+  const svgRef = useRef(null);
+
+  // FIX: tapping said "Paused. Tap to resume." but the dot kept going.
+  // The pause was attempted by conditionally spreading begin:"indefinite"
+  // onto <animateMotion>, and `begin` is a declarative START-TIME
+  // attribute - it decides when an animation may begin, and only matters
+  // while the element is being set up. Re-rendering it onto an animation
+  // that is already running does nothing at all, so the only thing the tap
+  // ever changed was the caption underneath.
+  //
+  // SMIL is controlled through the DOM, not through attributes: pause and
+  // unpause live on the <svg> root.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    if (playing) svg.unpauseAnimations();
+    else svg.pauseAnimations();
+  }, [playing]);
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
-      <svg viewBox="0 0 190 190" width="220" height="220" style={{ margin: "0 auto", display: "block", cursor: "pointer" }} onClick={() => setPlaying((p) => !p)}>
+    <div style={{ textAlign: "center", padding: "20px 0" }}>
+      <svg ref={svgRef} viewBox="0 0 190 190" width="220" height="220" style={{ margin: "0 auto", display: "block", cursor: "pointer" }} onClick={() => setPlaying((p) => !p)}>
         <path d={TRACE_PATH} fill="none" stroke="rgba(212,176,122,0.28)" strokeWidth="3" strokeLinecap="round" />
         <circle r="5" fill="#f6dfa8" style={{ filter: "drop-shadow(0 0 6px rgba(246,223,168,0.9))" }}>
           <animateMotion
@@ -488,7 +418,6 @@ function TraceShape() {
             repeatCount="indefinite"
             path={TRACE_PATH}
             rotate="auto"
-            {...(playing ? {} : { begin: "indefinite" })}
           />
         </circle>
       </svg>
@@ -572,7 +501,7 @@ function MatchColors() {
   const allMatched = matched.length === deck.length;
 
   return (
-    <div style={{ textAlign: "center", padding: "20px 0", ...STAGE }}>
+    <div style={{ textAlign: "center", padding: "20px 0" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, maxWidth: 260, margin: "0 auto" }}>
         {deck.map((card) => {
           const isUp = flipped.includes(card.id) || matched.includes(card.id);
@@ -609,7 +538,6 @@ function MatchColors() {
 const GAMES = [
   { id: "breathe", emoji: "🌸", labelKey: "relaxationGames.breathingTab", Component: BreathingFlower },
   { id: "pop", emoji: "🫧", labelKey: "relaxationGames.bubblePopTab", Component: BubblePop },
-  { id: "stones", emoji: "🪨", labelKey: "relaxationGames.stonesTab", Component: ArrangeStones },
   { id: "leaves", emoji: "🍂", labelKey: "relaxationGames.leavesTab", Component: CatchLeaves },
   { id: "stars", emoji: "✨", labelKey: "relaxationGames.starsTab", Component: ConnectStars },
   { id: "trace", emoji: "〰️", labelKey: "relaxationGames.traceTab", Component: TraceShape },
