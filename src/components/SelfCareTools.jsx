@@ -79,6 +79,7 @@ function PhotoChallenge() {
     t("selfCareTools.photoPrompt1"), t("selfCareTools.photoPrompt2"), t("selfCareTools.photoPrompt3"),
     t("selfCareTools.photoPrompt4"), t("selfCareTools.photoPrompt5"), t("selfCareTools.photoPrompt6"),
     t("selfCareTools.photoPrompt7"), t("selfCareTools.photoPrompt8"),
+    t("selfCareTools.photoPrompt9"), t("selfCareTools.photoPrompt10"),
   ];
   const [prompt, setPrompt] = useState(() => PHOTO_PROMPTS[Math.floor(Math.random() * PHOTO_PROMPTS.length)]);
   return (

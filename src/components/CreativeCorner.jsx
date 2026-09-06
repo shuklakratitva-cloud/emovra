@@ -9,6 +9,9 @@ const PROMPTS = [
   "Write three words that describe today, then explain one of them.",
   "Draw something that made you smile recently, even a small thing.",
   "Write a message you'd want to hear on a hard day.",
+  "Draw the view from a window you know well.",
+  "Write about a small kindness someone showed you.",
+  "Draw how today felt, using only shapes and colour.",
 ];
 
 const CANVAS_BG = "#0f0f11";

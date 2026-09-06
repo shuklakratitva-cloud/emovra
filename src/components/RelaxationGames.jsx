@@ -347,7 +347,18 @@ function ConnectStars() {
 
   return (
     <div style={{ textAlign: "center", padding: "20px 0" }}>
-      <svg viewBox="0 0 100 90" width="260" height="234" style={{ margin: "0 auto", display: "block", background: "linear-gradient(180deg, #0e1330, #1b2350)", borderRadius: 12 }}>
+      {/* Sized in % rather than a fixed 260px so the night sky fills the
+          card on a phone instead of sitting as a small square in the middle;
+          maxWidth keeps it sane on a desktop. aspectRatio matches the
+          viewBox so the star positions stay where they are drawn. */}
+      <svg
+        viewBox="0 0 100 90"
+        width="100%"
+        style={{
+          margin: "0 auto", display: "block", maxWidth: 460, aspectRatio: "100 / 90",
+          background: "linear-gradient(180deg, #0e1330, #1b2350)", borderRadius: 12,
+        }}
+      >
         {order.slice(1).map((idx, i) => {
           const a = STAR_POINTS[order[i]];
           const b = STAR_POINTS[idx];
@@ -356,7 +367,7 @@ function ConnectStars() {
         {STAR_POINTS.map((p, i) => (
           <circle
             key={i}
-            cx={p.x} cy={p.y} r={order.includes(i) ? 3.2 : 2.4}
+            cx={p.x} cy={p.y} r={order.includes(i) ? 3.6 : 2.8}
             fill={order.includes(i) ? "#f6dfa8" : "#cdd3f2"}
             opacity={order.includes(i) ? 1 : 0.75}
             onClick={() => tapStar(i)}

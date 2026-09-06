@@ -11,6 +11,12 @@ const CLOUD_PROMPT_KEYS = [
   "cloudPrompts.prompt2",
   "cloudPrompts.prompt3",
   "cloudPrompts.prompt4",
+  "cloudPrompts.prompt5",
+  "cloudPrompts.prompt6",
+  "cloudPrompts.prompt7",
+  "cloudPrompts.prompt8",
+  "cloudPrompts.prompt9",
+  "cloudPrompts.prompt10",
 ];
 
 function CloudShape() {
@@ -33,17 +39,26 @@ export default function CloudPrompts() {
 
   const clouds = useMemo(
     () => [
-      { id: 0, top: "8%", size: 92, duration: 34, delay: 0 },
-      { id: 1, top: "42%", size: 68, duration: 42, delay: -16 },
-      { id: 2, top: "68%", size: 100, duration: 38, delay: -27 },
+      { id: 0, topPct: 8, size: 92, duration: 34, delay: 0 },
+      { id: 1, topPct: 42, size: 68, duration: 42, delay: -16 },
+      { id: 2, topPct: 68, size: 100, duration: 38, delay: -27 },
     ],
     []
   );
 
   function tapCloud(cloudId) {
-    const textKey = CLOUD_PROMPT_KEYS[Math.floor(Math.random() * CLOUD_PROMPT_KEYS.length)];
-    setActive({ cloudId, textKey });
-    recordCalmMoment(0.5);
+    // FIX: this rerolled a random prompt on every tap, so tapping the same
+    // cloud again swapped the thought out from under you mid-read - it
+    // looked glitchy rather than intentional. Tapping a cloud that is
+    // already showing its thought now just keeps it on screen longer; a
+    // new thought only comes from a different cloud, or from waiting for
+    // this one to drift away.
+    const sameCloudAgain = active && active.cloudId === cloudId;
+    if (!sameCloudAgain) {
+      const textKey = CLOUD_PROMPT_KEYS[Math.floor(Math.random() * CLOUD_PROMPT_KEYS.length)];
+      setActive({ cloudId, textKey });
+      recordCalmMoment(0.5);
+    }
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => setActive(null), 4500);
   }
@@ -72,44 +87,53 @@ export default function CloudPrompts() {
             onClick={() => tapCloud(c.id)}
             aria-label={t("cloudPrompts.hint")}
             style={{
-              position: "absolute", top: c.top, left: "-30%", width: c.size, height: c.size * 0.5,
+              position: "absolute", top: `${c.topPct}%`, left: "-30%", width: c.size, height: c.size * 0.5,
               cursor: "pointer", padding: 0, border: "none", background: "transparent",
+              borderRadius: 999,
               animation: `emovra-cloud-drift ${c.duration}s linear infinite`,
               animationDelay: `${c.delay}s`,
             }}
           >
             <CloudShape />
+            {active && active.cloudId === c.id && (
+              <div
+                aria-live="polite"
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  // FIX: the thought used to be pinned above the cloud with
+                  // translate(-50%,-100%). The strip has overflow:hidden, so
+                  // for the cloud sitting at 8% the whole message rendered
+                  // past the top edge and was clipped away - tapping it
+                  // looked like nothing happened at all. It now sits BELOW
+                  // clouds in the upper half and ABOVE clouds in the lower
+                  // half, so it always has room inside the strip.
+                  ...(c.topPct < 50
+                    ? { top: "100%", marginTop: 8 }
+                    : { bottom: "100%", marginBottom: 8 }),
+                  background: "var(--card-bg, #fff)",
+                  color: "var(--text-h)",
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(212,176,122,0.5)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                  width: "max-content",
+                  maxWidth: 190,
+                  textAlign: "center",
+                  lineHeight: 1.4,
+                  pointerEvents: "none",
+                  animation: "emovra-cloud-fade 0.3s ease",
+                }}
+              >
+                {t(active.textKey)}
+              </div>
+            )}
           </button>
         ))}
 
-        {/* FIX: the prompt used to render as a tooltip INSIDE the cloud, at
-            top:-10 with translate(-50%,-100%) - i.e. entirely above it. The
-            strip has overflow:hidden, so for the cloud at top 8% the whole
-            message was clipped away and tapping it appeared to do nothing;
-            the one at 42% was cut in half. It also drifted sideways with the
-            cloud while you were still reading it.
-
-            It is one centred panel now: never clipped, never moving, and
-            legible whatever the cloud happens to be over. aria-live so a
-            screen reader announces it, since the trigger is a cloud. */}
-        {active && (
-          <div
-            aria-live="polite"
-            style={{
-              position: "absolute", left: "50%", top: "50%",
-              transform: "translate(-50%, -50%)",
-              background: "var(--card-bg, #fff)", color: "var(--text-h)",
-              fontSize: 14, fontWeight: 600, lineHeight: 1.5,
-              padding: "14px 18px", borderRadius: 12,
-              border: "1px solid rgba(212,176,122,0.5)",
-              boxShadow: "0 6px 18px rgba(0,0,0,0.28)",
-              maxWidth: "78%", textAlign: "center", pointerEvents: "none",
-              animation: "emovra-cloud-fade 0.3s ease",
-            }}
-          >
-            {t(active.textKey)}
-          </div>
-        )}
       </div>
       <p style={{ marginTop: 10, fontSize: 12, opacity: 0.5, textAlign: "center" }}>{t("cloudPrompts.hint")}</p>
       <style>{`
@@ -118,8 +142,8 @@ export default function CloudPrompts() {
           100% { left: 115%; }
         }
         @keyframes emovra-cloud-fade {
-          0% { opacity: 0; transform: translate(-50%, -42%); }
-          100% { opacity: 1; transform: translate(-50%, -50%); }
+          0% { opacity: 0; }
+          100% { opacity: 1; }
         }
         /* Constant drifting motion is the wrong default in a calming
            feature for anyone sensitive to it. Clouds still work - they just

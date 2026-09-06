@@ -3,7 +3,7 @@ import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 function GratitudeBingo() {
   const { t } = useLanguage();
-  const PROMPT_KEYS = ["mindGames.prompt0", "mindGames.prompt1", "mindGames.prompt2", "mindGames.prompt3", "mindGames.prompt4", "mindGames.prompt5", "mindGames.prompt6", "mindGames.prompt7", "mindGames.prompt8"];
+  const PROMPT_KEYS = ["mindGames.prompt0", "mindGames.prompt1", "mindGames.prompt2", "mindGames.prompt3", "mindGames.prompt4", "mindGames.prompt5", "mindGames.prompt6", "mindGames.prompt7", "mindGames.prompt8", "mindGames.prompt9"];
   const [checked, setChecked] = useState(() => new Array(9).fill(false));
   function toggle(i) { setChecked((c) => { const n = [...c]; n[i] = !n[i]; return n; }); }
   return (
