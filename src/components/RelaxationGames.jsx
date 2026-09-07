@@ -196,26 +196,27 @@ function pickLeafType() {
 }
 
 const LEAVES_BEST_KEY = "emovra_leaves_best";
-// Leaves to catch to clear a level.
-const LEAVES_PER_LEVEL = 10;
+// A level is a span of time survived, not a quota of leaves. Clearing one
+// means lasting this long without letting a leaf reach the ground.
+const LEVEL_DURATION_MS = 30 * 1000;
 // How long the "Level N" card sits over the board before play resumes.
 const LEVEL_BANNER_MS = 1600;
 
-// The difficulty curve. Now that a single miss ends the run, these numbers
-// matter far more than they did when the game was endless and forgiving -
-// a pace that was merely brisk before is lethal now, so both ends were
-// re-tuned: level 1 is slower than the old level 1, and the ceiling is
-// gentler than the old level 6. The floors are the important part. Below
-// roughly a 3-second fall there is no reaction window left, and a game
-// that becomes unwinnable is a poor thing to hand someone on a bad
-// evening - so the curve plateaus into "demanding but fair" and the run
-// ends because attention slipped, not because the game stopped being
-// possible.
+// The difficulty curve. Falling speed is the main lever - each level the
+// leaves come down noticeably faster, which is what the level number is
+// really counting. Spawn rate and the on-screen cap follow behind it.
+//
+// The floors matter more than the slope. Below roughly a 2.8-second fall
+// there is no reaction window left, and a game that becomes unwinnable is
+// a poor thing to hand someone on a bad evening - so the curve plateaus
+// into "demanding but fair" at level 8 and the run ends because attention
+// slipped, not because the game stopped being possible. Reaching that
+// plateau already means three and a half minutes without a single miss.
 function levelSpeed(level) {
   return {
-    spawnEvery: Math.max(620, 1500 - (level - 1) * 140),
-    fallBase: Math.max(3.1, 7 - (level - 1) * 0.55),
-    maxOnScreen: Math.min(7, 3 + level),
+    spawnEvery: Math.max(600, 1500 - (level - 1) * 130),
+    fallBase: Math.max(2.8, 7 - (level - 1) * 0.62),
+    maxOnScreen: Math.min(8, 3 + level),
   };
 }
 
@@ -234,20 +235,20 @@ function CatchLeaves() {
   const [best, setBest] = useState(() => {
     try { return Number(localStorage.getItem(LEAVES_BEST_KEY)) || 0; } catch { return 0; }
   });
+  const [msLeft, setMsLeft] = useState(LEVEL_DURATION_MS);
   const idRef = useRef(0);
-  // Score and level progress are kept in refs as well as state. Two leaves
-  // can be tapped in the same frame, and both handlers would then read the
-  // same stale render value - which would drop a point, or worse, let two
-  // taps each trip the level-up threshold. The refs are the source of
-  // truth; the state exists to render.
+  // Score is kept in a ref as well as state: two leaves can be tapped in
+  // the same frame and both handlers would otherwise read the same stale
+  // render value, dropping a point. The ref is the source of truth, the
+  // state exists to render.
   const scoreRef = useRef(0);
-  const caughtRef = useRef(0);
   // Two leaves can also finish falling in the same frame. Without this the
   // second would fire a second game-over on top of the first.
   const overRef = useRef(false);
 
   const { spawnEvery, fallBase, maxOnScreen } = levelSpeed(level);
-  const runCaught = (level - 1) * LEAVES_PER_LEVEL + caught;
+  const secondsLeft = Math.max(0, Math.ceil(msLeft / 1000));
+  const levelPct = Math.max(0, Math.min(100, (msLeft / LEVEL_DURATION_MS) * 100));
   const showingBanner = phase === "intro" || phase === "paused";
 
   // The level card doubles as the level's grace period: the board is empty
@@ -257,6 +258,33 @@ function CatchLeaves() {
     if (phase !== "intro") return;
     const id = setTimeout(() => setPhase("playing"), LEVEL_BANNER_MS);
     return () => clearTimeout(id);
+  }, [phase, level]);
+
+  // The level clock. Timed off Date.now() rather than by counting ticks, so
+  // a throttled interval (a busy tab, a slow phone) cannot quietly stretch a
+  // 30-second level into 40. It only runs while playing, so the level card
+  // and the tab-hidden pause both stop the clock for free.
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const startedAt = Date.now();
+    const tick = setInterval(() => {
+      const left = LEVEL_DURATION_MS - (Date.now() - startedAt);
+      if (left > 0) { setMsLeft(left); return; }
+      clearInterval(tick);
+      // Refilled here rather than at the top of this effect, where it would
+      // be a synchronous setState inside an effect body (a cascading render,
+      // and a lint error). Refilling on the way OUT means the clock already
+      // reads full behind the next level card, so the bar never flashes
+      // empty for the first tick of a level.
+      setMsLeft(LEVEL_DURATION_MS);
+      // Survived the level. Clearing the board is deliberate: leaves still
+      // in flight would otherwise land behind the next level card.
+      setLeaves([]);
+      setLevel((lv) => lv + 1);
+      setPhase("intro");
+      recordCalmMoment(LEVEL_DURATION_MS / 60000);
+    }, 100);
+    return () => clearInterval(tick);
   }, [phase, level]);
 
   useEffect(() => {
@@ -313,19 +341,9 @@ function CatchLeaves() {
     scoreRef.current += leaf.points * level;
     setScore(scoreRef.current);
 
-    caughtRef.current += 1;
-    if (caughtRef.current >= LEAVES_PER_LEVEL) {
-      // Clearing the board on level-up is deliberate: leaves already in
-      // flight would otherwise land during the level card.
-      caughtRef.current = 0;
-      setCaught(0);
-      setLeaves([]);
-      setLevel((lv) => lv + 1);
-      setPhase("intro");
-      recordCalmMoment(1);
-    } else {
-      setCaught(caughtRef.current);
-    }
+    // Catching no longer advances the level - the clock does. This is now
+    // purely the run's tally.
+    setCaught((c) => c + 1);
   }
 
   function landLeaf(id) {
@@ -344,11 +362,11 @@ function CatchLeaves() {
 
   function playAgain() {
     scoreRef.current = 0;
-    caughtRef.current = 0;
     overRef.current = false;
     setScore(0);
     setCaught(0);
     setLevel(1);
+    setMsLeft(LEVEL_DURATION_MS);
     setNewBest(false);
     setLeaves([]);
     setPhase("intro");
@@ -378,8 +396,18 @@ function CatchLeaves() {
           <div style={{ fontWeight: 700, color: "var(--text-h)" }}>{t("relaxationGames.leavesScore", { score })}</div>
           <div>{t("relaxationGames.leavesLevel", { level })}</div>
         </div>
-        <div style={{ position: "absolute", right: 10, top: 8, fontSize: 11, fontWeight: 700, opacity: 0.75, color: "var(--text-h)", fontVariantNumeric: "tabular-nums" }}>
-          {caught} / {LEAVES_PER_LEVEL}
+        <div style={{
+          position: "absolute", right: 10, top: 8, fontSize: 11, fontWeight: 700,
+          color: secondsLeft <= 5 && phase === "playing" ? "#f6dfa8" : "var(--text-h)",
+          opacity: 0.85, fontVariantNumeric: "tabular-nums",
+        }}>
+          {secondsLeft}s
+        </div>
+        {/* The level clock, draining left to right. No transition on the
+            width: it is redrawn ten times a second already, and a CSS ease
+            on top of that makes it lag visibly behind the number. */}
+        <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 3, background: "rgba(212,176,122,0.12)" }}>
+          <div style={{ width: `${levelPct}%`, height: "100%", background: "rgba(246,223,168,0.7)" }} />
         </div>
 
         {/* Both overlays paint their own text colours rather than taking them
@@ -397,7 +425,7 @@ function CatchLeaves() {
             </div>
             <div style={{ fontSize: 54, fontWeight: 800, lineHeight: 1.1, color: "#f6dfa8" }}>{level}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 6 }}>
-              {t("relaxationGames.leavesLevelGoal", { count: LEAVES_PER_LEVEL })}
+              {t("relaxationGames.leavesLevelGoal", { seconds: LEVEL_DURATION_MS / 1000 })}
             </div>
           </div>
         )}
@@ -413,7 +441,7 @@ function CatchLeaves() {
             </div>
             <div style={{ fontSize: 40, fontWeight: 800, lineHeight: 1.1, color: "#f6dfa8" }}>{score}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
-              {t("relaxationGames.leavesRunSummary", { count: runCaught, level })}
+              {t("relaxationGames.leavesRunSummary", { count: caught, level })}
             </div>
             {newBest && (
               <div style={{ fontSize: 12, fontWeight: 700, color: "#f6dfa8", marginTop: 2 }}>
@@ -430,7 +458,7 @@ function CatchLeaves() {
       </div>
 
       <p style={{ marginTop: 12, fontSize: 12, opacity: 0.6 }}>
-        {t("relaxationGames.leavesCaught", { count: runCaught })}
+        {t("relaxationGames.leavesCaught", { count: caught })}
         {best > 0 ? ` · ${t("relaxationGames.leavesBest", { best })}` : ""}
       </p>
       <p style={{ marginTop: 4, fontSize: 12, opacity: 0.5 }}>{t("relaxationGames.leavesHint")}</p>
