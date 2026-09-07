@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import {
   Home, Smile, BookOpen, Palette, MessageCircle, Droplets, Trees,
@@ -70,6 +70,22 @@ export default function Dashboard() {
   const [showGuide, setShowGuide] = useState(false);
   const [pendingChallengesScroll, setPendingChallengesScroll] = useState(false);
   const location = useLocation();
+  // Which challenges were claimable at the last refresh. null means "not
+  // seeded yet" - the first load must not announce things the student
+  // finished hours ago.
+  const readyRef = useRef(null);
+  const toastTimer = useRef(null);
+  const firstPathRun = useRef(true);
+
+  // Every toast used to set its own bare setTimeout, so a second toast
+  // arriving within four seconds inherited the first one's countdown and
+  // vanished early. One timer, cleared on each new message.
+  function showToast(message, ms = 4000) {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), ms);
+  }
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const activeId = location.pathname === "/dashboard" ? "dashboard" : (location.pathname.split("/")[2] || "dashboard");
   const goTo = (id) => navigate(id === "dashboard" ? "/dashboard" : `/dashboard/${id}`);
@@ -120,6 +136,55 @@ export default function Dashboard() {
     load();
   }, []);
 
+  // Announce the moment a challenge becomes claimable. Keyed on the
+  // challenge list so it fires however the data arrived - a route change, a
+  // window focus, the slow poll below.
+  useEffect(() => {
+    const list = data?.challenges;
+    if (!list) return;
+    const readyNow = list.filter((c) => c.completed && !c.claimed).map((c) => c.id);
+    const seen = readyRef.current;
+    readyRef.current = new Set(readyNow);
+    if (seen === null) return;
+    const fresh = readyNow.filter((id) => !seen.has(id));
+    if (!fresh.length) return;
+    if (fresh.length === 1) {
+      showToast(`🎉 ${t("dash.readyToClaim", { title: t(`challenge.${fresh[0]}`) })}`, 5000);
+    } else {
+      showToast(`🎉 ${t("dash.readyToClaimMany", { n: fresh.length })}`, 5000);
+    }
+    // `t` is in the deps only to satisfy exhaustive-deps. It is not stable
+    // (LanguageContext rebuilds it every render), so this effect runs often -
+    // which is harmless: readyRef is compared before anything is announced,
+    // so a run with unchanged challenges finds nothing fresh and returns.
+  }, [data?.challenges, t]);
+
+  // A challenge is finished on some OTHER screen - the journal, habits,
+  // sleep - and those are nested routes of this same component, so coming
+  // back to any dashboard route is the natural moment to re-check. The
+  // first run is skipped because load() has just fetched on mount.
+  useEffect(() => {
+    if (firstPathRun.current) { firstPathRun.current = false; return; }
+    if (!localStorage.getItem("token")) return;
+    loadQuiet();
+  }, [location.pathname]);
+
+  // Focus and a slow poll cover the student who never navigates: a habit
+  // ticked in another tab, or the dashboard simply left open. Both skip a
+  // hidden tab, so a backgrounded page is not polling all afternoon.
+  useEffect(() => {
+    if (!localStorage.getItem("token")) return;
+    const refresh = () => { if (!document.hidden) loadQuiet(); };
+    const id = setInterval(refresh, 90000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
+
   async function claim(id) {
     setClaiming(id);
     try {
@@ -128,15 +193,15 @@ export default function Dashboard() {
       if (json.success) {
         setData((d) => d ? { ...d, challenges: d.challenges.map((c) => c.id === id ? { ...c, claimed: true } : c) } : d);
         if (json.newBadges?.length) {
-          setToast(`🎉 New badge: ${json.newBadges.map((b) => b.name).join(", ")}!`);
-          setTimeout(() => setToast(null), 4000);
+          showToast(`🎉 New badge: ${json.newBadges.map((b) => b.name).join(", ")}!`);
         } else if (json.leveledUp) {
-          setToast(`🎉 Level up! You're now level ${json.level}`);
-          setTimeout(() => setToast(null), 4000);
+          showToast(`🎉 Level up! You're now level ${json.level}`);
         }
         await loadQuiet();
       } else {
-        alert(json.message || t("dashboard.couldNotClaim"));
+        // Was a browser alert(), which blocks the page and reads like an
+        // error dialog for what is usually just "you have not done it yet".
+        showToast(json.message || t("dashboard.couldNotClaim"), 5000);
       }
     } catch {}
     setClaiming(null);
@@ -163,7 +228,9 @@ export default function Dashboard() {
   const firstName = data?.name ? data.name.split(" ")[0] : "";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? t("dashboard.greetingMorning") : hour < 18 ? t("dashboard.greetingAfternoon") : t("dashboard.greetingEvening");
-  const unclaimedCount = (data?.challenges || []).filter((c) => !c.claimed).length;
+  const unclaimedCount = (data?.challenges || []).filter(
+    (c) => !c.claimed && c.completed !== false
+  ).length;
   const hasAlert = !!data?.earlyWarning?.triggered;
 
   const MOOD_SCALE = { "Happy": 5, "Calm": 4, "Neutral": 3, "Sad": 2, "Anxious": 2, "Angry": 1, "Lonely": 1, "Overwhelmed": 1, "Don't Know What To Do": 2, "Everything Fell On You At Once": 1 };
@@ -182,7 +249,12 @@ export default function Dashboard() {
     return days;
   })();
 
-  const allChallengesDone = (data?.challenges?.length || 0) > 0 && unclaimedCount === 0;
+  // NOT `unclaimedCount === 0`. That counter now means "nothing is claimable
+  // right now", which is also true at 7am when the student has done nothing
+  // yet - the green dot would have declared the day complete before it
+  // started. The dot means every challenge is actually claimed.
+  const allChallengesDone =
+    (data?.challenges?.length || 0) > 0 && (data?.challenges || []).every((c) => c.claimed);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", backgroundImage: "var(--bg-image, none)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed", color: "var(--text)", fontFamily: "Inter, sans-serif" }}>
@@ -511,7 +583,28 @@ export default function Dashboard() {
                     {c.claimed ? (
                       <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ {t("dash.done")}</span>
                     ) : (
-                      <button onClick={() => claim(c.id)} disabled={claiming === c.id} style={{ background: "var(--accent)", color: "#000", border: "none", padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12, cursor: claiming === c.id ? "default" : "pointer", opacity: claiming === c.id ? 0.7 : 1 }}>
+                      /* Deliberately `=== false`, not `!c.completed`. The site
+                         and the API deploy separately, so a frontend that
+                         ships first sees `completed` undefined - and should
+                         then look exactly as it always did rather than
+                         greying out every button. Also deliberately still
+                         clickable when not done: the server is the authority
+                         on whether XP is owed, so a completion check that
+                         errors costs a student a hint, never the XP. */
+                      <button
+                        onClick={() => claim(c.id)}
+                        disabled={claiming === c.id}
+                        title={c.completed === false ? t("dash.notDoneYet") : undefined}
+                        style={{
+                          background: c.completed === false ? "rgba(212,197,160,0.1)" : "var(--accent)",
+                          color: c.completed === false ? "rgba(232,220,198,0.5)" : "#000",
+                          border: c.completed === false ? "1px solid rgba(212,197,160,0.2)" : "none",
+                          padding: "6px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12,
+                          cursor: claiming === c.id ? "default" : "pointer",
+                          opacity: claiming === c.id ? 0.7 : 1,
+                          transition: "background 0.25s ease, color 0.25s ease",
+                        }}
+                      >
                         {claiming === c.id ? t("dashboard.claiming") : t("dash.claim")}
                       </button>
                     )}
