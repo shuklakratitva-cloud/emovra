@@ -174,7 +174,8 @@ function BubblePop() {
 
 
 // ------------------------------------------------------------------
-// Catch Falling Leaves - tap drifting leaves before they land, no fail state
+// Catch Falling Leaves - a round-based game. Every leaf counts: one that
+// reaches the ground ends the run.
 // ------------------------------------------------------------------
 // Leaf types. The golden one is rare and worth triple - something to
 // actually watch for, rather than every leaf being identical.
@@ -195,48 +196,83 @@ function pickLeafType() {
 }
 
 const LEAVES_BEST_KEY = "emovra_leaves_best";
+// Leaves to catch to clear a level.
+const LEAVES_PER_LEVEL = 10;
+// How long the "Level N" card sits over the board before play resumes.
+const LEVEL_BANNER_MS = 1600;
+
+// The difficulty curve. Now that a single miss ends the run, these numbers
+// matter far more than they did when the game was endless and forgiving -
+// a pace that was merely brisk before is lethal now, so both ends were
+// re-tuned: level 1 is slower than the old level 1, and the ceiling is
+// gentler than the old level 6. The floors are the important part. Below
+// roughly a 3-second fall there is no reaction window left, and a game
+// that becomes unwinnable is a poor thing to hand someone on a bad
+// evening - so the curve plateaus into "demanding but fair" and the run
+// ends because attention slipped, not because the game stopped being
+// possible.
+function levelSpeed(level) {
+  return {
+    spawnEvery: Math.max(620, 1500 - (level - 1) * 140),
+    fallBase: Math.max(3.1, 7 - (level - 1) * 0.55),
+    maxOnScreen: Math.min(7, 3 + level),
+  };
+}
 
 function CatchLeaves() {
   const { t } = useLanguage();
+  // intro   - the "Level N" card is up, board cleared, nothing spawning
+  // playing - leaves falling
+  // paused  - tab hidden mid-run (see the visibility effect below)
+  // over    - a leaf landed
+  const [phase, setPhase] = useState("intro");
+  const [level, setLevel] = useState(1);
   const [leaves, setLeaves] = useState([]);
   const [caught, setCaught] = useState(0);
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
+  const [newBest, setNewBest] = useState(false);
   const [best, setBest] = useState(() => {
     try { return Number(localStorage.getItem(LEAVES_BEST_KEY)) || 0; } catch { return 0; }
   });
   const idRef = useRef(0);
+  // Score and level progress are kept in refs as well as state. Two leaves
+  // can be tapped in the same frame, and both handlers would then read the
+  // same stale render value - which would drop a point, or worse, let two
+  // taps each trip the level-up threshold. The refs are the source of
+  // truth; the state exists to render.
+  const scoreRef = useRef(0);
+  const caughtRef = useRef(0);
+  // Two leaves can also finish falling in the same frame. Without this the
+  // second would fire a second game-over on top of the first.
+  const overRef = useRef(false);
 
-  // Difficulty ramps with how many you have caught: leaves fall faster,
-  // spawn more often, and more share the screen. Capped at 6 so it plateaus
-  // into "brisk but playable" rather than climbing until it is impossible -
-  // this still lives in a wellness app, and an unwinnable game is a bad way
-  // to spend a bad evening.
-  const level = Math.min(6, 1 + Math.floor(caught / 8));
+  const { spawnEvery, fallBase, maxOnScreen } = levelSpeed(level);
+  const runCaught = (level - 1) * LEAVES_PER_LEVEL + caught;
+  const showingBanner = phase === "intro" || phase === "paused";
 
-  // A streak multiplies what each leaf is worth, so paying attention pays
-  // off. Missing one resets the streak but never takes points away - there
-  // is still no fail state, just a reason to focus.
-  const multiplier = Math.min(3, 1 + Math.floor(streak / 5));
+  // The level card doubles as the level's grace period: the board is empty
+  // and nothing spawns while it is up, so a leaf can never land behind it
+  // and end a run the player had no chance to save.
+  useEffect(() => {
+    if (phase !== "intro") return;
+    const id = setTimeout(() => setPhase("playing"), LEVEL_BANNER_MS);
+    return () => clearTimeout(id);
+  }, [phase, level]);
 
   useEffect(() => {
-    // Re-created whenever the level changes so the spawner never closes
-    // over a stale difficulty.
-    const spawnEvery = Math.max(450, 1300 - (level - 1) * 165);
-    const maxOnScreen = 4 + level;
+    if (phase !== "playing") return;
     const spawn = setInterval(() => {
       setLeaves((ls) => {
         if (ls.length >= maxOnScreen) return ls;
         const type = pickLeafType();
-        const base = Math.max(2.4, 6.5 - (level - 1) * 0.72);
         return [
           ...ls,
           {
             id: idRef.current++,
             x: 8 + Math.random() * 80,
-            // Golden leaves fall noticeably quicker - the bonus has to be
-            // earned, not just collected.
-            duration: (base + Math.random() * 1.6) * (type.golden ? 0.7 : 1),
+            // Golden leaves fall quicker, so the bonus is a risk as much as
+            // a reward - missing one now costs the whole run.
+            duration: (fallBase + Math.random() * 1.5) * (type.golden ? 0.8 : 1),
             drift: Math.random() * 60 - 30,
             emoji: type.emoji,
             points: type.points,
@@ -246,31 +282,76 @@ function CatchLeaves() {
       });
     }, spawnEvery);
     return () => clearInterval(spawn);
-  }, [level]);
+  }, [phase, spawnEvery, maxOnScreen, fallBase]);
+
+  // Leaving the tab must not kill the run. Browsers keep CSS animations
+  // running on wall-clock time for a hidden tab, so without this a student
+  // who glances at a notification comes back to a game they already lost
+  // while not looking at it. Hiding parks the run; returning replays the
+  // level card and starts that level's leaves fresh.
+  useEffect(() => {
+    function onVisibility() {
+      if (document.hidden) {
+        if (phase === "playing") {
+          setLeaves([]);
+          setPhase("paused");
+        }
+      } else if (phase === "paused") {
+        setPhase("intro");
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [phase]);
 
   function catchLeaf(leaf) {
+    if (phase !== "playing") return;
     setLeaves((ls) => ls.filter((l) => l.id !== leaf.id));
-    setStreak((st) => st + 1);
-    setScore((sc) => {
-      const next = sc + leaf.points * multiplier;
-      setBest((b) => {
-        if (next <= b) return b;
-        try { localStorage.setItem(LEAVES_BEST_KEY, String(next)); } catch { /* private mode */ }
-        return next;
-      });
-      return next;
-    });
-    setCaught((c) => {
-      const next = c + 1;
-      if (next % 5 === 0) recordCalmMoment(1);
-      return next;
-    });
+
+    // Each leaf is worth its face value times the current level, which is
+    // what makes surviving to level 5 better than farming level 1.
+    scoreRef.current += leaf.points * level;
+    setScore(scoreRef.current);
+
+    caughtRef.current += 1;
+    if (caughtRef.current >= LEAVES_PER_LEVEL) {
+      // Clearing the board on level-up is deliberate: leaves already in
+      // flight would otherwise land during the level card.
+      caughtRef.current = 0;
+      setCaught(0);
+      setLeaves([]);
+      setLevel((lv) => lv + 1);
+      setPhase("intro");
+      recordCalmMoment(1);
+    } else {
+      setCaught(caughtRef.current);
+    }
   }
+
   function landLeaf(id) {
-    // A leaf reaching the bottom is the only "miss": it quietly ends the
-    // streak. No sound, no flash, no penalty to the score.
     setLeaves((ls) => ls.filter((l) => l.id !== id));
-    setStreak(0);
+    if (phase !== "playing" || overRef.current) return;
+    overRef.current = true;
+    const finalScore = scoreRef.current;
+    if (finalScore > best) {
+      setBest(finalScore);
+      setNewBest(true);
+      try { localStorage.setItem(LEAVES_BEST_KEY, String(finalScore)); } catch { /* private mode */ }
+    }
+    setLeaves([]);
+    setPhase("over");
+  }
+
+  function playAgain() {
+    scoreRef.current = 0;
+    caughtRef.current = 0;
+    overRef.current = false;
+    setScore(0);
+    setCaught(0);
+    setLevel(1);
+    setNewBest(false);
+    setLeaves([]);
+    setPhase("intro");
   }
 
   return (
@@ -292,19 +373,64 @@ function CatchLeaves() {
             {l.emoji}
           </span>
         ))}
+
         <div style={{ position: "absolute", left: 10, top: 8, fontSize: 11, opacity: 0.75, textAlign: "left", lineHeight: 1.5 }}>
           <div style={{ fontWeight: 700, color: "var(--text-h)" }}>{t("relaxationGames.leavesScore", { score })}</div>
           <div>{t("relaxationGames.leavesLevel", { level })}</div>
         </div>
-        {streak >= 2 && (
-          <div style={{ position: "absolute", right: 10, top: 8, fontSize: 11, fontWeight: 700, color: "var(--text-h)" }}>
-            {t("relaxationGames.leavesStreak", { streak })}
-            {multiplier > 1 ? ` ×${multiplier}` : ""}
+        <div style={{ position: "absolute", right: 10, top: 8, fontSize: 11, fontWeight: 700, opacity: 0.75, color: "var(--text-h)", fontVariantNumeric: "tabular-nums" }}>
+          {caught} / {LEAVES_PER_LEVEL}
+        </div>
+
+        {/* Both overlays paint their own text colours rather than taking them
+            from the theme: the scrim is a fixed dark panel, and a custom or
+            image-derived theme can have a dark accent, which would render
+            this card as dark text on a dark ground. */}
+        {showingBanner && (
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 3,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+            background: "rgba(8,9,14,0.78)", animation: "emovra-level-in 0.35s ease-out",
+          }}>
+            <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.55)" }}>
+              {t("relaxationGames.leavesLevelLabel")}
+            </div>
+            <div style={{ fontSize: 54, fontWeight: 800, lineHeight: 1.1, color: "#f6dfa8" }}>{level}</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 6 }}>
+              {t("relaxationGames.leavesLevelGoal", { count: LEAVES_PER_LEVEL })}
+            </div>
+          </div>
+        )}
+
+        {phase === "over" && (
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 3,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+            background: "rgba(8,9,14,0.82)", animation: "emovra-level-in 0.35s ease-out",
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>
+              {t("relaxationGames.leavesMissed")}
+            </div>
+            <div style={{ fontSize: 40, fontWeight: 800, lineHeight: 1.1, color: "#f6dfa8" }}>{score}</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
+              {t("relaxationGames.leavesRunSummary", { count: runCaught, level })}
+            </div>
+            {newBest && (
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#f6dfa8", marginTop: 2 }}>
+                {t("relaxationGames.leavesNewBest")}
+              </div>
+            )}
+            {/* The hairline ring keeps the button's shape visible on the dark
+                scrim even if a custom theme's accent happens to be dark. */}
+            <button onClick={playAgain} style={{ marginTop: 12, padding: "8px 20px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer", boxShadow: "0 0 0 1px rgba(255,255,255,0.25)" }}>
+              {t("relaxationGames.leavesPlayAgain")}
+            </button>
           </div>
         )}
       </div>
+
       <p style={{ marginTop: 12, fontSize: 12, opacity: 0.6 }}>
-        {t("relaxationGames.leavesCaught", { count: caught })}
+        {t("relaxationGames.leavesCaught", { count: runCaught })}
         {best > 0 ? ` · ${t("relaxationGames.leavesBest", { best })}` : ""}
       </p>
       <p style={{ marginTop: 4, fontSize: 12, opacity: 0.5 }}>{t("relaxationGames.leavesHint")}</p>
@@ -313,6 +439,10 @@ function CatchLeaves() {
           0% { transform: translateY(0) translateX(0) rotate(0deg); }
           50% { transform: translateY(120px) translateX(var(--ev-drift)) rotate(160deg); }
           100% { transform: translateY(270px) translateX(0) rotate(340deg); }
+        }
+        @keyframes emovra-level-in {
+          0% { opacity: 0; transform: scale(1.05); }
+          100% { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>
@@ -330,20 +460,38 @@ const STAR_POINTS = [
 function ConnectStars() {
   const { t } = useLanguage();
   const [order, setOrder] = useState([]);
+  // The drawing used to end itself the moment all six stars were lit, which
+  // is what made each star a one-shot: revisiting one could never have
+  // finished the picture. Now the player says when it is done, so a star can
+  // be passed through as many times as the line wants.
+  const [finished, setFinished] = useState(false);
+
+  // A soft ceiling on path length. Nobody doodling will reach it - it only
+  // stops the segment array from growing without bound if a tap is held down
+  // or a child simply keeps going.
+  const MAX_SEGMENTS = 100;
 
   function tapStar(i) {
-    if (order.includes(i)) return;
+    if (finished) return;
     setOrder((o) => {
-      const next = [...o, i];
-      if (next.length === STAR_POINTS.length) recordCalmMoment(1);
-      return next;
+      // Tapping the star the line is already sitting on would add a segment
+      // of zero length - nothing to see, so nothing to add.
+      if (o.length && o[o.length - 1] === i) return o;
+      if (o.length >= MAX_SEGMENTS) return o;
+      return [...o, i];
     });
+  }
+  function finish() {
+    if (order.length < 2) return;
+    setFinished(true);
+    recordCalmMoment(1);
   }
   function reset() {
     setOrder([]);
+    setFinished(false);
   }
 
-  const done = order.length === STAR_POINTS.length;
+  const canFinish = order.length >= 2;
 
   return (
     <div style={{ textAlign: "center", padding: "20px 0" }}>
@@ -353,20 +501,29 @@ function ConnectStars() {
           const b = STAR_POINTS[idx];
           return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgba(246,223,168,0.75)" strokeWidth="0.6" />;
         })}
-        {STAR_POINTS.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x} cy={p.y} r={order.includes(i) ? 3.2 : 2.4}
-            fill={order.includes(i) ? "#f6dfa8" : "#cdd3f2"}
-            opacity={order.includes(i) ? 1 : 0.75}
-            onClick={() => tapStar(i)}
-            style={{ cursor: "pointer", transition: "r 0.3s ease" }}
-          >
-            {!done && <animate attributeName="opacity" values="0.5;1;0.5" dur={`${2 + i * 0.3}s`} repeatCount="indefinite" />}
-          </circle>
-        ))}
+        {STAR_POINTS.map((p, i) => {
+          const lit = order.includes(i);
+          // The star the line is currently resting on, drawn a touch larger
+          // so it is obvious where the next segment will start from - which
+          // matters much more now that the path can double back.
+          const current = !finished && order.length > 0 && order[order.length - 1] === i;
+          return (
+            <circle
+              key={i}
+              cx={p.x} cy={p.y} r={current ? 3.8 : lit ? 3.2 : 2.4}
+              fill={lit ? "#f6dfa8" : "#cdd3f2"}
+              opacity={lit ? 1 : 0.75}
+              stroke={current ? "rgba(246,223,168,0.55)" : "none"}
+              strokeWidth={current ? 1.4 : 0}
+              onClick={() => tapStar(i)}
+              style={{ cursor: finished ? "default" : "pointer", transition: "r 0.3s ease" }}
+            >
+              {!finished && <animate attributeName="opacity" values="0.5;1;0.5" dur={`${2 + i * 0.3}s`} repeatCount="indefinite" />}
+            </circle>
+          );
+        })}
       </svg>
-      {done ? (
+      {finished ? (
         <>
           <p style={{ marginTop: 12, fontSize: 12, opacity: 0.65 }}>{t("relaxationGames.starsComplete")}</p>
           <button onClick={reset} style={{ marginTop: 8, padding: "8px 20px", borderRadius: 999, border: "none", background: "var(--accent)", color: "#000", fontWeight: 700, cursor: "pointer" }}>
@@ -374,7 +531,22 @@ function ConnectStars() {
           </button>
         </>
       ) : (
-        <p style={{ marginTop: 12, fontSize: 12, opacity: 0.55 }}>{t("relaxationGames.starsHint")}</p>
+        <>
+          <p style={{ marginTop: 12, fontSize: 12, opacity: 0.55 }}>{t("relaxationGames.starsHint")}</p>
+          <button
+            onClick={finish}
+            disabled={!canFinish}
+            style={{
+              marginTop: 8, padding: "8px 20px", borderRadius: 999, border: "none",
+              background: canFinish ? "var(--accent)" : "rgba(140,140,150,0.25)",
+              color: canFinish ? "#000" : "rgba(140,140,150,0.9)",
+              fontWeight: 700, cursor: canFinish ? "pointer" : "default",
+              transition: "background 0.25s ease, color 0.25s ease",
+            }}
+          >
+            {t("relaxationGames.starsFinish")}
+          </button>
+        </>
       )}
     </div>
   );
