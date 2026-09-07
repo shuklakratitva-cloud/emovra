@@ -2,6 +2,7 @@ import express from "express";
 import { protect as auth } from "../middleware/auth.js";
 import { getGamificationProfile, todayStr } from "../utils/gamification.js";
 import { getTodayChallenges } from "../data/challenges.js";
+import { decorateChallenges } from "../utils/challengeProgress.js";
 import User from "../models/User.js";
 import Habit from "../models/Habit.js";
 import SharedJournal from "../models/SharedJournal.js";
@@ -59,7 +60,7 @@ router.get("/", auth, async (req, res) => {
       theme: resolveTheme(user),
       isBirthdayToday,
       gamification: profile,
-      challenges: challenges.map((c) => ({ ...c, claimed: claimedToday.has(c.id) })),
+      challenges: await decorateChallenges(req.user.id, date, challenges, claimedToday),
       habits: {
         count: habits.length,
         dueToday: habits.filter((h) => h.lastCompletedDate !== date).length,

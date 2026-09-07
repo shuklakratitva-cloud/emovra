@@ -1,14 +1,9 @@
 import express from "express";
 import { protect as auth } from "../middleware/auth.js";
 import User from "../models/User.js";
-import PrivateJournal from "../models/PrivateJournal.js";
-import Habit from "../models/Habit.js";
-import SharedJournal from "../models/SharedJournal.js";
-import SleepLog from "../models/SleepLog.js";
-import Goal from "../models/Goal.js";
 import { getTodayChallenges } from "../data/challenges.js";
+import { completedChallengeIds, decorateChallenges } from "../utils/challengeProgress.js";
 import { awardXP, todayStr } from "../utils/gamification.js";
-import { istDayBounds, toISTDateStr } from "../utils/istDate.js";
 
 const router = express.Router();
 
@@ -26,64 +21,13 @@ router.get("/today", auth, async (req, res) => {
     res.json({
       success: true,
       date,
-      challenges: challenges.map((c) => ({ ...c, claimed: claimedToday.has(c.id) })),
+      challenges: await decorateChallenges(req.user.id, date, challenges, claimedToday),
     });
   } catch (err) {
     console.error("Today challenges error:", err);
     res.status(500).json({ success: false, message: "Failed to load challenges" });
   }
 });
-
-async function didComplete(challengeId, userId, date) {
-  const { start: startOfDay, end: endOfDay } = istDayBounds(date);
-
-  switch (challengeId) {
-    case "journal_entry":
-      return !!(await PrivateJournal.exists({ userId, createdAt: { $gte: startOfDay, $lte: endOfDay } }));
-
-    case "habit_complete":
-      return !!(await Habit.exists({ userId, completions: date }));
-
-    case "shared_journal": {
-      const journals = await SharedJournal.find({
-        $or: [{ ownerId: userId }, { "collaborators.userId": userId }],
-      }).select("entries.authorId entries.timestamp");
-      return journals.some((j) =>
-        j.entries.some((e) => String(e.authorId) === String(userId) && e.timestamp >= startOfDay && e.timestamp <= endOfDay)
-      );
-    }
-
-    case "sleep_log":
-      return !!(await SleepLog.exists({ userId, date }));
-
-    case "goal_progress":
-      return !!(await Goal.exists({ userId, updatedAt: { $gte: startOfDay, $lte: endOfDay } }));
-
-    case "chatbot": {
-      const u = await User.findById(userId).select("lastChatbotXPDate");
-      return u?.lastChatbotXPDate === date;
-    }
-
-    case "quiz": {
-      const u = await User.findById(userId).select("personalityResult");
-      const takenAt = u?.personalityResult?.takenAt;
-      return !!(takenAt && toISTDateStr(takenAt) === date);
-    }
-
-    case "mood_checkin": {
-      const u = await User.findById(userId).select("lastMoodCheckinDate");
-      return u?.lastMoodCheckinDate === date;
-    }
-
-    case "grounding": {
-      const u = await User.findById(userId).select("lastGroundingDate");
-      return u?.lastGroundingDate === date;
-    }
-
-    default:
-      return false;
-  }
-}
 
 router.post("/:id/claim", auth, async (req, res) => {
   try {
@@ -100,7 +44,7 @@ router.post("/:id/claim", auth, async (req, res) => {
     const already = user.claimedChallenges.some((c) => c.date === date && c.challengeId === challenge.id);
     if (already) return res.status(400).json({ success: false, message: "Already claimed today" });
 
-    const completed = await didComplete(challenge.id, req.user.id, date);
+    const completed = (await completedChallengeIds(req.user.id, date, [challenge.id])).has(challenge.id);
     if (!completed) {
       return res.status(400).json({ success: false, message: "Looks like you haven't done this one yet today - go do it, then come back and claim." });
     }
