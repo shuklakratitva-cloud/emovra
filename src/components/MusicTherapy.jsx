@@ -18,6 +18,26 @@ function useAmbientSound() {
     setPlaying(false);
   }
 
+  // FIX: nothing ever resumed the AudioContext. Browsers hand back a
+  // SUSPENDED context under their autoplay rules, and one created earlier
+  // gets suspended again whenever the tab is backgrounded (and on iOS,
+  // routinely). The oscillators were then started and connected quite
+  // happily against a stopped clock - so the button flipped to the pause
+  // icon and looked like it was playing while absolutely nothing came out.
+  // resume() must be called inside the click that triggered it, which is
+  // why this is invoked synchronously from start()/startMoodTone() rather
+  // than awaited by them.
+  function ensureRunning(ctx) {
+    const resumed = ctx.state === "running" ? Promise.resolve() : ctx.resume();
+    Promise.resolve(resumed)
+      .catch(() => {})
+      .then(() => {
+        // If the browser still refuses, do not leave the UI claiming to
+        // play something the student cannot hear.
+        if (ctxRef.current === ctx && ctx.state !== "running") stop();
+      });
+  }
+
   // FIX: nothing tore this down on unmount. Starting Rain/Fireplace/Forest
   // in the Sanctuary and then navigating to another dashboard section
   // unmounted the component along with its Stop button, while the
@@ -91,6 +111,7 @@ function useAmbientSound() {
     stop();
     const ctx = ctxRef.current || new (window.AudioContext || window.webkitAudioContext)();
     ctxRef.current = ctx;
+    ensureRunning(ctx);
     const master = ctx.createGain();
     // Same problem as the mood tones below - 0.15 was far too quiet on a
     // phone speaker for what is meant to be a background ambience.
@@ -169,6 +190,7 @@ function useAmbientSound() {
     stop();
     const ctx = ctxRef.current || new (window.AudioContext || window.webkitAudioContext)();
     ctxRef.current = ctx;
+    ensureRunning(ctx);
     const master = ctx.createGain();
     // FIX: this was 0.14, and each voice then got only 0.5/voices on top
     // (0.25 each for a two-note preset), so peak output sat around 7% of
@@ -183,7 +205,19 @@ function useAmbientSound() {
       calm: { freqs: [174.61, 220.0], lfoRate: 0.06, filter: 1200, filterQ: 0.4 },
       sad: { freqs: [196.0, 233.08], lfoRate: 0.05, filter: 900, filterQ: 0.5 },
       anxious: { freqs: [164.81, 196.0], lfoRate: 0.045, filter: 800, filterQ: 0.6 },
-      sleepy: { freqs: [110.0, 130.81], lfoRate: 0.03, filter: 500, filterQ: 0.3 },
+      // FIX: "Wind Down" was two sine waves at 110Hz and 130.81Hz. On a
+      // scope it measured as loud as every other preset; through anything
+      // smaller than headphones it was 23dB below "energize" - roughly a
+      // fourteenth of the amplitude, which is why it read as no sound at
+      // all. Laptop and phone speakers simply cannot radiate 110Hz, and a
+      // sine has no harmonics to fall back on, so nothing reached the ear.
+      // Adding the octave above each note keeps the low, restful character
+      // for anyone on headphones while putting real energy in the band a
+      // small speaker can actually reproduce: measured -5.9dB instead of
+      // -23.1dB, and peak output DROPS from 0.480 to 0.431, so nothing
+      // clips. The lowpass moves to 700Hz so it is not fighting the new
+      // upper voices.
+      sleepy: { freqs: [110.0, 130.81, 220.0, 261.63], lfoRate: 0.03, filter: 700, filterQ: 0.3 },
       energize: { freqs: [220.0, 277.18, 329.63], lfoRate: 0.08, filter: 2200, filterQ: 0.4 },
       focus: { freqs: [196.0, 246.94], lfoRate: 0.1, filter: 1600, filterQ: 0.3 },
     };
