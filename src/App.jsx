@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "./i18n/LanguageContext.jsx"; // NEW: Hindi/English language support
+import BackgroundVideo from "./components/BackgroundVideo.jsx"; // device-local background video, painted behind every route
 import LandingPage from "./pages/LandingPage";
 import MindGuardApp from "./pages/MindGuardApp";
 import Dashboard from "./pages/Dashboard"; // NEW: personalized dashboard, shown right after login
@@ -25,6 +26,10 @@ function AdminRoute({ children }) {
 export default function App() {
   return (
     <LanguageProvider>
+      {/* Mounted outside <Routes> on purpose: the background belongs to the
+          whole app, and remounting it on every navigation would restart the
+          video and re-read the blob from IndexedDB each time. */}
+      <BackgroundVideo />
       <Routes>
         <Route path="/" element={<LandingPage />} />
 
