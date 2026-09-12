@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 import { API_BASE as API } from "../config/api.js";
@@ -272,7 +273,92 @@ function useAmbientSound() {
 // soft glow, wax body) that matches the app's gold/dark theme, and made
 // it tappable: tapping sends a gust through the flame and a few sparks
 // drifting up, instead of just sitting there looping forever.
-function VirtualCandle() {
+// Shared sizing + full-screen behaviour for the calming visuals.
+//
+// PANEL_H used to be a bare 140 repeated in three components, which on a
+// laptop left the rain window about a centimetre tall - too small to be
+// the calming thing it is meant to be.
+const PANEL_H = 240;
+
+// How much the sprites grow full screen. The visuals are built from small
+// absolutely-positioned elements at fixed pixel sizes; stretching only the
+// container would leave 2px raindrops and 1px stars scattered across a
+// whole monitor, which reads as empty rather than immersive. Everything
+// that is drawn in pixels is multiplied by this.
+const BIG_K = 2.4;
+
+function VisualFrame({ label, children }) {
+  const { t } = useLanguage();
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e) => { if (e.key === "Escape") setExpanded(false); };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";      // no scrolling behind the overlay
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [expanded]);
+
+  if (!expanded) {
+    return (
+      <div style={{ position: "relative" }}>
+        {children(false)}
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          title={t("musicTherapy.fullScreen")}
+          style={{
+            position: "absolute", right: 10, top: 18, zIndex: 2,
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 600,
+            cursor: "pointer", color: "#f6dfa8",
+            background: "rgba(8,9,14,0.55)", border: "1px solid rgba(246,223,168,0.35)",
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          ⛶ {t("musicTherapy.fullScreen")}
+        </button>
+      </div>
+    );
+  }
+
+  // Rendered into document.body on purpose. A position:fixed overlay is
+  // trapped inside any ancestor carrying a transform or filter, and the
+  // dashboard has several - so mounting it in place would have pinned the
+  // "full screen" view to the inside of a card.
+  return createPortal(
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "var(--bg, #0a0a0c)",
+        display: "flex", flexDirection: "column", padding: "14px 14px 10px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-h)" }}>{label}</div>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          style={{
+            padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+            color: "#f6dfa8", background: "rgba(246,223,168,0.10)",
+            border: "1px solid rgba(246,223,168,0.35)",
+          }}
+        >
+          ✕ {t("musicTherapy.closeFullScreen")}
+        </button>
+      </div>
+      <div style={{ flex: 1, minHeight: 0 }}>{children(true)}</div>
+    </div>,
+    document.body
+  );
+}
+
+function VirtualCandle({ big }) {
   const { t } = useLanguage();
   const [gusting, setGusting] = useState(false);
   const [sparks, setSparks] = useState([]);
@@ -292,8 +378,16 @@ function VirtualCandle() {
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "16px 0", cursor: "pointer" }} onClick={handleTap} role="button" tabIndex={0}>
-      <svg width="72" height="112" viewBox="0 0 72 112" style={{ overflow: "visible", filter: "drop-shadow(0 0 20px rgba(255,176,85,0.35))" }}>
+    <div
+      style={{
+        textAlign: "center", padding: big ? 0 : "16px 0", cursor: "pointer",
+        height: big ? "100%" : "auto",
+        display: big ? "flex" : "block", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+      }}
+      onClick={handleTap} role="button" tabIndex={0}
+    >
+      <svg width={big ? 72 * BIG_K : 72} height={big ? 112 * BIG_K : 112} viewBox="0 0 72 112" style={{ overflow: "visible", filter: "drop-shadow(0 0 20px rgba(255,176,85,0.35))" }}>
         <defs>
           <radialGradient id="ev-flame-core" cx="50%" cy="35%" r="65%">
             <stop offset="0%" stopColor="#fff6d8" />
@@ -348,11 +442,12 @@ function VirtualCandle() {
 // body + tail shapes, a highlight for depth) plus rising bubbles, and
 // tapping the water now bursts a little cluster of bubbles from wherever
 // you tapped, instead of just being a static scene.
-function VirtualAquarium() {
+function VirtualAquarium({ big }) {
   // FIX: this component called t("musicTherapy.aquariumCaption") below
   // without ever destructuring `t` from useLanguage() - a guaranteed
   // ReferenceError crash the moment this visual rendered.
   const { t } = useLanguage();
+  const K = big ? BIG_K : 1;
   const FISH_COLORS = ["#e8a35a", "#6ec6d9", "#e88a6a"];
   const [taps, setTaps] = useState([]);
 
@@ -372,12 +467,25 @@ function VirtualAquarium() {
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "10px 0" }}>
+    <div style={{
+      textAlign: "center", padding: big ? 0 : "10px 0",
+      height: big ? "100%" : "auto",
+      display: big ? "flex" : "block", flexDirection: "column",
+    }}>
       <div
         onClick={handleTap}
         role="button"
         tabIndex={0}
-        style={{ position: "relative", height: 140, borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "linear-gradient(180deg, rgba(96,165,250,0.18), rgba(45,110,160,0.08))" }}
+        style={{
+          position: "relative", height: big ? "100%" : PANEL_H, flex: big ? 1 : "none",
+          borderRadius: big ? 16 : 12, overflow: "hidden", cursor: "pointer",
+          background: "linear-gradient(180deg, rgba(96,165,250,0.18), rgba(45,110,160,0.08))",
+          // Travel distances live in variables because they were hard-coded
+          // pixel values: bubbles rose exactly 150px and then vanished, which
+          // on a full screen meant they popped out halfway up the tank.
+          "--ev-rise": big ? "92vh" : "150px",
+          "--ev-burst": big ? "40vh" : "70px",
+        }}
       >
         {[0, 1, 2, 3].map((i) => (
           <span
@@ -386,8 +494,8 @@ function VirtualAquarium() {
               position: "absolute",
               bottom: -10,
               left: `${15 + i * 22}%`,
-              width: 5 + (i % 2) * 3,
-              height: 5 + (i % 2) * 3,
+              width: (5 + (i % 2) * 3) * K,
+              height: (5 + (i % 2) * 3) * K,
               borderRadius: "50%",
               background: "rgba(255,255,255,0.35)",
               animation: `emovra-bubble ${5 + i}s linear infinite`,
@@ -398,8 +506,8 @@ function VirtualAquarium() {
         {FISH_COLORS.map((color, i) => (
           <svg
             key={i}
-            width="34"
-            height="18"
+            width={34 * K}
+            height={18 * K}
             viewBox="0 0 34 18"
             style={{ position: "absolute", top: `${18 + i * 26}%`, animation: `emovra-swim${i} ${9 + i * 3}s linear infinite` }}
           >
@@ -413,7 +521,8 @@ function VirtualAquarium() {
           <span
             key={b.id}
             style={{
-              position: "absolute", left: `${b.x}%`, top: `${b.y}%`, width: 6, height: 6, marginLeft: -3, marginTop: -3,
+              position: "absolute", left: `${b.x}%`, top: `${b.y}%`,
+              width: 6 * K, height: 6 * K, marginLeft: -3 * K, marginTop: -3 * K,
               borderRadius: "50%", background: "rgba(255,255,255,0.6)",
               animation: "emovra-bubble-burst 1.4s ease-out forwards", animationDelay: `${b.delay}s`,
             }}
@@ -421,8 +530,8 @@ function VirtualAquarium() {
         ))}
       </div>
       <style>{`
-        @keyframes emovra-bubble { 0% { transform: translateY(0); opacity: 0.8; } 100% { transform: translateY(-150px); opacity: 0; } }
-        @keyframes emovra-bubble-burst { 0% { transform: translateY(0) scale(1); opacity: 0.9; } 100% { transform: translateY(-70px) scale(1.4); opacity: 0; } }
+        @keyframes emovra-bubble { 0% { transform: translateY(0); opacity: 0.8; } 100% { transform: translateY(calc(-1 * var(--ev-rise, 150px))); opacity: 0; } }
+        @keyframes emovra-bubble-burst { 0% { transform: translateY(0) scale(1); opacity: 0.9; } 100% { transform: translateY(calc(-1 * var(--ev-burst, 70px))) scale(1.4); opacity: 0; } }
         @keyframes emovra-swim0 { 0%{left:-8%; transform:scaleX(1);} 49%{transform:scaleX(1);} 50%{left:100%; transform:scaleX(-1);} 99%{transform:scaleX(-1);} 100%{left:-8%; transform:scaleX(1);} }
         @keyframes emovra-swim1 { 0%{left:100%; transform:scaleX(-1);} 49%{transform:scaleX(-1);} 50%{left:-8%; transform:scaleX(1);} 99%{transform:scaleX(1);} 100%{left:100%; transform:scaleX(-1);} }
         @keyframes emovra-swim2 { 0%{left:-8%; transform:scaleX(1);} 49%{transform:scaleX(1);} 50%{left:100%; transform:scaleX(-1);} 99%{transform:scaleX(-1);} 100%{left:-8%; transform:scaleX(1);} }
@@ -436,9 +545,10 @@ function VirtualAquarium() {
 // a window and a fireplace pair with ambient sounds already offered
 // above, and a starry sky gives a third, wind-down-flavored option. All
 // three are tappable too, same as the candle/aquarium above.
-function VirtualRainWindow() {
+function VirtualRainWindow({ big }) {
   const { t } = useLanguage();
-  const DROPS = Array.from({ length: 14 }, (_, i) => i);
+  const K = big ? BIG_K : 1;
+  const DROPS = Array.from({ length: big ? 46 : 14 }, (_, i) => i);
   const [wipes, setWipes] = useState([]);
 
   function handleTap(e) {
@@ -451,27 +561,35 @@ function VirtualRainWindow() {
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "10px 0" }}>
+    <div style={{
+      textAlign: "center", padding: big ? 0 : "10px 0",
+      height: big ? "100%" : "auto",
+      display: big ? "flex" : "block", flexDirection: "column",
+    }}>
       <div
         onClick={handleTap}
         role="button"
         tabIndex={0}
         style={{
-          position: "relative", height: 140, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+          position: "relative", height: big ? "100%" : PANEL_H, flex: big ? 1 : "none",
+          borderRadius: big ? 16 : 12, overflow: "hidden", cursor: "pointer",
           background: "linear-gradient(180deg, rgba(70,90,120,0.35), rgba(30,38,52,0.55))",
           border: "1px solid rgba(180,200,230,0.15)",
+          // The drops used to fall a fixed 170px and reset. Full screen that
+          // meant rain in the top strip of the window and nowhere else.
+          "--ev-fall": big ? "104vh" : "170px",
         }}
       >
         {DROPS.map((i) => {
           const left = (i * 7.2 + (i % 3) * 2) % 100;
           const duration = 1.4 + (i % 5) * 0.35;
           const delay = (i % 7) * 0.4;
-          const height = 14 + (i % 4) * 6;
+          const height = (14 + (i % 4) * 6) * K;
           return (
             <span
               key={i}
               style={{
-                position: "absolute", top: -20, left: `${left}%`, width: 2, height,
+                position: "absolute", top: -20 * K, left: `${left}%`, width: 2 * K, height,
                 borderRadius: 2, background: "linear-gradient(180deg, rgba(200,220,255,0) 0%, rgba(200,220,255,0.55) 100%)",
                 animation: `emovra-rain-fall ${duration}s linear infinite`, animationDelay: `${delay}s`,
               }}
@@ -482,7 +600,8 @@ function VirtualRainWindow() {
           <span
             key={w.id}
             style={{
-              position: "absolute", left: `${w.x}%`, top: `${w.y}%`, width: 54, height: 54, marginLeft: -27, marginTop: -27,
+              position: "absolute", left: `${w.x}%`, top: `${w.y}%`,
+              width: 54 * K, height: 54 * K, marginLeft: -27 * K, marginTop: -27 * K,
               borderRadius: "50%", background: "radial-gradient(circle, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0) 70%)",
               animation: "emovra-wipe-fade 3s ease-out forwards",
             }}
@@ -492,7 +611,7 @@ function VirtualRainWindow() {
         <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: 1, background: "rgba(212,197,160,0.15)" }} />
       </div>
       <style>{`
-        @keyframes emovra-rain-fall { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(170px); opacity: 0.2; } }
+        @keyframes emovra-rain-fall { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(var(--ev-fall, 170px)); opacity: 0.2; } }
         @keyframes emovra-wipe-fade { 0% { opacity: 0; transform: scale(0.5); } 15% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.15); } }
       `}</style>
       <p style={{ fontSize: 11, opacity: 0.5, marginTop: 10 }}>{t("musicTherapy.rainCaption")}</p>
@@ -501,9 +620,10 @@ function VirtualRainWindow() {
 }
 
 
-function VirtualStarryNight() {
+function VirtualStarryNight({ big }) {
   const { t } = useLanguage();
-  const STARS = Array.from({ length: 22 }, (_, i) => i);
+  const K = big ? BIG_K : 1;
+  const STARS = Array.from({ length: big ? 90 : 22 }, (_, i) => i);
   const [wishes, setWishes] = useState([]);
 
   function handleTap() {
@@ -513,24 +633,31 @@ function VirtualStarryNight() {
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "10px 0" }}>
+    <div style={{
+      textAlign: "center", padding: big ? 0 : "10px 0",
+      height: big ? "100%" : "auto",
+      display: big ? "flex" : "block", flexDirection: "column",
+    }}>
       <div
         onClick={handleTap}
         role="button"
         tabIndex={0}
         style={{
-          position: "relative", height: 140, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+          position: "relative", height: big ? "100%" : PANEL_H, flex: big ? 1 : "none",
+          borderRadius: big ? 16 : 12, overflow: "hidden", cursor: "pointer",
           background: "linear-gradient(180deg, #171733 0%, #262450 60%, #33305f 100%)",
+          "--ev-shoot-x": big ? "70vw" : "230px",
+          "--ev-shoot-y": big ? "46vh" : "150px",
         }}
       >
-        <svg width="34" height="34" viewBox="0 0 34 34" style={{ position: "absolute", top: 14, right: 18, filter: "drop-shadow(0 0 10px rgba(255,244,214,0.45))" }}>
+        <svg width={34 * K} height={34 * K} viewBox="0 0 34 34" style={{ position: "absolute", top: 14 * K, right: 18 * K, filter: "drop-shadow(0 0 10px rgba(255,244,214,0.45))" }}>
           <circle cx="17" cy="17" r="13" fill="#fdf4d6" />
           <circle cx="23" cy="13" r="12" fill="#262450" />
         </svg>
         {STARS.map((i) => {
           const left = (i * 13 + (i % 5) * 7) % 100;
-          const top = (i * 17 + (i % 4) * 11) % 80;
-          const size = 1 + (i % 3);
+          const top = (i * 17 + (i % 4) * 11) % 92;
+          const size = (1 + (i % 3)) * K;
           const duration = 2 + (i % 4) * 0.6;
           const delay = (i % 6) * 0.5;
           return (
@@ -548,7 +675,7 @@ function VirtualStarryNight() {
           <span
             key={w.id}
             style={{
-              position: "absolute", top: "14%", left: "6%", width: 46, height: 2, borderRadius: 2,
+              position: "absolute", top: "14%", left: "6%", width: 46 * K, height: 2 * K, borderRadius: 2,
               background: "linear-gradient(90deg, rgba(253,244,214,0), rgba(253,244,214,0.95))",
               animation: "emovra-shooting-star 1.1s ease-in forwards",
             }}
@@ -560,10 +687,203 @@ function VirtualStarryNight() {
         @keyframes emovra-shooting-star {
           0% { transform: translate(0, 0) rotate(28deg); opacity: 0; }
           12% { opacity: 1; }
-          100% { transform: translate(230px, 150px) rotate(28deg); opacity: 0; }
+          100% { transform: translate(var(--ev-shoot-x, 230px), var(--ev-shoot-y, 150px)) rotate(28deg); opacity: 0; }
         }
       `}</style>
       <p style={{ fontSize: 11, opacity: 0.5, marginTop: 10 }}>{t("musicTherapy.starsCaption")}</p>
+    </div>
+  );
+}
+
+
+// ------------------------------------------------------------------
+// Your own looping wallpaper - a video or image the student picks.
+// ------------------------------------------------------------------
+// Deliberately NEVER uploaded. The file is held as an object URL for
+// playback and kept in IndexedDB on the student's own device, for three
+// reasons that all point the same way:
+//
+//   1. There is nowhere to put it. The backend runs on Render's free
+//      tier, whose disk is ephemeral - anything written there is gone on
+//      the next restart - and MongoDB is not a blob store.
+//   2. Video is the one thing that would actually cost money to serve.
+//   3. It is the only version that is safe. A box that accepts any file a
+//      teenager chooses, and stores it on a server, is a moderation and
+//      data-protection problem the moment it ships - and students put
+//      themselves in their own camera roll. Keeping the file on the
+//      device means there is nothing to moderate and nothing to leak.
+//
+// localStorage is not an option here (roughly 5MB, strings only), so this
+// uses IndexedDB, which takes Blobs and has room for them.
+const MEDIA_DB = "emovra_media";
+const MEDIA_STORE = "visuals";
+const MEDIA_KEY = "wallpaper";
+const MAX_MEDIA_MB = 60;
+
+function openMediaDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(MEDIA_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(MEDIA_STORE)) db.createObjectStore(MEDIA_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function saveMedia(blob, kind) {
+  const db = await openMediaDB();
+  await new Promise((res, rej) => {
+    const tx = db.transaction(MEDIA_STORE, "readwrite");
+    tx.objectStore(MEDIA_STORE).put({ blob, kind }, MEDIA_KEY);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+  db.close();
+}
+async function loadMedia() {
+  const db = await openMediaDB();
+  const rec = await new Promise((res, rej) => {
+    const tx = db.transaction(MEDIA_STORE, "readonly");
+    const r = tx.objectStore(MEDIA_STORE).get(MEDIA_KEY);
+    r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error);
+  });
+  db.close();
+  return rec;
+}
+async function clearMedia() {
+  const db = await openMediaDB();
+  await new Promise((res, rej) => {
+    const tx = db.transaction(MEDIA_STORE, "readwrite");
+    tx.objectStore(MEDIA_STORE).delete(MEDIA_KEY);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+  db.close();
+}
+
+function VirtualYourVideo({ big }) {
+  const { t } = useLanguage();
+  const [media, setMedia] = useState(null);      // { url, kind }
+  const [error, setError] = useState("");
+  const fileRef = useRef(null);
+  const urlRef = useRef(null);
+
+  function show(blob, kind) {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    const url = URL.createObjectURL(blob);
+    urlRef.current = url;
+    setMedia({ url, kind });
+  }
+
+  useEffect(() => {
+    let alive = true;
+    loadMedia()
+      .then((rec) => { if (alive && rec?.blob) show(rec.blob, rec.kind); })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      // Object URLs pin the whole file in memory until revoked.
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    };
+  }, []);
+
+  async function pick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError("");
+    if (file.size > MAX_MEDIA_MB * 1024 * 1024) {
+      setError(t("musicTherapy.videoTooBig", { mb: MAX_MEDIA_MB }));
+      return;
+    }
+    const kind = file.type.startsWith("video") ? "video" : "image";
+    show(file, kind);
+    try { await saveMedia(file, kind); } catch { /* private mode - it still plays this session */ }
+  }
+
+  async function remove() {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    urlRef.current = null;
+    setMedia(null);
+    setError("");
+    try { await clearMedia(); } catch { /* nothing stored */ }
+  }
+
+  const frame = {
+    position: "relative", height: big ? "100%" : PANEL_H, flex: big ? 1 : "none",
+    borderRadius: big ? 16 : 12, overflow: "hidden",
+    background: "linear-gradient(180deg, rgba(212,176,122,0.06), rgba(212,176,122,0.14))",
+    border: "1px dashed rgba(212,197,160,0.3)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
+
+  return (
+    <div style={{
+      textAlign: "center", padding: big ? 0 : "10px 0",
+      height: big ? "100%" : "auto",
+      display: big ? "flex" : "block", flexDirection: "column",
+    }}>
+      <div style={media ? { ...frame, border: "none" } : frame}>
+        {media ? (
+          media.kind === "video" ? (
+            // muted is not a style choice - browsers refuse to autoplay a
+            // video with sound, and this sits in a room where the student
+            // may already have an ambient track running.
+            // onError matters more than it looks. Phone cameras produce
+            // HEVC in a .mov container, which Chrome cannot decode at all -
+            // so the single most likely file a student picks would otherwise
+            // give them a silent black rectangle and no idea why.
+            <video
+              src={media.url}
+              autoPlay loop muted playsInline
+              onError={() => setError(t("musicTherapy.videoUnsupported"))}
+              onLoadedData={() => setError("")}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
+          ) : (
+            <img src={media.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          )
+        ) : (
+          <div style={{ padding: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-h)" }}>{t("musicTherapy.noVideoYet")}</div>
+            <div style={{ fontSize: 11, opacity: 0.6, marginTop: 6, maxWidth: 320 }}>{t("musicTherapy.videoHint")}</div>
+          </div>
+        )}
+      </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="video/*,image/*"
+        onChange={pick}
+        style={{ display: "none" }}
+      />
+      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 10, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          style={{
+            padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+            background: "var(--accent)", color: "#000", border: "none",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.2)",
+          }}
+        >
+          {media ? t("musicTherapy.replaceVideo") : t("musicTherapy.chooseVideo")}
+        </button>
+        {media && (
+          <button
+            type="button"
+            onClick={remove}
+            style={{
+              padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
+              background: "transparent", color: "var(--text)", border: "1px solid var(--border)",
+            }}
+          >
+            {t("musicTherapy.removeVideo")}
+          </button>
+        )}
+      </div>
+      {error && <p style={{ fontSize: 11, color: "#f87171", marginTop: 8 }}>{error}</p>}
+      <p style={{ fontSize: 11, opacity: 0.5, marginTop: 8 }}>{t("musicTherapy.yourVideoCaption")}</p>
     </div>
   );
 }
@@ -592,6 +912,7 @@ export default function MusicTherapy() {
     { k: "aquarium", emoji: "🐠", labelKey: "musicTherapy.aquariumButton", Comp: VirtualAquarium },
     { k: "rain-window", emoji: "🌧", labelKey: "musicTherapy.rainWindowButton", Comp: VirtualRainWindow },
     { k: "stars", emoji: "✨", labelKey: "musicTherapy.starsButton", Comp: VirtualStarryNight },
+    { k: "yours", emoji: "🎞", labelKey: "musicTherapy.yourVideoButton", Comp: VirtualYourVideo },
   ];
 
   return (
@@ -637,7 +958,11 @@ export default function MusicTherapy() {
             </button>
           ))}
         </div>
-        {VISUALS.map((v) => visual === v.k && <v.Comp key={v.k} />)}
+        {VISUALS.map((v) => visual === v.k && (
+          <VisualFrame key={v.k} label={t(v.labelKey)}>
+            {(big) => <v.Comp big={big} />}
+          </VisualFrame>
+        ))}
       </div>
 
       <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
