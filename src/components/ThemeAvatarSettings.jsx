@@ -3,6 +3,7 @@ import { applyThemeVars } from "../utils/applyTheme.js";
 import HSLColorPicker from "./HSLColorPicker.jsx";
 import { extractThemeFromImage } from "../utils/extractColors.js";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
+import { getLocalMedia, putLocalMedia, delLocalMedia, localMediaQuota, notifyLocalMedia, requestPersistence, BG_VIDEO_KEY } from "../utils/localMedia.js";
 import { clearAppStorage } from "../utils/storage.js";
 import { decryptLocal } from "../utils/localCipher.js";
 
@@ -46,6 +47,10 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
   const [bgPrompt, setBgPrompt] = useState("");
   const [generatingImage, setGeneratingImage] = useState(false);
   const [genError, setGenError] = useState("");
+  const [hasBgVideo, setHasBgVideo] = useState(false);
+  const [bgVideoNote, setBgVideoNote] = useState("");
+  const [savingBgVideo, setSavingBgVideo] = useState(false);
+  const bgVideoInputRef = useRef(null);
   const [applyingBg, setApplyingBg] = useState(false);
   const bgFileInputRef = useRef(null);
   // Live preview - throttled to fire at most once every 120ms (trailing
@@ -378,6 +383,110 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
     img.onerror = () => setBgExtracted(null);
     img.src = dataUri;
   }
+
+  // The background VIDEO is stored on the device, not on the server.
+  // backgroundImage is a base64 string inside the user's MongoDB document,
+  // which caps the whole document at 16MB and sits behind an express.json
+  // limit of 4mb - so a video of any real length cannot go there at all,
+  // and raising the number would not change that. Kept local, the only
+  // ceiling is the browser's storage quota.
+  const MAX_BG_VIDEO_BYTES = 1024 * 1024 * 1024;          // 1 GB, as asked
+  const HEAVY_BG_VIDEO_BYTES = 150 * 1024 * 1024;         // warn past here
+
+  async function handleBgVideoUpload(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setGenError("");
+    setBgVideoNote("");
+
+    if (file.size > MAX_BG_VIDEO_BYTES) {
+      setGenError(t("themeAvatarSettings.bgVideoTooLarge", { gb: 1 }));
+      return;
+    }
+
+    // Chrome hands an origin a share of free disk; Safari is far stingier.
+    // Without this the picker accepts a 1GB file and the write fails later
+    // with a QuotaExceededError the student cannot interpret.
+    const q = await localMediaQuota();
+    if (q && q.free && file.size > q.free) {
+      setGenError(t("themeAvatarSettings.bgVideoNoRoom", {
+        need: Math.ceil(file.size / 1048576),
+        free: Math.floor(q.free / 1048576),
+      }));
+      return;
+    }
+
+    setSavingBgVideo(true);
+    try {
+      // Without this the browser may evict the video under storage
+      // pressure, and a background the student deliberately set would
+      // vanish on its own one day.
+      await requestPersistence();
+      // The File goes in exactly as it came off disk - no canvas, no
+      // re-encode, no downscale. The image path above deliberately
+      // resizes to 1920 and re-encodes to JPEG because it has to fit in a
+      // 4MB request body; nothing here is sent anywhere, so the video
+      // keeps its original resolution, bitrate and codec byte for byte.
+      await putLocalMedia(BG_VIDEO_KEY, file, { kind: "video", name: file.name, size: file.size });
+      notifyLocalMedia(BG_VIDEO_KEY);
+      setHasBgVideo(true);
+      if (file.size > HEAVY_BG_VIDEO_BYTES) {
+        setBgVideoNote(t("themeAvatarSettings.bgVideoHeavy", { mb: Math.round(file.size / 1048576) }));
+      }
+      // The panel promises the theme colours auto-match the background, so
+      // pull them from the first frame rather than leaving that false for
+      // video.
+      extractFromVideoFrame(file);
+    } catch (err) {
+      setGenError(
+        String(err?.name || "").includes("Quota")
+          ? t("themeAvatarSettings.bgVideoNoRoomGeneric")
+          : t("themeAvatarSettings.bgVideoSaveFailed")
+      );
+    }
+    setSavingBgVideo(false);
+  }
+
+  function extractFromVideoFrame(file) {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.muted = true;
+    v.playsInline = true;
+    v.src = url;
+    const done = () => URL.revokeObjectURL(url);
+    v.onloadeddata = () => {
+      try {
+        v.currentTime = Math.min(1, (v.duration || 2) / 2);
+      } catch { done(); }
+    };
+    v.onseeked = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = Math.min(320, v.videoWidth || 320);
+        c.height = Math.round((v.videoHeight || 180) * (c.width / (v.videoWidth || 320)));
+        c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+        runExtraction(c.toDataURL("image/jpeg", 0.8));
+      } catch { /* colours simply stay as they are */ }
+      done();
+    };
+    v.onerror = done;
+  }
+
+  async function removeBgVideo() {
+    try { await delLocalMedia(BG_VIDEO_KEY); } catch { /* nothing stored */ }
+    notifyLocalMedia(BG_VIDEO_KEY);
+    setHasBgVideo(false);
+    setBgVideoNote("");
+  }
+
+  useEffect(() => {
+    let alive = true;
+    getLocalMedia(BG_VIDEO_KEY)
+      .then((rec) => { if (alive) setHasBgVideo(!!rec?.blob); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   function handleBgFileUpload(e) {
     const file = e.target.files?.[0];
@@ -791,6 +900,57 @@ export default function ThemeAvatarSettings({ onProfileUpdate }) {
               >
                 📤 {t("themeAvatarSettings.uploadImageButton")}
               </button>
+
+              <input
+                ref={bgVideoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleBgVideoUpload}
+                style={{ display: "none" }}
+              />
+              <button
+                onClick={() => bgVideoInputRef.current?.click()}
+                disabled={savingBgVideo}
+                style={{
+                  marginTop: 8,
+                  display: "block",
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  color: "var(--text)",
+                  padding: "8px 16px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  cursor: savingBgVideo ? "default" : "pointer",
+                  opacity: savingBgVideo ? 0.6 : 1,
+                }}
+              >
+                🎬 {savingBgVideo
+                  ? t("themeAvatarSettings.savingVideo")
+                  : hasBgVideo
+                    ? t("themeAvatarSettings.replaceVideoButton")
+                    : t("themeAvatarSettings.uploadVideoButton")}
+              </button>
+              {hasBgVideo && (
+                <button
+                  onClick={removeBgVideo}
+                  style={{
+                    marginTop: 6, display: "block",
+                    background: "transparent", border: "none",
+                    color: "var(--text)", opacity: 0.7,
+                    padding: "4px 2px", fontSize: 11, cursor: "pointer", textDecoration: "underline",
+                  }}
+                >
+                  {t("themeAvatarSettings.removeVideoButton")}
+                </button>
+              )}
+              <div style={{ fontSize: 10, opacity: 0.55, marginTop: 6, maxWidth: 210, lineHeight: 1.5 }}>
+                {t("themeAvatarSettings.bgVideoNote")}
+              </div>
+              {bgVideoNote && (
+                <div style={{ fontSize: 10, color: "#fbbf24", marginTop: 6, maxWidth: 210, lineHeight: 1.5 }}>
+                  {bgVideoNote}
+                </div>
+              )}
             </div>
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ display: "flex", gap: 8 }}>

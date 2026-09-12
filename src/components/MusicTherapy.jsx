@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { getLocalMedia, putLocalMedia, delLocalMedia, WALLPAPER_KEY } from "../utils/localMedia.js";
 import { useLanguage } from "../i18n/LanguageContext.jsx";
 
 import { API_BASE as API } from "../config/api.js";
@@ -715,50 +716,7 @@ function VirtualStarryNight({ big }) {
 //
 // localStorage is not an option here (roughly 5MB, strings only), so this
 // uses IndexedDB, which takes Blobs and has room for them.
-const MEDIA_DB = "emovra_media";
-const MEDIA_STORE = "visuals";
-const MEDIA_KEY = "wallpaper";
 const MAX_MEDIA_MB = 60;
-
-function openMediaDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(MEDIA_DB, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(MEDIA_STORE)) db.createObjectStore(MEDIA_STORE);
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-async function saveMedia(blob, kind) {
-  const db = await openMediaDB();
-  await new Promise((res, rej) => {
-    const tx = db.transaction(MEDIA_STORE, "readwrite");
-    tx.objectStore(MEDIA_STORE).put({ blob, kind }, MEDIA_KEY);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
-  });
-  db.close();
-}
-async function loadMedia() {
-  const db = await openMediaDB();
-  const rec = await new Promise((res, rej) => {
-    const tx = db.transaction(MEDIA_STORE, "readonly");
-    const r = tx.objectStore(MEDIA_STORE).get(MEDIA_KEY);
-    r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error);
-  });
-  db.close();
-  return rec;
-}
-async function clearMedia() {
-  const db = await openMediaDB();
-  await new Promise((res, rej) => {
-    const tx = db.transaction(MEDIA_STORE, "readwrite");
-    tx.objectStore(MEDIA_STORE).delete(MEDIA_KEY);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
-  });
-  db.close();
-}
 
 function VirtualYourVideo({ big }) {
   const { t } = useLanguage();
@@ -776,7 +734,7 @@ function VirtualYourVideo({ big }) {
 
   useEffect(() => {
     let alive = true;
-    loadMedia()
+    getLocalMedia(WALLPAPER_KEY)
       .then((rec) => { if (alive && rec?.blob) show(rec.blob, rec.kind); })
       .catch(() => {});
     return () => {
@@ -797,7 +755,7 @@ function VirtualYourVideo({ big }) {
     }
     const kind = file.type.startsWith("video") ? "video" : "image";
     show(file, kind);
-    try { await saveMedia(file, kind); } catch { /* private mode - it still plays this session */ }
+    try { await putLocalMedia(WALLPAPER_KEY, file, { kind }); } catch { /* private mode - it still plays this session */ }
   }
 
   async function remove() {
@@ -805,7 +763,7 @@ function VirtualYourVideo({ big }) {
     urlRef.current = null;
     setMedia(null);
     setError("");
-    try { await clearMedia(); } catch { /* nothing stored */ }
+    try { await delLocalMedia(WALLPAPER_KEY); } catch { /* nothing stored */ }
   }
 
   const frame = {
