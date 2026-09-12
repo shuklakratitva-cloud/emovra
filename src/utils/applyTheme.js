@@ -14,9 +14,16 @@ export function applyThemeVars(theme) {
   root.style.setProperty("--accent", t.accent);
   root.style.setProperty("--text", t.text);
   root.style.setProperty("--text-h", t.accent); 
-  document.body.style.setProperty("background", t.bg, "important");
+  // When a device-local background VIDEO is playing, BackgroundVideo owns
+  // the body background and has made it transparent so the video shows
+  // through. Repainting it here - which happens on every theme change -
+  // would silently hide the video the person just chose.
+  const videoBg = document.documentElement.dataset.evBgVideo === "1";
+  if (!videoBg) {
+    document.body.style.setProperty("background", t.bg, "important");
+  }
   document.documentElement.style.setProperty("background", t.bg, "important");
-if (t.backgroundImage) {
+if (t.backgroundImage && !videoBg) {
   const overlay = `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55))`;
   const bgImageValue = `${overlay}, url(${t.backgroundImage})`;
   root.style.setProperty("--bg-image", bgImageValue);
