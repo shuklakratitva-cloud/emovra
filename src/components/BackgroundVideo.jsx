@@ -57,37 +57,66 @@ export default function BackgroundVideo() {
   // the video would sit behind it and never be seen. The flag lets
   // applyThemeVars know not to repaint over the video when the theme
   // changes later; clearing it restores the normal painted background.
-  const claimedRef = useRef(false);
+  // Clearing the way for the video is more than making <body>
+  // transparent. Three opaque layers sit above a negative-z-index element:
+  //
+  //   body            - App.css:74  `body, #root { background: var(--bg) !important }`
+  //   #root           - the same rule
+  //   the page root   - e.g. Dashboard.jsx paints `background: var(--bg)`
+  //                     inline on a min-height:100vh div
+  //
+  // An earlier version only handled <body>, which is why the video was
+  // invisible in the real app while passing a test against a bare page.
+  //
+  // A stylesheet rule is used rather than inline styles because it can
+  // reach elements this component does not own, and because an author
+  // !important rule beats the page root's non-important inline style.
+  // #root's own rule is !important too, so the selector is made more
+  // specific than a bare `#root` to win that tie.
   useEffect(() => {
-    const root = document.documentElement;
-    if (url) {
-      root.dataset.evBgVideo = "1";
-      document.body.style.setProperty("background-color", "transparent", "important");
-      document.body.style.setProperty("background-image", "none", "important");
-      claimedRef.current = true;
-    } else if (claimedRef.current) {
-      // Only restore if this component was the one that took the
-      // background away. An earlier version cleared it unconditionally on
-      // mount, which stripped the themed background applyTheme had just
-      // painted for everyone who has no video at all.
-      //
-      // Restored through the custom properties rather than a literal
-      // colour, so the body picks up whatever theme is current instead of
-      // whichever one happened to be active when the video was set.
-      delete root.dataset.evBgVideo;
-      document.body.style.setProperty("background-color", "var(--bg)", "important");
-      document.body.style.setProperty("background-image", "var(--bg-image, none)", "important");
-      claimedRef.current = false;
-    }
+    if (!url) return;
+    const style = document.createElement("style");
+    style.dataset.evBgVideo = "1";
+    style.textContent = `
+      html[data-ev-bg-video="1"] body,
+      html[data-ev-bg-video="1"] #root,
+      html[data-ev-bg-video="1"] #root > div:not([data-ev-bg-layer]) {
+        background-color: transparent !important;
+        background-image: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    document.documentElement.dataset.evBgVideo = "1";
+
+    // <body> needs one extra step. initTheme() runs before React mounts,
+    // so applyThemeVars has already painted body with an INLINE
+    // !important background - and an inline important declaration beats
+    // the stylesheet rule above. The applyTheme guard stops it being
+    // repainted from here on, but it cannot undo the paint that already
+    // happened, so the existing one is lifted (and put back on cleanup).
+    const hadInlineBg = !!document.body.style.getPropertyValue("background")
+      || !!document.body.style.getPropertyValue("background-color");
+    document.body.style.removeProperty("background");
+    document.body.style.removeProperty("background-color");
+    document.body.style.removeProperty("background-image");
+
     return () => {
-      delete root.dataset.evBgVideo;
+      style.remove();
+      delete document.documentElement.dataset.evBgVideo;
+      // Restored through var(--bg) rather than the captured literal, so
+      // the body picks up whichever theme is current - the person may
+      // have changed it while the video was covering everything.
+      if (hadInlineBg) {
+        document.body.style.setProperty("background", "var(--bg)", "important");
+        document.body.style.setProperty("background-image", "var(--bg-image, none)", "important");
+      }
     };
   }, [url]);
 
   if (!url) return null;
 
   return (
-    <div aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: -1, overflow: "hidden", pointerEvents: "none" }}>
+    <div aria-hidden="true" data-ev-bg-layer="1" style={{ position: "fixed", inset: 0, zIndex: -1, overflow: "hidden", pointerEvents: "none" }}>
       <video
         src={url}
         autoPlay loop muted playsInline
