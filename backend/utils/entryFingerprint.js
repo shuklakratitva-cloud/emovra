@@ -38,6 +38,32 @@ export function entryFingerprint(userLabel, text) {
     .digest("hex");
 }
 
-export function dedupCutoff() {
+// The replay window, used only when the client says a write is a retry of
+// something it first tried at a known moment.
+//
+// The 90-second window above is right for the double-write case it was
+// built for, and wrong for a retry: the frontend now keeps unconfirmed
+// check-ins in a local outbox and re-sends them when the network or the
+// session comes back, which can be hours or days later. Judged against 90
+// seconds such a replay looks brand new and would store a second copy of
+// the same disclosure - doubling it in the student's history and in the
+// admin counts, which is the exact bug the fingerprint was added to stop.
+//
+// The window is derived from the client's own timestamp rather than being
+// a fixed larger constant, so it is only ever as wide as that entry
+// actually is, and a client cannot use it to suppress someone else's
+// writes: the fingerprint is already scoped to one user's text.
+export const MAX_REPLAY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function dedupCutoff(clientTs) {
+  const ts = Number(clientTs);
+  if (Number.isFinite(ts) && ts > 0) {
+    const age = Date.now() - ts;
+    if (age > 0 && age < MAX_REPLAY_WINDOW_MS) {
+      // Look back to just before the client first tried, plus a minute of
+      // slack for clock skew between the device and the server.
+      return new Date(ts - 60 * 1000);
+    }
+  }
   return new Date(Date.now() - DEDUP_WINDOW_MS);
 }

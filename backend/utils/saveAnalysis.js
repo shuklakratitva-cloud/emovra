@@ -30,8 +30,11 @@ export async function saveAnalysis({
   const safeUserId = toObjectIdOrNull(userId);
   const userLabel = userId || "anonymous";
 
+  // Matches the client-side guard in MindGuardApp.saveToBackend: GREEN and
+  // YELLOW are intentionally never persisted. The old message named only
+  // GREEN, so a YELLOW being dropped looked like a bug in the logs.
   if (riskLevel !== "RED" && riskLevel !== "ORANGE") {
-    log("PRIVACY-SKIP", riskLevel, score, category, `GREEN not saved - User:${userLabel}`);
+    log("PRIVACY-SKIP", riskLevel, score, category, `${riskLevel} not stored by design - User:${userLabel}`);
     return { entrySaved: false, alertSaved: false };
   }
 
