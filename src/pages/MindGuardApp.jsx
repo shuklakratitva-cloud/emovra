@@ -24,6 +24,7 @@ const VoiceToneAnalyzer = lazy(() => import("../components/VoiceToneAnalyzer.jsx
 const Chatbot = lazy(() => import("../components/Chatbot"));
 
 import { API_BASE as API } from "../config/api.js";
+import { enqueue, resolve as resolveOutbox, pendingCount, startOutbox } from "../utils/outbox.js";
 
 function getAdvice(t, level, category) {
   const lvl = String(level || "").toUpperCase();
@@ -66,6 +67,7 @@ export default function MindGuardApp() {
   // Set when the backend rejects our token. See saveToBackend below - this
   // is the difference between "saved" and "silently thrown away".
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [pendingSaves, setPendingSaves] = useState(() => pendingCount());
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("checkin");
   const [history, setHistory] = useState(() => {
@@ -220,12 +222,40 @@ export default function MindGuardApp() {
     } catch {}
   }, [history]);
 
+  // Retry anything still queued: on mount, on focus, on reconnect, and on
+  // a slow tick. Also re-checks whenever `token` changes, which is what
+  // makes a queued entry go up immediately after signing back in.
+  useEffect(() => {
+    const stop = startOutbox(({ expired }) => {
+      if (expired) {
+        localStorage.removeItem("token");
+        setSessionExpired(true);
+      }
+      setPendingSaves(pendingCount());
+    });
+    return stop;
+  }, [token]);
+
   async function saveToBackend(entry) {
+    // Deliberate: only RED and ORANGE check-ins are stored server-side.
+    // GREEN and YELLOW stay on the device in emovra_history and never
+    // reach the backend at all, so a student having ordinary days has no
+    // rows in the database by design - which looks exactly like data loss
+    // when you go looking in Atlas, and is not.
     if (entry.riskLevel !== "RED" && entry.riskLevel !== "ORANGE") {
-      console.log("Privacy: GREEN not saved to backend, only local");
+      console.log(`Privacy: ${entry.riskLevel} not saved to backend, kept on this device only`);
       return;
     }
     if (!token) return;
+
+    // Written to disk BEFORE the request goes out. Every call site fires
+    // this without awaiting and clears the textarea immediately, so the
+    // request is still in flight while the person moves on - and a closed
+    // tab or a cold-starting backend used to take the entry with it.
+    const queuedAt = Date.now();
+    const queueId = enqueue(entry);
+    setPendingSaves(pendingCount());
+
     try {
       // FIX: this used to be a bare `await fetch(...)` with an empty catch,
       // and never looked at the response. fetch() only rejects on a network
@@ -243,17 +273,28 @@ export default function MindGuardApp() {
       const res = await fetch(`${API}/data/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(entry),
+        body: JSON.stringify({ ...entry, clientTs: queuedAt }),
       });
       if (res.status === 401 || res.status === 403) {
+        // The entry stays in the outbox and goes up as soon as they sign
+        // in again. Clearing the dead token is what ends the zombie state:
+        // previously nothing ever did, so a student past day 20 kept
+        // "saving" into a void indefinitely.
+        localStorage.removeItem("token");
         setSessionExpired(true);
-        console.warn("Session expired - check-in was NOT saved to the server.");
-      } else if (!res.ok) {
-        console.warn(`Check-in save failed with ${res.status} - not saved.`);
+        setPendingSaves(pendingCount());
+        console.warn("Session expired - check-in is queued and will be saved after signing in again.");
+      } else if (res.ok) {
+        resolveOutbox(queueId);
+        setPendingSaves(pendingCount());
+      } else {
+        console.warn(`Check-in save failed with ${res.status} - kept for retry.`);
+        setPendingSaves(pendingCount());
       }
     } catch (e) {
-      // Genuine network failure (offline, or Render cold-starting).
-      console.warn("Check-in save failed - not saved:", e?.message);
+      // Offline, or Render cold-starting. It is already on disk.
+      console.warn("Check-in save failed - kept for retry:", e?.message);
+      setPendingSaves(pendingCount());
     }
   }
 
@@ -1078,7 +1119,9 @@ export default function MindGuardApp() {
                 >
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{t("session.expiredTitle")}</div>
                   <p style={{ fontSize: 13, opacity: 0.85, margin: "6px 0 12px", lineHeight: 1.6 }}>
-                    {t("session.expiredBody")}
+                    {pendingSaves > 0
+                      ? t("session.expiredQueued", { n: pendingSaves })
+                      : t("session.expiredBody")}
                   </p>
                   <button
                     onClick={() => {
