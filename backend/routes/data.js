@@ -69,7 +69,7 @@ router.post('/save', auth, async (req, res) => {
       try {
         const duplicate = await Entry.exists({
           dedupHash,
-          createdAt: { $gte: dedupCutoff() },
+          createdAt: { $gte: dedupCutoff(req.body.clientTs) },
         });
         if (duplicate) {
           console.log(`[DEDUP-SKIP] /data/save - identical text already stored moments ago - User:${req.user.id}`);
